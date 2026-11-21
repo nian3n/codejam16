@@ -335,9 +335,9 @@ The player needs both hands to sign, so **do not use hold-to-sign**.
 
 1. Space starts a recording. For 1 s, a banner says "GET YOUR HANDS READY". Then recording starts.
 2. The player signs a word, then makes a **separator**. The separator ends the clip and adds no word:
-   - **Hands down:** both hands leave the frame or drop below the waist line for 0.15 s.
+   - **Hands down:** both hands leave the frame or drop below the waist line for 0.3 s. Shorter dropouts are tracking blips and do not end the sign.
    - **The "next" pose:** both hands open, fingers up, held still for 0.5 s. It is our own signal, not an ASL word. A rule on the landmarks detects it, so the model never sees it. No game word looks like it: FINISH shakes two open hands, and the digit 5 is one hand. The glossary lists it under "game controls".
-3. The code cuts the separator frames off each clip. It drops clips under 0.3 s and marks clips over 3 s as "unclear". Hands that fall fast never start a clip.
+3. After each sign, a 1 s cooldown starts (from when the hands went down). No new sign starts during it, so hands that leave the frame and come straight back give one word, not two. The banner shows "✓ GOT IT". The code cuts the separator frames off each clip. It drops clips under 0.3 s and marks clips over 3 s as "unclear". Hands that fall fast never start a clip.
 4. Each clip goes to `POST /api/practice/guess` at once, while the player signs the next word. It becomes a chip with the top 3 guesses. The player picks a guess or deletes the chip.
 5. Space stops the recording. `tests/test_sequence.py` runs the logic in Node with synthetic hands.
 
@@ -461,7 +461,7 @@ The expert's manual already highlights the pages that contain the signed words (
 `HOME → LOBBY → GAME → END → LOBBY`
 
 - **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The HQ handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`, and the package name `escape_pod`.
-- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
+- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
 - **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the typed signs not sent yet (until recognition is in), "Send to expert" and the message feed.
