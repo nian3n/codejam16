@@ -150,7 +150,10 @@ def test_allowed_sets_by_level_use_only_game_words():
     import random
 
     words = game_words()
-    assert {"cat", "yes", "no", "finish", "0", "9"} <= words
+    assert {"cat", "yes", "no", "finish"} <= words
+    # No digits: the keypad left the pool, so module signs never mix in the digit model.
+    # The case lock asks for digits only, and practice.py reads those with the digit model.
+    assert not any(g.isdigit() for g in words)
     assert "callonphone" not in words  # a model gloss that no puzzle uses
     assert not any(len(g) == 1 and g.isalpha() for g in words)  # no fingerspelled letters
 

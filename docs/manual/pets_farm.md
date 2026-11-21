@@ -1,4 +1,4 @@
-# 12. Animal panel
+# 11. Animal panel
 
 **Topic:** pets and farm animals · **Widget:** Picture buttons
 

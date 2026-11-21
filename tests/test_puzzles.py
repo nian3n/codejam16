@@ -1,5 +1,6 @@
 # Owner: Teammate 4 (Puzzles and brain)
 import json
+from pathlib import Path
 import random
 
 import pytest
@@ -8,16 +9,21 @@ from escape_pod import config
 from escape_pod.manual.build import all_pages, page_markdown
 from escape_pod.manual.solve import sheet_markdown, solve_module
 from escape_pod.puzzles.engine import WIDGETS, Module, draw, load_pool
-from escape_pod.puzzles.models import Action
+from escape_pod.puzzles.models import Action, PuzzleSpec
 from escape_pod.puzzles.phrase import phrase, word
 
 POOL = load_pool()
+# The keypad puzzle left the pool (Nov 2026): the digits in the module's allowed words
+# pulled the word model's scores off the other modules. The widget code stays, so its
+# tests run on the old puzzle file, kept as a fixture.
+NUMBERS = PuzzleSpec.model_validate(json.loads((Path(__file__).parent / "fixtures" / "numbers.json").read_text(encoding="utf-8")))
+SPECS = {**POOL, "numbers": NUMBERS}
 ICONS = json.loads(config.ICONS_FILE.read_text(encoding="utf-8"))
 
 
 def test_pool_has_20_unique_topics():
-    assert len(POOL) == 20  # alphabet (letters) was replaced by senses
-    assert len({s.topic for s in POOL.values()}) == 20
+    assert len(POOL) == 19  # senses replaced alphabet; the keypad (numbers) left the pool
+    assert len({s.topic for s in POOL.values()}) == 19
 
 
 def test_no_gloss_in_two_pools():
@@ -35,18 +41,18 @@ def test_every_picture_gloss_has_an_icon():
             assert not missing, f"{s.id} has no icon for {missing}"
 
 
-@pytest.mark.parametrize("pid", sorted(POOL))
+@pytest.mark.parametrize("pid", sorted(SPECS))
 def test_rules_use_only_derived_keys(pid):
-    spec = POOL[pid]
+    spec = SPECS[pid]
     known = WIDGETS[spec.widget].known_keys(spec)
     for r in spec.rules:
         for key, _, _ in r.when or []:
             assert key in known, f"{pid}: rule uses unknown key {key}"
 
 
-@pytest.mark.parametrize("pid", sorted(POOL))
+@pytest.mark.parametrize("pid", sorted(SPECS))
 def test_500_seeds_give_a_valid_target(pid):
-    spec = POOL[pid]
+    spec = SPECS[pid]
     w = WIDGETS[spec.widget]
     for seed in range(500):
         m = Module(spec, w.generate(spec, random.Random(seed)))
@@ -99,7 +105,7 @@ def test_known_answers():
     assert phrase(m.solution(), m) == "Press the buttons in this order: duck, hen, horse, pig."  # horse rule
     m = Module(pets, {"icons": ["duck", "pig", "donkey", "hen"]})
     assert phrase(m.solution(), m) == "Press the hen."
-    nums = POOL["numbers"]
+    nums = NUMBERS
     m = Module(nums, {"display": ["7", "4", "2"]})
     assert phrase(m.solution(), m) == "Type 2, 4, 7."
     m = Module(nums, {"display": ["1", "4", "2"]})
@@ -129,7 +135,7 @@ def test_draw_is_seeded():
 
 def test_manual_pages_build():
     pages = all_pages()
-    assert len(pages) == 20
+    assert len(pages) == 19
     for p in pages:
         text = page_markdown(p)
         assert p["title"] in text and "Otherwise" in text
@@ -145,7 +151,7 @@ def test_answer_key_matches_engine():
 
 
 def test_verb_puzzles_say_picture_and_noun_puzzles_do_not():
-    from escape_pod.puzzles.models import Action
+    from escape_pod.puzzles.models import Action, PuzzleSpec
     from escape_pod.puzzles.phrase import phrase, word
     assert phrase(Action("press", {"icon": "dance"}), spec=POOL["actions"]) == "Press the dance picture."
     assert phrase(Action("turn", {"to": "listen"}), spec=POOL["senses"]) == "Turn the dial to the listen picture."
@@ -226,7 +232,7 @@ def test_opposites_flip_every_switch():
 
 
 def test_keypad_plus_one():
-    m = _mod("numbers", {"display": ["5", "9", "2"]})
+    m = Module(NUMBERS, {"display": ["5", "9", "2"]})
     assert m.solution() == Action("type", {"keys": ["6", "0", "3"]})
     assert phrase(m.spec.rules[m.fired_rule()].action(), spec=m.spec) == (
         "Add 1 to each number on the display and type the result (9 becomes 0).")
@@ -301,7 +307,7 @@ def test_the_sorter_manual_lists_the_groups():
     assert p["rules"][1]["if"] == "the first picture is a healthy food"
 
 
-def test_the_keypad_never_shows_2():
-    # The digit model rarely reads a signed 2 (playtest, Nov 2026). The keys still have a 2:
-    # "add 1" can type one, and typing is a click, not a sign.
-    assert "2" not in POOL["numbers"].pool
+def test_no_keypad_in_the_pool():
+    # Digits are signed only at the case lock now, where the digit model reads them alone.
+    assert all(s.widget != "keypad" for s in POOL.values())
+    assert not any(g.isdigit() for s in POOL.values() for g in s.pool)

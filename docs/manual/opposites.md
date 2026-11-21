@@ -1,4 +1,4 @@
-# 10. Opposite levers
+# 9. Opposite levers
 
 **Topic:** opposites · **Widget:** Switches
 

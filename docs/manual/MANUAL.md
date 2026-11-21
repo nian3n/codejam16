@@ -10,18 +10,17 @@ Find the page whose words match what the field agent signs. Each page has one to
 6. [Mood button](feelings.md): feelings
 7. [Snack sorter](food.md): food
 8. [Home power board](home_things.md): things at home
-9. [Number keypad](numbers.md): numbers
-10. [Opposite levers](opposites.md): opposites
-11. [Crew badges](people_jobs.md): people and jobs
-12. [Animal panel](pets_farm.md): pets and farm animals
-13. [Room lights](places.md): places
-14. [School supplies](school.md): school things
-15. [Sensor dial](senses.md): senses
-16. [Time panel](time_words.md): time words
-17. [Toy box](toys.md): toys and play
-18. [Travel dial](transport.md): transport
-19. [Sky dial](weather_sky.md): weather and sky
-20. [Safari panel](wild_animals.md): wild animals
+9. [Opposite levers](opposites.md): opposites
+10. [Crew badges](people_jobs.md): people and jobs
+11. [Animal panel](pets_farm.md): pets and farm animals
+12. [Room lights](places.md): places
+13. [School supplies](school.md): school things
+14. [Sensor dial](senses.md): senses
+15. [Time panel](time_words.md): time words
+16. [Toy box](toys.md): toys and play
+17. [Travel dial](transport.md): transport
+18. [Sky dial](weather_sky.md): weather and sky
+19. [Safari panel](wild_animals.md): wild animals
 
 ---
 
@@ -213,30 +212,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 9. Number keypad
-
-**Topic:** numbers · **Widget:** Keypad
-
-## How to recognize it
-
-A keypad with the digits 0 to 9 and a small display that shows three digits.
-
-Words you can see on it: 0, 1, 3, 4, 5, 6, 7, 8, 9.
-
-The display is read from left to right.
-
-## Rules
-
-Read the rules in order. Do the first rule that is true.
-
-1. **If** the display shows 0: Type the display from smallest to largest.
-2. **If** the display shows 5: Add 1 to each number on the display and type the result (9 becomes 0).
-3. **If** the first digit is bigger than the last digit: Type the display in reverse order.
-4. **Otherwise:** Type the display as shown.
-
----
-
-# 10. Opposite levers
+# 9. Opposite levers
 
 **Topic:** opposites · **Widget:** Switches
 
@@ -259,7 +235,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 11. Crew badges
+# 10. Crew badges
 
 **Topic:** people and jobs · **Widget:** Picture buttons
 
@@ -281,7 +257,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 12. Animal panel
+# 11. Animal panel
 
 **Topic:** pets and farm animals · **Widget:** Picture buttons
 
@@ -304,7 +280,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 13. Room lights
+# 12. Room lights
 
 **Topic:** places · **Widget:** Switches
 
@@ -327,7 +303,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 14. School supplies
+# 13. School supplies
 
 **Topic:** school things · **Widget:** Picture buttons
 
@@ -350,7 +326,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 15. Sensor dial
+# 14. Sensor dial
 
 **Topic:** senses · **Widget:** Dial
 
@@ -374,7 +350,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 16. Time panel
+# 15. Time panel
 
 **Topic:** time words · **Widget:** Picture buttons · **Hard**
 
@@ -396,7 +372,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 17. Toy box
+# 16. Toy box
 
 **Topic:** toys and play · **Widget:** Picture buttons
 
@@ -419,7 +395,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 18. Travel dial
+# 17. Travel dial
 
 **Topic:** transport · **Widget:** Dial
 
@@ -441,7 +417,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 19. Sky dial
+# 18. Sky dial
 
 **Topic:** weather and sky · **Widget:** Dial
 
@@ -465,7 +441,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 20. Safari panel
+# 19. Safari panel
 
 **Topic:** wild animals · **Widget:** Picture buttons
 

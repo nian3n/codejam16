@@ -1,4 +1,4 @@
-# 19. Sky dial
+# 18. Sky dial
 
 **Topic:** weather and sky · **Widget:** Dial
 

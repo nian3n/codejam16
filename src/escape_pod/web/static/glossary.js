@@ -10,7 +10,9 @@ import { $, el, icon, store, wordOf, WIRE_COLORS } from "./core.js";
 // Digits are not in PopSign (spec 6.4). They show a still picture instead, when the team
 // has added one: signs/clips/pictures/index.json lists each picture with its source and
 // license (see the README there). The digits are still hand shapes, so a picture is enough.
-const HANDSHAPE_PAGES = new Set(["numbers"]);
+// The digits are on no manual page (the keypad left the pool), but the agent signs them at
+// the case lock, so the glossary lists them under their own topic. No 2: the code never has one.
+const LOCK_DIGITS = [..."013456789"];
 // The signs that run the capture (spec 6.2). Not on any manual page, so listed here.
 const CONTROL_SIGNS = { yes: "👍", no: "👎", finish: "🏁", next: "✋" };
 // "next" is our own separator pose (sequence.js), not an ASL word: no clip, a description instead.
@@ -59,7 +61,8 @@ export async function openGlossary(gloss = null) {
   }
   if (!entries.length) {
     entries = store.pages
-      .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic, still: HANDSHAPE_PAGES.has(p.id) })))
+      .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic })))
+      .concat(LOCK_DIGITS.map((g) => ({ gloss: g, word: wordOf(g), topic: "case lock", still: true })))
       .concat(Object.keys(CONTROL_SIGNS).map((g) => ({ gloss: g, word: g === "next" ? "next (both palms)" : g, topic: "game controls" })))
       .sort((a, b) => a.word.localeCompare(b.word));
   }

@@ -1,4 +1,4 @@
-# 15. Sensor dial
+# 14. Sensor dial
 
 **Topic:** senses · **Widget:** Dial
 

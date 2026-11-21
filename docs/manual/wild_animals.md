@@ -1,4 +1,4 @@
-# 20. Safari panel
+# 19. Safari panel
 
 **Topic:** wild animals · **Widget:** Picture buttons
 

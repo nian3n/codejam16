@@ -98,7 +98,7 @@ def _start_game(level="intermediate", *, open_gates=True, arm=True):
 
 
 def test_manual_and_icons_endpoints():
-    assert len(client.get("/api/manual").json()) == 20
+    assert len(client.get("/api/manual").json()) == 19
     assert "cow" in client.get("/api/icons").json()
 
 
@@ -813,15 +813,6 @@ def test_a_two_cut_answer_is_checked_click_by_click():
     assert s["strikes"] == 0 and s["chat"][-1]["text"] == "Module 1 defused!"
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
-
-
-def test_solo_keypad_questions_take_only_digits_and_core_signs():
-    code, a, s = _start_solo()
-    assert "bot_words" not in s  # naming a module: any word on the bomb
-    a.send_json({"type": "signs", "glosses": ["7"]})  # the keypad page
-    s = _bot_said(a, len(s["chat"]))
-    assert s["bot_words"] == sorted(list("013456789") + list(config.CORE_SIGNS))  # no 2 on the keypad
-    a.__exit__(None, None, None)
 
 
 def test_custom_level_sets_modules_and_time():

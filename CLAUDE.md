@@ -19,7 +19,7 @@ The game is inspired by *Keep Talking and Nobody Explodes*. Two players join one
 - **Defuser** (on screen: **Field agent**): sees the bomb, but not the manual. Signs what they see to the webcam, one sign at a time. Clicks the bomb to act.
 - **Expert** (on screen: **Handler**. The game no longer says "HQ": players did not know it means headquarters): sees the manual, but never the bomb. Reads the signs, finds the page and tells the defuser what to do in English text.
 
-Each game **draws modules from a pool of 20 puzzles**. **Every puzzle teaches a different vocabulary topic** (colors, numbers, animals and so on). Every word in a puzzle is a sign the recognizer knows (§5.1).
+Each game **draws modules from a pool of 19 puzzles**. **Every puzzle teaches a different vocabulary topic** (colors, animals, food and so on). Every word in a puzzle is a sign the recognizer knows (§5.1).
 
 One exchange:
 
@@ -230,14 +230,13 @@ class Verdict(BaseModel):
 
 ## 5. Puzzles (Teammate 4)
 
-### 5.1 The pool: 20 puzzles, 20 topics
+### 5.1 The pool: 19 puzzles, 19 topics
 
-All 20 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map, except the digits, which use the handshape classifier (§6.4). In November 2026, the `senses` puzzle replaced the `alphabet` (fingerspelling) puzzle: the game reads digits, not letters. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
+All 19 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map. In November 2026, the `senses` puzzle replaced the `alphabet` (fingerspelling) puzzle. Later that month, the `numbers` keypad puzzle left the pool: when a bomb had a keypad, the digits in the allowed words pulled the scores away from the other modules' signs. The digits are now signed only at the case lock (§4.2), with the digit model alone. The keypad widget code stays, and its tests use the old puzzle file in `tests/fixtures/numbers.json`. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
 
 | id | Topic | Widget | Pool (glosses) |
 |---|---|---|---|
 | `colors` | Colors | wires | red, blue, green, yellow, black, white, brown, orange |
-| `numbers` | Numbers 0–9 | keypad | 0, 1, 3–9 (handshapes). No 2: the digit model rarely reads it. The keys still include 2, which "add 1" can type |
 | `pets_farm` | Pets and farm animals | icons | cat, dog, cow, pig, horse, duck, hen, donkey |
 | `senses` | Senses | dial | see, look, hear, listen, taste, touch, smile, think |
 | `wild_animals` | Wild animals | icons | lion, tiger, zebra, giraffe, elephant, alligator, wolf, owl |
@@ -258,7 +257,7 @@ All 20 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the
 | `time_words` | Time words | icons | morning, night, now, later, yesterday, tomorrow |
 
 - Hard puzzles: `feelings`, `time_words`.
-- Each module shows 4 items from its pool. Keypads show 3, dials show 4–5.
+- Each module shows 4 items from its pool. Dials show 4–5. (A keypad showed 3.)
 - Instructions name targets with the topic's own words. The colors puzzle says "the blue wire", not "the second wire".
 - Signs with motion are fine, because the word model reads whole clips. Only the handshape classifier is limited to still signs. The digits 0–9 are all still signs.
 
@@ -318,7 +317,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 **Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the sequence capture (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the sequence capture (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). At the case lock, the allowed words are digits only, and the server reads them with the digit model alone (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
 
 ### 6.1 Pipeline
 
@@ -402,12 +401,11 @@ Choosing among 10 signs is much more reliable than among 250.
 
 ### 6.4 Numbers (handshape classifier)
 
-The word model does not cover numbers. A second, small model reads the digits from one hand's shape.
+The word model does not cover numbers. A second, small model reads the digits from one hand's shape. Since the keypad left the pool, the game uses it only at the case lock.
 
 - **Model (November 2026):** the ready-made "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp` on Hugging Face, CC BY-NC 4.0). It scores 36 still hand shapes (0–9, A–Z) from 21 MediaPipe hand points, trained on the ASL-HG dataset. The game uses only the 10 digit scores. `uv run download-models` gets the ONNX file and converts it once to NumPy weights (`models/digits/asl_mlp.npz`, `vision/digit_mlp.py`). The server needs no ONNX runtime.
 - **Features:** the signing hand's 21 points, moved to the wrist and divided by the 3-D length from the wrist to the middle-finger knuckle, as the model card says. The code averages them over the steadiest 5 frames. A left hand is mirrored to a right hand.
-- **Mixing:** `rank_mixed` in `vision/recognizer.py`. The word model's probability for the allowed words stays with those words. The rest goes to the digits, split by the digit model. `/api/practice/guess` mixes when the allowed set has digits.
-- **Solo:** while the bot is on the keypad page, the state has `bot_words` (the digits and the core signs), and the page offers only those.
+- **Mixing:** `rank_mixed` in `vision/recognizer.py`. The word model's probability for the allowed words stays with those words. The rest goes to the digits, split by the digit model. `/api/practice/guess` mixes when the allowed set has digits and words. No game screen asks for that now: the case lock asks for digits only.
 - **Fallback:** our own k-NN (`vision/handshape.py`, `uv run record-digits` and `uv run train-digits`) loads only when the downloaded model is missing.
 - **Not measured yet:** the model card reports 100 % on its own dataset. Check it with our cameras and hands (§6.5).
 
@@ -423,8 +421,8 @@ The word model does not cover numbers. A second, small model reads the digits fr
 
 The expert's manual already highlights the pages that contain the signed words (`pagesFor` in `manual_view.js`). Each gloss is in one pool only, so this vote is exact. Embedding retrieval matters only when the LLM alien plays the expert:
 
-- **Index:** for each puzzle, embed `title + looks_like + "Words: " + pool` with `all-MiniLM-L6-v2`. Build the 20 vectors at startup.
-- **Query:** the confirmed glosses joined into a string ("cat dog cow pig"). Search all 20 pages.
+- **Index:** for each puzzle, embed `title + looks_like + "Words: " + pool` with `all-MiniLM-L6-v2`. Build the 19 vectors at startup.
+- **Query:** the confirmed glosses joined into a string ("cat dog cow pig"). Search all 19 pages.
 - **Decision:** best score under `config.RETRIEVAL_MIN_SCORE` → `ask_more`. Top two within `config.RETRIEVAL_MARGIN` → `ask_which`. Otherwise, answer.
 - Also compute the vote (the puzzle that owns most glosses). If the vote and the embeddings disagree, trust the vote.
 
@@ -475,7 +473,7 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role (in a solo room, at once). No hint line sits under Start. A solo lobby shows no room code and no invite link. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
 - **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to <handler name>" and the message feed.
-- **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
+- **Game, expert:** the manual. It has an index of the 19 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Initializing (both roles):** after Start, an "INITIALIZING" screen covers the game, and the timer holds the full time. The agent's browser loads the hand tracker and asks the server to load the word model (`GET /api/practice/warmup`), then sends `ready` (`static/init.js`). The screen then shows "GET READY" and a 3-2-1 for both players, so signing never goes live without warning. The server also loads the model in the background when it starts, because the first load takes about 6 s.
 - **Mission (both roles):** when the clock starts, the agent first opens a closed case: they sign the 3 digits on its tag (the case lock). Then they cut 4 wires in a tray, in the order that the handler reads from the manual (the wire tray). The module board opens after the tray. The gates share the board's timer and strikes.
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
