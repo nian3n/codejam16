@@ -30,6 +30,7 @@ from fastapi.staticfiles import StaticFiles
 
 from escape_pod import config
 from escape_pod.brain.hq_bot import BOT_NAME, HqBot
+from escape_pod.brain.hq_voice import mood, nervous
 from escape_pod.manual.build import all_pages
 from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
@@ -93,6 +94,7 @@ class Room:
     # "Initializing": the clock waits until the agent's browser has loaded the hand tracker
     # and the server has loaded the word model ({"type": "ready"}), or ARM_TIMEOUT_S.
     armed: bool = False
+    voice_rng: random.Random = field(default_factory=random.Random)  # the solo bot's nervous words
     timer_s: float = 0.0
     last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
     # Solo: one human (the defuser) and the scripted bot in the HQ seat. The bot is not
@@ -279,7 +281,9 @@ def leave(room: Room, me: Player):
 
 
 def bot_say(room: Room, text: str) -> None:
-    room.say({"kind": "say", "from": BOT_NAME, "text": text})
+    # The bot's sentence stays word for word; hq_voice only adds nervous words around it.
+    level = mood(room.strikes, room.remaining(), room.timer_s or 1.0)
+    room.say({"kind": "say", "from": BOT_NAME, "text": nervous(text, level, room.voice_rng)})
 
 
 def bot_later(room: Room, answer: Callable[[], str | None]) -> None:

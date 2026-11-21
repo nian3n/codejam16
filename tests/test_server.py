@@ -352,7 +352,7 @@ def _talk(code, ws, s, m):
 def test_solo_room_starts_with_one_player_and_greets():
     _, a, s = _start_solo()
     last = s["chat"][-1]
-    assert (last["kind"], last["from"], last["text"]) == ("say", BOT_NAME, HqBot().greeting())
+    assert (last["kind"], last["from"]) == ("say", BOT_NAME) and HqBot().greeting() in last["text"]
     assert s["bot_stage"] == "module" and len(s["players"]) == 1
     a.__exit__(None, None, None)
 
@@ -364,7 +364,7 @@ def test_solo_bot_answers_signs():
     a.send_json({"type": "signs", "glosses": [item]})
     s2 = _bot_said(a, len(s["chat"]))
     assert s2["chat"][-2]["kind"] == "signs"
-    assert s2["chat"][-1]["text"].startswith(f"That is the {first['title']}.")
+    assert f"That is the {first['title']}." in s2["chat"][-1]["text"]
     assert s2["bot_stage"] == "details"
     a.__exit__(None, None, None)
 
@@ -385,7 +385,7 @@ def test_solo_strike_gets_a_bot_reply():
     s = _talk(code, a, s, m)
     a.send_json({"type": "act", "module": 0, "action": {"verb": "nope", "target": {}}})
     s = _drain(a, lambda s: s["strikes"] == 1 and s["chat"][-1].get("from") == BOT_NAME)
-    assert s["chat"][-1]["text"].startswith(f"That was a strike. Let us check the {m.spec.title} again.")
+    assert f"That was a strike. Let us check the {m.spec.title} again." in s["chat"][-1]["text"]
     assert s["bot_stage"] == "details"
     a.__exit__(None, None, None)
 
@@ -419,7 +419,7 @@ def test_solo_again_starts_a_fresh_bot():
     assert "bot_stage" not in s and s["can_start"]
     a.send_json({"type": "start"})
     s = _drain(a, lambda s: s["phase"] == "playing")
-    assert s["bot_stage"] == "module" and s["chat"][-1]["text"] == HqBot().greeting()
+    assert s["bot_stage"] == "module" and HqBot().greeting() in s["chat"][-1]["text"]
     a.__exit__(None, None, None)
 
 
