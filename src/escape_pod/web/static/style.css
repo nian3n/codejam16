@@ -109,6 +109,12 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .level { border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; cursor: pointer; text-align: center; min-width: 140px; }
 .level.on { border-color: var(--acc); background: var(--acc-bg); }
 .level small { display: block; color: var(--dim); }
+.level.custom { display: grid; gap: 4px; }
+.stepper { display: grid; grid-template-columns: 4.2em auto 3.4em auto; align-items: center; gap: 6px; font-size: .85rem; }
+.stepper-label { color: var(--dim); text-align: left; }
+.stepper-value { font-family: var(--mono); }
+.stepper .btn { padding: 0 8px; min-width: 26px; }
+.stepper .btn[disabled] { opacity: .35; cursor: default; }
 
 /* ---------- game layout ---------- */
 .topbar {

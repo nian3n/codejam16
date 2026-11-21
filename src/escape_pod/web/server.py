@@ -85,6 +85,8 @@ class Room:
     players: dict[str, Player] = field(default_factory=dict)
     phase: Literal["lobby", "playing", "escaped", "boom"] = "lobby"
     level: str = "intermediate"
+    custom_modules: int = 3     # the "custom" level (config.custom_level)
+    custom_timer_s: int = 600
     seed: int = 0
     modules: list[Module] = field(default_factory=list)
     strikes: int = 0
@@ -161,8 +163,10 @@ def view(room: Room, me: Player) -> dict:
                     for p in room.players.values()],
         "phase": room.phase,
         "level": room.level,
-        "levels": {k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
-                   for k, l in config.LEVELS.items()},
+        "levels": {**{k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
+                      for k, l in config.LEVELS.items()},
+                   "custom": {"modules": room.custom_modules, "timer_s": room.custom_timer_s, "hard": False,
+                              "range": {"modules": config.CUSTOM_MODULES, "timer_s": config.CUSTOM_TIMER_S}}},
         "can_start": room.can_start(),
         "remaining_s": round(room.remaining(), 2),
         "armed": room.armed,
@@ -257,8 +261,14 @@ async def watch_timer(room: Room):
             await broadcast(room)
 
 
+def room_level(room: Room) -> config.Level:
+    if room.level == "custom":
+        return config.custom_level(room.custom_modules, room.custom_timer_s)
+    return config.LEVELS[room.level]
+
+
 def start_game(room: Room):
-    level = config.LEVELS[room.level]
+    level = room_level(room)
     room.seed = random.randrange(1_000_000)
     room.modules = draw(random.Random(room.seed), level)
     room.strikes = 0
@@ -400,6 +410,16 @@ async def handle(room: Room, me: Player, msg: dict):
             me.role = role
     elif kind == "level" and room.phase == "lobby" and msg.get("level") in config.LEVELS:
         room.level = msg["level"]
+    elif kind == "level" and room.phase == "lobby" and msg.get("level") == "custom":
+        # Optional "modules" and "timer_s"; a value out of range (or not an int) is ignored.
+        n, t = msg.get("modules"), msg.get("timer_s")
+        lo, hi = config.CUSTOM_MODULES
+        if type(n) is int and lo <= n <= hi:
+            room.custom_modules = n
+        lo, hi = config.CUSTOM_TIMER_S
+        if type(t) is int and lo <= t <= hi:
+            room.custom_timer_s = t
+        room.level = "custom"
     elif kind == "start" and room.can_start():
         start_game(room)
     elif kind == "signs" and room.phase == "playing" and me.role == "defuser":

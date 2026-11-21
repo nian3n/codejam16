@@ -32,7 +32,7 @@ let nextId = 1;
 let note = "";         // a short status line under the buttons
 
 // Chips live in store.local, so a new game (resetLocal) starts with none.
-// {id, state: "pending" | "done" | "unclear" | "error", guesses, pick, text, typed}
+// {id, state: "pending" | "done" | "unclear" | "error", guesses, pick, text}
 const chips = () => (store.local.signChips ??= []);
 
 /**
@@ -53,21 +53,11 @@ function recording() { return seq.phase !== "idle"; }
 export function signComposer() {
   stopRecording();
   note = "";
-  const typed = el("input", { placeholder: "Type a sign, press Enter", list: "glosses", autocomplete: "off", id: "type-sign" });
-  typed.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    e.stopPropagation();  // the document handler below would send at once
-    if (!typed.value.trim()) { sendSigns(); return; }  // Enter on an empty field sends, as elsewhere
-    const g = typed.value.trim().toLowerCase().replace(/\s+/g, "");
-    if (g && chips().length < MAX_SIGNS) chips().push({ id: nextId++, state: "done", guesses: [], pick: g, typed: true });
-    typed.value = "";
-    renderSignChips();
-  });
-  const all = [...new Set(store.pages.flatMap((p) => p.glosses))].sort();
+  // Signs come from the camera only: the team dropped the typed fallback (Nov 2026).
+  // Solo needs no hint here; the bot's question says what to sign.
   return el("div", { class: "composer sign-composer" },
-    el("div", { class: "label", text: store.state?.solo
-      ? `Answer ${store.state.bot_name}: sign to your camera, one sign at a time. YES and NO work too.`
-      : "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at." }),
+    store.state?.solo ? null : el("div", { class: "label", text:
+      "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at." }),
     el("div", { class: "seq-banner hidden", id: "game-banner", "aria-live": "polite" }),
     el("div", { class: "sign-buttons" },
       el("button", { class: "btn primary", id: "sign-record", text: "Start signing (Space)", onclick: toggleRecording }),
@@ -75,11 +65,7 @@ export function signComposer() {
     el("div", { class: "label sign-note", id: "sign-note" }),
     el("div", { class: "sign-frame hidden", id: "sign-frame" }),
     el("div", { class: "seq-chips", id: "sign-chips" }),
-    el("button", { class: "btn primary", id: "send-signs", text: `Send to ${handlerName()} (Enter)`, onclick: sendSigns }),
-    el("details", { class: "type-instead" },
-      el("summary", { text: "No camera? Type the signs instead" }),
-      typed,
-      el("datalist", { id: "glosses" }, all.map((g) => el("option", { value: g })))));
+    el("button", { class: "btn primary", id: "send-signs", text: `Send to ${handlerName()} (Enter)`, onclick: sendSigns }));
 }
 
 /** Who reads the signs: the bot's name in a solo game, else the handler player's name. */
@@ -104,13 +90,13 @@ function toggleRecording() {
 async function startRecording() {
   if (recording() || store.state?.phase !== "playing") return;
   const video = localCameraVideo();
-  if (!video) { setNote("Turn your camera on to sign. Or type the signs below."); return; }
+  if (!video) { setNote("Turn your camera on to sign."); return; }
   const id = ++run;
   if (!trackerLoaded()) setNote("Loading the hand tracker (only the first time)…");
   try {
     await startTracker();
   } catch (error) {
-    setNote(error.message || "The hand tracker could not start. Type the signs below.");
+    setNote(error.message || "The hand tracker could not start. Reload the page to try again.");
     return;
   }
   if (run !== id) return;
@@ -140,7 +126,7 @@ async function loop(id) {
       handle(seq.push(performance.now(), landmarks, packLandmarks(landmarks)));
     }
   } catch {
-    if (run === id) { stopRecording(); setNote("Hand tracking stopped. Start signing again, or type the signs below."); }
+    if (run === id) { stopRecording(); setNote("Hand tracking stopped. Start signing again."); }
   }
 }
 
@@ -196,7 +182,6 @@ function chipView(chip, i) {
     const text = chip.state === "unclear" ? "Unclear, sign again" : chip.text;
     return el("div", { class: "chip bad" }, head, el("span", { class: "chip-main", text }), remove);
   }
-  if (chip.typed) return el("div", { class: "chip" }, head, el("span", { class: "chip-main", text: `${wordOf(chip.pick).toUpperCase()} (typed)` }), remove);
   const options = chip.guesses.map((g) => el("button", {
     class: "chip-opt" + (g.gloss === chip.pick ? " on" : ""),
     text: `${wordOf(g.gloss).toUpperCase()} ${Math.round(g.score * 100)}%`,
@@ -231,8 +216,8 @@ export function renderSignChips() {
   frame.textContent = store.state?.bot_stage === "details" ? "My answer:" : "I need help with:";
 }
 
-// Enter sends the chips to HQ. Outside text fields only: Enter in the typed-sign field adds a
-// chip (and sends when the field is empty). On a focused button it sends too, instead of
+// Enter sends the chips to the handler. Outside text fields only, so Enter in the glossary
+// search still works as usual. On a focused button it sends too, instead of
 // clicking that button again: the player's hands are busy, Enter is the one key to find.
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" || !$("#send-signs") || $("#game").classList.contains("hidden")) return;

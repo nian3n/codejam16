@@ -83,7 +83,7 @@ MAX_STRIKES = 3
 
 @dataclass(frozen=True)
 class Level:
-    name: Literal["beginner", "intermediate", "advanced"]
+    name: Literal["beginner", "intermediate", "advanced", "custom"]
     modules: int
     allow_hard: bool
     timer_s: int | None
@@ -102,3 +102,13 @@ LEVELS = {
     "intermediate": Level("intermediate", 4, False, 300, "bomb", True, False, True),
     "advanced": Level("advanced", 4, True, 180, "all", False, False, False),
 }
+
+# The lobby's "Custom" level: the players pick the module count and the time. Everything
+# else is as at Intermediate (no hard puzzles, the bomb's words). 5 modules is the most
+# the bomb case holds (2 rows of 3 slots, one is the timer).
+CUSTOM_MODULES = (1, 5)
+CUSTOM_TIMER_S = (60, 1200)  # 1 to 20 minutes
+
+
+def custom_level(modules: int, timer_s: int) -> Level:
+    return Level("custom", modules, False, timer_s, "bomb", True, False, True)

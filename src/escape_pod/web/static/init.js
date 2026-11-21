@@ -7,9 +7,8 @@
 // shows. When both are done it sends {"type": "ready"}. The server then counts 3-2-1
 // (countdown_s in the state, so both players see the same count) and starts the clock
 // (server.py arm). Without the count, signing went live with no warning. The handler
-// sees the same screen until then. A step that fails does not block
-// the game: the typed fallback still works, and the server starts the clock after
-// ARM_TIMEOUT_S anyway.
+// sees the same screen until then. A step that fails does not block the game: the
+// server starts the clock after ARM_TIMEOUT_S anyway.
 import { $, el, send, store } from "./core.js";
 import { startTracker } from "./tracker.js";
 
@@ -30,8 +29,8 @@ function draw() {
   }
   const st = store.local.init || { tracker: "wait", model: "wait" };
   box.replaceChildren(
-    row("Hand tracker", st.tracker, "not available. You can type the signs instead."),
-    row("Sign model", st.model, "not available. You can type the signs instead."));
+    row("Hand tracker", st.tracker, "not available. Check the camera, then reload the page."),
+    row("Sign model", st.model, "not available. Reload the page to try again."));
 }
 
 async function run() {

@@ -14,10 +14,9 @@
   <section id="home" class="screen">
     <div class="card home-card">
       <h1 class="logo">KEEP MOVING<span>and nobody explodes</span></h1>
-      <p class="tag">No words. Only hands. Keep moving.</p>
       <label>Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="off"></label>
       <button id="create" class="btn primary">Create a room</button>
-      <button id="create-solo" class="btn">Play solo (with Rob, a bot handler)</button>
+      <button id="create-solo" class="btn">Play solo</button>
       <div class="or">or join a friend</div>
       <div class="row">
         <input id="code" maxlength="4" placeholder="CODE" autocomplete="off" class="code-input">
@@ -105,7 +104,6 @@
       <div id="lobby-video"></div>
       <div class="levels" id="levels"></div>
       <button id="start" class="btn primary big" disabled>Start the game</button>
-      <p id="lobby-hint" class="hint"></p>
       <p id="lobby-note" class="hint note"></p>
     </div>
   </section>
@@ -115,7 +113,7 @@
     <header class="topbar">
       <div class="op">
         <span id="op-line" class="op-line"></span>
-        <span class="op-sub">Room <b id="game-code"></b> · <span id="game-role"></span></span>
+        <span class="op-sub"><span id="game-room">Room <b id="game-code"></b> · </span><span id="game-role"></span></span>
       </div>
       <div class="top-timer" id="top-timer">0:00</div>
       <div id="top-strikes" class="strikes"></div>

@@ -40,7 +40,7 @@
   "tv": {"emoji": "📺"}, "radio": {"emoji": "📻"}, "refrigerator": {"emoji": "🧊", "caption": true},
   "drawer": {"emoji": "🗄️", "caption": true},
 
-  "bedroom": {"emoji": "🛏️", "caption": true}, "backyard": {"emoji": "🌳", "caption": true},
+  "bedroom": {"emoji": "🏠", "caption": true}, "backyard": {"emoji": "🌳", "caption": true},
   "pool": {"emoji": "🏊", "caption": true}, "store": {"emoji": "🏪", "caption": true},
   "farm": {"emoji": "🚜", "caption": true}, "outside": {"emoji": "🏞️", "caption": true},
   "stairs": {"emoji": "🪜", "caption": true}, "closet": {"emoji": "🚪", "caption": true},

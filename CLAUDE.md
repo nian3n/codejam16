@@ -167,7 +167,7 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | Client sends | Who | Phase |
 |---|---|---|
 | `{"type": "role", "role": "defuser" \| "expert"}` | anyone | lobby |
-| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}` | anyone | lobby |
+| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}`, or `{"type": "level", "level": "custom", "modules": 1-5, "timer_s": 60-1200}` (both fields optional, out-of-range values ignored) | anyone | lobby |
 | `{"type": "start"}` | anyone, when both roles are taken | lobby |
 | `{"type": "signs", "glosses": ["cat", "dog"]}` | defuser | playing |
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
@@ -314,7 +314,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 **Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). A "Type the signs instead" fallback stays under the chips for a missing camera.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
 
 ### 6.1 Pipeline
 
@@ -449,6 +449,8 @@ The expert's manual already highlights the pages that contain the signed words (
 | Briefing before the bomb | yes, each topic's signs shown and practiced | yes, shown only | no |
 | Sign cards beside the camera | yes | no | no |
 
+**Custom level:** the lobby also has a "Custom" card. The players pick 1 to 5 modules and 1 to 20 minutes, in 1-minute steps. All other settings are as at Intermediate (`config.custom_level`, `CUSTOM_MODULES`, `CUSTOM_TIMER_S`).
+
 ### 9.2 Features (M5)
 
 - **Briefing:** before the timer starts, show each drawn module's topic and its signs as looping animations.
@@ -465,10 +467,10 @@ The expert's manual already highlights the pages that contain the signed words (
 `HOME → LOBBY → GAME → END → LOBBY`
 
 - **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`, and the package name `escape_pod`.
-- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Play solo (with Rob, a bot handler)** makes a solo room (§4.2). The bot is named Rob (`hq_bot.BOT_NAME`, sent as `bot_name` in the state). Its lobby shows the level picker, Start and the player's own camera, so they can frame their hands. The game also shows the own camera full size. Above the sign chips, a line shows the bot's template: "I need help with:" (name a module with one item) or "My answer:" (the answer to the bot's question). **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
-- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
+- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Play solo** makes a solo room (§4.2). The bot is named Rob (`hq_bot.BOT_NAME`, sent as `bot_name` in the state). Its lobby shows the level picker, Start and the player's own camera, so they can frame their hands. The game also shows the own camera full size. Above the sign chips, a line shows the bot's template: "I need help with:" (name a module with one item) or "My answer:" (the answer to the bot's question). **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
+- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role (in a solo room, at once). No hint line sits under Start. A solo lobby shows no room code and no invite link. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
-- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to <handler name>", a typed fallback and the message feed.
+- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to <handler name>" and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Initializing (both roles):** after Start, an "INITIALIZING" screen covers the game, and the timer holds the full time. The agent's browser loads the hand tracker and asks the server to load the word model (`GET /api/practice/warmup`), then sends `ready` (`static/init.js`). The screen then shows "GET READY" and a 3-2-1 for both players, so signing never goes live without warning. The server also loads the model in the background when it starts, because the first load takes about 6 s.
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
@@ -567,7 +569,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 4. **M4: assets and polish.** CC0 icons and module art in place of emoji, sounds, a credits screen.
 5. **M5: learner support and media.** Glossary, signer recordings turned into animations, briefing, sign cards, round report, progress file.
 6. **M6: LLM alien (phase 2).** Retrieval, the answer call, `verify()`, `--mock-llm`, as in §7 and §8.
-7. **M7: demo hardening.** Test with people outside the team and in venue lighting. Latency within target. A typed-sign fallback if the camera fails. A recorded backup run.
+7. **M7: demo hardening.** Test with people outside the team and in venue lighting. Latency within target. A plan for a camera that fails (the typed fallback was removed in November 2026). A recorded backup run.
 
 ---
 

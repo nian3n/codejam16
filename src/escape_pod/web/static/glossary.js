@@ -43,7 +43,7 @@ export function bindGlossary() {
   $("#open-glossary").onclick = toggleGlossary;  // in the top bar, for both roles
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && isOpen()) { closeGlossary(); return; }
-    // G opens and closes it during a game, but never while the player types (search, reply, typed signs).
+    // G opens and closes it during a game, but never while the player types (search, reply).
     if (e.key.toLowerCase() !== "g" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if ($("#game").classList.contains("hidden") || ["INPUT", "SELECT", "TEXTAREA"].includes(e.target?.tagName)) return;
     e.preventDefault();
@@ -80,11 +80,13 @@ function render() {
   const q = query.trim().toLowerCase();
   const shown = entries.filter((e) => !q || e.word.includes(q) || e.gloss.includes(q) || e.topic.includes(q));
   // Thumb index: one tab per letter that has words; a tab jumps the list to that letter.
-  const letters = [...new Set(entries.map((e) => e.word[0].toUpperCase()))];
+  // The digits share one section, "0-9": ten one-word sections took too much room.
+  const section = (w) => (/^\d/.test(w) ? "0-9" : w[0].toUpperCase());
+  const letters = [...new Set(entries.map((e) => section(e.word)))];
   const list = el("div", { class: "gl-list" });
   let last = "";
   for (const e of shown) {
-    const L = e.word[0].toUpperCase();
+    const L = section(e.word);
     if (L !== last) { list.append(el("div", { class: "gl-letter", id: `gl-${L}`, text: L })); last = L; }
     list.append(el("button", { class: "gl-row" + (e.gloss === current ? " open" : ""), onclick: () => { current = e.gloss; render(); } },
       mark(e.gloss, "gl-emoji"),

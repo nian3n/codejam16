@@ -31,7 +31,7 @@ export function renderFeed() {
   local.chatSeen = seen;
 }
 
-// The field agent's composer (webcam signs, with a typed fallback) is in game_signs.js.
+// The field agent's composer (webcam signs) is in game_signs.js.
 export { signComposer as defuserComposer, renderSignChips } from "./game_signs.js";
 
 export function expertComposer() {
