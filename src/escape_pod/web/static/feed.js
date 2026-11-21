@@ -42,7 +42,6 @@ export function defuserComposer() {
     input.focus();
   } });
   return el("div", { class: "composer" },
-    el("div", { class: "cam-box", text: "Webcam sign recognition comes next. For now, type each sign." }),
     el("div", { class: "label", text: "Sign what you see, one sign at a time. Dial: sign each picture clockwise from the top, then the one the needle points at." }),
     input,
     el("datalist", { id: "glosses" }, all.map((g) => el("option", { value: g }))),

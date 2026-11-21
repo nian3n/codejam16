@@ -13,12 +13,17 @@ import { bindLobby, renderLobby } from "./lobby.js";
 import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
+import { renderGuided, resetGuided, roleName } from "./guided.js";
+import { enterPractice, leavePractice } from "./practice.js";
+import { receiveVideo, syncVideo } from "./room_video.js";
 import { updateFaces } from "./widgets/big_button.js";
 
 let code = null;
 let closedOnPurpose = false;
 
 async function boot() {
+  $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
+  $("#close-practice").onclick = () => showScreen("home");
   const [icons, pages] = await Promise.all([
     fetch("/api/icons").then((r) => r.json()),
     fetch("/api/manual").then((r) => r.json()),
@@ -29,19 +34,30 @@ async function boot() {
   $("#name").value = localStorage.getItem("ep:name") || "";
   const q = new URLSearchParams(location.search).get("room");
   if (q) $("#code").value = q.toUpperCase();
-  $("#create").onclick = async () => {
+  async function createRoom(mode) {
     if (!saveName()) return;
-    const r = await fetch("/api/rooms", { method: "POST" }).then((r) => r.json());
+    const r = await fetch(`/api/rooms?mode=${mode}`, { method: "POST" }).then((r) => r.json());
     connect(r.code);
-  };
+  }
+  $("#create").onclick = () => createRoom("classic");
+  $("#create-guided").onclick = () => createRoom("guided");
   $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
   $("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#join").click(); });
   $("#again").onclick = () => send({ type: "again" });
   bindLobby();
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
-  // Reloading the page with ?room=CODE and a saved player id rejoins the same seat.
-  if (q && localStorage.getItem(`ep:pid:${q.toUpperCase()}`)) connect(q.toUpperCase());
+  // Keep seats per tab so two tabs can play different roles on the same laptop.
+  if (q) {
+    const room = q.toUpperCase();
+    const key = `ep:pid:${room}`;
+    const pid = sessionStorage.getItem(key) || localStorage.getItem(key);
+    if (pid) {
+      sessionStorage.setItem(key, pid);
+      localStorage.removeItem(key);
+      connect(room);
+    }
+  }
 }
 
 function saveName() {
@@ -58,38 +74,58 @@ function connect(c) {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/${c}`);
   store.ws = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: localStorage.getItem(`ep:pid:${c}`), name: localStorage.getItem("ep:name") }));
+  const key = `ep:pid:${c}`;
+  const name = $("#name").value.trim();
+  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: sessionStorage.getItem(key), name }));
   ws.onmessage = (e) => {
+    if (store.ws !== ws) return;
     const m = JSON.parse(e.data);
     if (m.type === "welcome") {
-      localStorage.setItem(`ep:pid:${c}`, m.pid);
+      sessionStorage.setItem(key, m.pid);
       history.replaceState(null, "", `/?room=${c}`);
     } else if (m.type === "error") {
       closedOnPurpose = true;
+      syncVideo(null);
       showScreen("home");
       $("#home-error").textContent = m.text;
     } else if (m.type === "state") onState(m);
+    else if (m.type === "video") void receiveVideo(m);
   };
-  ws.onclose = () => { if (!closedOnPurpose && store.state) setTimeout(() => connect(code), 1500); };
+  ws.onclose = (event) => {
+    if (store.ws !== ws) return;
+    syncVideo(null);
+    if (event.code === 4000) {
+      showScreen("home");
+      $("#home-error").textContent = "This seat is open in another tab.";
+    } else if (!closedOnPurpose && store.state) {
+      setTimeout(() => { if (store.ws === ws) connect(code); }, 1500);
+    }
+  };
 }
 
 function showScreen(id) {
-  for (const s of ["home", "lobby", "game"]) $("#" + s).classList.toggle("hidden", s !== id);
+  if (id !== "practice" && !$("#practice").classList.contains("hidden")) leavePractice();
+  if (id !== "game") {
+    $("#end").classList.add("hidden");
+    resetGuided();
+  }
+  for (const s of ["home", "lobby", "game", "practice"]) $("#" + s).classList.toggle("hidden", s !== id);
 }
 
 function onState(s) {
   const prev = store.state;
   store.state = s;
+  syncVideo(s);
   store.deadlineAt = performance.now() + s.remaining_s * 1000;
   if (s.phase === "lobby") {
     showScreen("lobby");
     renderLobby();
   } else {
     showScreen("game");
-    if (!prev || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
+    if (!prev || prev.code !== s.code || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
     renderGame();
   }
-  const over = s.phase === "escaped" || s.phase === "boom";
+  const over = !s.guided && (s.phase === "escaped" || s.phase === "boom");
   $("#end").classList.toggle("hidden", !over);
   if (over) renderEnd();
   if (prev && prev.phase === "playing" && s.strikes > prev.strikes) flashStrike();
@@ -109,15 +145,27 @@ function setupGame() {
   resetLocal();
   const s = store.state;
   $("#game-code").textContent = s.code;
-  $("#game-role").textContent = s.me.role === "defuser" ? "💣 Defuser" : "📖 Expert";
-  $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
+  $("#game").classList.toggle("guided-mode", !!s.guided);
+  $("#game").classList.toggle("guided-decoder", !!s.guided && s.me.role === "expert");
+  $("#game-role").textContent = s.guided ? roleName(s.me.role, s.guided.swapped) : s.me.role === "defuser" ? "💣 Defuser" : "📖 Expert";
+  $("#top-strikes").classList.toggle("hidden", !!s.guided);
+  $("#composer").replaceChildren();
   const bar = $(".topbar");
   bar.querySelector(".dbg")?.remove();
+  if (s.guided) return;
+  $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
   if (s.debug) bar.append(el("a", { class: "btn small dbg", href: `/api/rooms/${s.code}/answer-key`, target: "_blank", text: "Answer key (debug)" }));
 }
 
 function renderGame() {
   const s = store.state;
+  if (s.guided) {
+    $("#top-progress").textContent = s.guided.step === "practice" || s.guided.step === "ready"
+      ? "Practice round"
+      : `${s.guided.solved} / ${s.guided.total} clues solved`;
+    renderGuided(s);
+    return;
+  }
   $("#top-strikes").replaceChildren(...Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") })));
   $("#top-progress").textContent = s.progress ? `Defused ${s.progress.defused} / ${s.progress.total}` : "";
   if (s.me.role === "defuser") renderBomb();
@@ -130,9 +178,13 @@ function renderGame() {
 function tickTimer() {
   const s = store.state;
   if (!s) return;
+  if (s.guided && ["practice", "ready", "untimed"].includes(s.guided.step)) {
+    $("#top-timer").textContent = "Untimed";
+    return;
+  }
   const left = s.phase === "playing" ? Math.max(0, (store.deadlineAt - performance.now()) / 1000) : s.remaining_s;
   const t = fmt(Math.ceil(left));
-  $("#top-timer").textContent = t;
+  $("#top-timer").textContent = s.guided?.step === "unlocked" && left === 0 ? "Unlocked" : t;
   const seg = $(".seg");
   if (seg) seg.textContent = t;
 }

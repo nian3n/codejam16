@@ -1,0 +1,180 @@
+/* Owner: Teammate 1 (Game, scenes, widgets) */
+.guided-mode {
+  background: radial-gradient(ellipse at 46% 25%, #172a36 0, #101620 38%, #090d14 78%);
+}
+.guided-mode .topbar {
+  border-bottom-color: #2c424d;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  gap: 12px;
+}
+.guided-mode .top-timer {
+  color: #8cebd7;
+  text-shadow: 0 0 16px #5ee0c848;
+  font-variant-numeric: tabular-nums;
+}
+.guided-mode .game-main {
+  grid-template-columns: minmax(0, 1fr) minmax(250px, .42fr);
+  grid-template-areas: "stage video";
+  max-width: 1540px;
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 40px);
+  gap: clamp(16px, 3vw, 40px);
+  height: auto;
+}
+.guided-decoder .game-main {
+  grid-template-columns: minmax(0, 1.65fr) minmax(315px, 1fr);
+  grid-template-areas: "video stage";
+}
+.guided-mode #stage { grid-area: stage; overflow: visible; }
+.guided-mode .side { grid-area: video; display: block; }
+.guided-mode #feed, .guided-mode #composer { display: none; }
+.guided-mode .camera-panel {
+  background: #131b25;
+  border-color: #334957;
+  position: sticky;
+  top: 76px;
+}
+.camera-actions, .guided-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.guided-mode .camera-views { grid-template-columns: 1fr; }
+.guided-mode .camera-video { object-fit: contain; background: #111923; }
+.guided-mode .local-view { width: min(100%, 168px); }
+.guided-decoder .peer-view {
+  border-radius: 10px;
+  background: #0d151e;
+  border: 1px solid #334957;
+  overflow: hidden;
+}
+.guided-decoder .peer-view:not(:has(video:not(.hidden))) {
+  min-height: clamp(150px, 31vw, 460px);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding-inline: 12px;
+}
+.guided-decoder .peer-view .camera-status { padding: 0 10px 10px; }
+.guided-decoder .peer-view .camera-video { max-height: 64vh; }
+.guided-content {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(16px, 2.5vw, 30px);
+  min-width: 0;
+  border: 1px solid #344951;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #1b2831, #141e29 74%);
+  box-shadow: inset 0 1px 0 #93ecdb14, 0 18px 44px #0004;
+}
+.guided-content h2, .guided-content h3, .guided-content p { margin: 0; }
+.guided-content > .btn { justify-self: start; }
+.guided-note { color: #b8c4d5; line-height: 1.5; }
+.guided-feedback { color: #ffd483; font-weight: 700; }
+.guided-feedback:empty { display: none; }
+.guided-feedback[data-result="correct"] { color: #8af4c8; }
+.private-clue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-radius: 12px;
+  padding: clamp(18px, 4vw, 34px);
+  border: 1px solid #54767a;
+  background: radial-gradient(ellipse at 85% 50%, #2c5559, #14242e 60%);
+}
+.private-clue h2 { font-size: clamp(2rem, 5vw, 4.2rem); line-height: 1.04; }
+.repeat-cue { background: #273f40; border: 1px solid #68d1bc; border-radius: 8px; padding: 12px; }
+.control-art {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: 6px;
+  color: var(--signal-color);
+  font-weight: 750;
+  text-align: center;
+}
+.panel-number, .panel-wire {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+}
+.panel-number {
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 14%, #0c1721);
+  box-shadow: inset 0 0 14px #0004, 0 0 12px color-mix(in srgb, currentColor 22%, transparent);
+  font-size: 1.65rem;
+  font-variant-numeric: tabular-nums;
+}
+.panel-wire::before {
+  content: "";
+  display: block;
+  width: 44px;
+  border-top: 5px solid currentColor;
+  border-radius: 8px;
+  box-shadow: 0 0 10px currentColor;
+  transform: rotate(-18deg);
+}
+.control-name { font-size: .86rem; }
+.decoder-panel { display: grid; gap: 14px; }
+.panel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.panel-control {
+  cursor: pointer;
+  background: #121b24;
+  border: 1px solid #405361;
+  border-radius: 10px;
+  padding: 8px 4px;
+}
+.panel-control:hover, .panel-control[aria-pressed="true"] { background: #243544; border-color: #bce5db; }
+.panel-control:focus-visible, .guided-mode .btn:focus-visible, .alphabet-reference summary:focus-visible {
+  outline: 2px solid #8cebd7;
+  outline-offset: 3px;
+}
+.sign-demo { display: grid; grid-template-columns: minmax(95px, 150px) minmax(0, 1fr); gap: 18px; align-items: center; }
+.demo-frame { overflow: hidden; border: 1px solid #3b515f; border-radius: 12px; text-align: center; background: #12212b; }
+.demo-hand {
+  display: grid;
+  place-items: center;
+  background: #edf2f3;
+  height: clamp(104px, 18vw, 146px);
+  color: #324456;
+}
+.demo-hand img { display: block; width: 88%; height: 90%; object-fit: contain; }
+.demo-caption { padding: 6px; min-height: 36px; color: #b7f1df; font-weight: 750; }
+.demo-copy { display: grid; gap: 9px; }
+.demo-copy p { letter-spacing: .1em; font-weight: 650; color: #bfecdf; }
+.demo-copy .demo-tip { letter-spacing: normal; font-weight: 400; color: #b8c4d5; font-size: .88rem; }
+.alphabet-reference {
+  border-top: 1px solid #405361;
+  padding-top: 12px;
+}
+.alphabet-reference summary { cursor: pointer; font-weight: 650; }
+.alphabet-grid { margin-block: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(53px, 1fr)); gap: 6px; }
+.alphabet-grid figure { margin: 0; border-radius: 6px; background: #edf2f3; color: #172333; text-align: center; padding: 4px; }
+.alphabet-grid img { display: block; width: 100%; height: 43px; object-fit: contain; }
+.sign-review { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.sign-review li { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-radius: 8px; background: #14222c; padding: 12px; }
+.review-demo:empty { display: none; }
+.dark-panel {
+  min-height: 110px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #080b10;
+  border: 1px solid #25333d;
+}
+.dark-panel .decoder-panel { padding: 14px; }
+.dark-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #080b10;
+  animation: panel-blackout 750ms ease-out;
+}
+@keyframes panel-blackout { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dark-panel::after { animation: none; } }
+@media (max-width: 760px) {
+  .guided-mode .game-main { grid-template-columns: 1fr; grid-template-areas: "stage" "video"; }
+  .guided-decoder .game-main { grid-template-areas: "video" "stage"; }
+}

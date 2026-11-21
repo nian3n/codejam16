@@ -5,7 +5,7 @@ Source code for CodeJam 16. Escape Pod is a two-player bomb-defusal game for ASL
 - The **defuser** sees the bomb and signs what they see.
 - The **expert** sees only the manual and tells the defuser what to do.
 
-For now, the defuser types each sign. Webcam sign recognition and the LLM alien come later. The full spec is in `CLAUDE.md`.
+During a round, both players can share their cameras to sign to each other. Typed signs and expert replies work alongside video. Solo practice scores individual signs with the ASL word model. The full spec is in `CLAUDE.md`.
 
 ## Set up
 
@@ -17,13 +17,34 @@ For now, the defuser types each sign. Webcam sign recognition and the LLM alien 
 
 1. Start the server: `uv run escape-pod`
 2. Open `http://localhost:8000` in two browser tabs, one for each player.
-3. In the first tab, type a name and click **Create a room**.
+3. In the first tab, type a name and click **Create a guided room** or **Create a classic room**.
 4. In the second tab, type the 4-letter room code and click **Join**.
-5. Each player takes one role. Then click **Start the game**.
+5. Each player takes one role. In a classic room, click **Start the game**, then **Share camera** to start your feed. Live video is peer-to-peer, with no audio or recording, and stops when the round ends.
 
-To play on two laptops on the same Wi-Fi, run `uv run escape-pod --host 0.0.0.0`. The second player then opens `http://<your-ip>:8000`.
+### Guided rooms
+
+Choose **Child · Signer** or **Parent · Decoder** and begin the untimed practice exchange. Use **Preview camera** to frame your face and both hands, then choose **Share live**. The signer can replay the ASL fingerspelling demonstration and sign the private clue. The decoder can open the alphabet beside the child’s video and select a control with the arrow keys or mouse. Press **Enter** or click **Confirm selection** to submit it. **Sign again** asks the signer to repeat the clue.
+
+After the practice clue, choose **Start countdown** for three clues in two minutes. Incorrect selections can be retried. If the panel goes dark, the pair can retry the same clues without a timer. Unlocking the room reveals a recap and a role swap.
+
+The public-domain ASL handshape illustrations are by wpclipart.com. [Wikimedia Commons ASL alphabet](https://commons.wikimedia.org/wiki/Category:ASL_letters)
+
+The demonstration marks repeated letters. [Lifeprint’s guide to double letters](https://www.lifeprint.com/asl101/topics/fingerspelling-double-letters.htm)
+
+To play on two laptops on the same Wi-Fi with text, run `uv run escape-pod --host 0.0.0.0` and connect to `http://<your-ip>:8000`. Browsers require HTTPS for camera access away from localhost. With a certificate trusted by both browsers and valid for the server's address, run `uv run escape-pod --host 0.0.0.0 --ssl-certfile <cert.pem> --ssl-keyfile <key.pem>` and connect over HTTPS. Live video needs a direct connection between browsers. Some networks block it.
 
 To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then click **Answer key (debug)** in the top bar.
+
+## Practice signs solo
+
+1. Run `uv sync --extra vision` and `uv run download-models`.
+2. Open the game, click **Practice signs solo**, and choose a target word.
+3. Turn on the camera, position your hands and upper body in view, and click **Capture sign**. Sign once after the three-second countdown.
+4. The result shows the model's confidence for the selected word and its top guess. A matching guess at **75% confidence or higher** is approved. This score reflects the classifier's confidence across the 250 supported word signs. Fingerspelling and digits need a separate classifier.
+
+Solo practice draws connected MediaPipe landmarks over the camera preview. Approved words leave the list and stay cleared in that browser. Once every word is approved, **Practice all words again** resets the list.
+
+Solo practice loads MediaPipe Holistic from jsDelivr. It extracts landmarks in the browser and sends only the landmark clip to the game server for scoring.
 
 ## Test the sign model
 

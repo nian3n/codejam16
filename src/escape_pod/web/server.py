@@ -31,6 +31,8 @@ from escape_pod.manual.build import all_pages
 from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
+from escape_pod.web.guided import BUTTONS, TIMED_SECONDS, WIRES, GuidedRound
+from escape_pod.web.practice import router as practice_router
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
@@ -40,6 +42,7 @@ MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
 app = FastAPI(title="Escape Pod")
 app.state.debug = False
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+app.include_router(practice_router)
 
 
 @dataclass
@@ -63,9 +66,10 @@ class Room:
     ended_left: float = 0.0
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
+    guided: GuidedRound | None = None
 
     def remaining(self) -> float:
-        if self.phase == "playing":
+        if self.phase == "playing" and self.deadline:
             return max(0.0, self.deadline - time.monotonic())
         return self.ended_left
 
@@ -73,7 +77,12 @@ class Room:
         return any(p.role == role and p.pid != by_other_than for p in self.players.values())
 
     def can_start(self) -> bool:
-        return self.phase == "lobby" and all(self.role_taken(r, "") for r in ROLES)
+        return self.phase == "lobby" and all(self.role_taken(r, "") for r in ROLES) and (
+            self.guided is None or self.both_online()
+        )
+
+    def both_online(self) -> bool:
+        return all(any(p.role == role and p.ws is not None for p in self.players.values()) for role in ROLES)
 
     def say(self, entry: dict):
         entry["t"] = round(time.time(), 3)
@@ -111,6 +120,10 @@ def view(room: Room, me: Player) -> dict:
         v["bomb"] = [{"id": m.spec.id, "title": m.spec.title, "widget": m.spec.widget,
                       "target_words": m.spec.target_words, "pool": m.spec.pool,
                       "facts": m.facts, "defused": m.defused} for m in room.modules]
+    if room.guided:
+        v["guided"] = room.guided.view(me.role)
+        if room.phase == "lobby":
+            v["guided"].pop("clue", None)
     return v
 
 
@@ -140,8 +153,17 @@ async def watch_timer(room: Room):
     while room.phase == "playing":
         await asyncio.sleep(0.25)
         if room.phase == "playing" and room.remaining() <= 0:
-            end_game(room, "boom", "Time ran out. BOOM!")
+            expire_round(room)
             await broadcast(room)
+
+
+def expire_round(room: Room):
+    if room.guided:
+        room.guided.step = "timeout"
+        room.guided.feedback = ""
+        end_game(room, "boom", "The panel went dark.")
+    else:
+        end_game(room, "boom", "Time ran out. BOOM!")
 
 
 def start_game(room: Room):
@@ -185,6 +207,9 @@ async def handle(room: Room, me: Player, msg: dict):
         role = msg.get("role")
         if role in ROLES and not room.role_taken(role, me.pid):
             me.role = role
+    elif room.guided:
+        if not handle_guided(room, room.guided, me, msg):
+            return
     elif kind == "level" and room.phase == "lobby" and msg.get("level") in config.LEVELS:
         room.level = msg["level"]
     elif kind == "start" and room.can_start():
@@ -213,6 +238,96 @@ async def handle(room: Room, me: Player, msg: dict):
     await broadcast(room)
 
 
+def handle_guided(room: Room, game: GuidedRound, me: Player, msg: dict) -> bool:
+    kind = msg.get("type")
+    if me.role not in ROLES:
+        return False
+    if room.phase == "playing" and game.step == "timed" and room.remaining() <= 0:
+        expire_round(room)
+        return True
+
+    if kind == "start" and room.can_start():
+        game.begin_practice()
+        room.phase = "playing"
+        room.deadline = room.ended_left = 0
+        room.chat.clear()
+        return True
+    if kind == "guided_begin" and room.phase == "playing" and game.step == "ready" and room.both_online():
+        game.step = "timed"
+        game.feedback = ""
+        game.move_to_next_clue()
+        room.deadline = time.monotonic() + TIMED_SECONDS
+        room.timer_task = asyncio.create_task(watch_timer(room))
+        return True
+    if kind == "guided_retry" and room.phase == "boom" and game.step == "timeout":
+        game.step = "untimed"
+        game.index = 0
+        game.feedback = ""
+        game.move_to_next_clue()
+        room.phase = "playing"
+        room.deadline = room.ended_left = 0
+        room.chat.clear()
+        return True
+    if (kind == "again" and room.phase in ("escaped", "boom")) or (
+        kind == "guided_swap" and room.phase == "escaped"
+    ):
+        swapped = game.swapped
+        if kind == "guided_swap":
+            for player in room.players.values():
+                player.role = "expert" if player.role == "defuser" else "defuser"
+            swapped = not swapped
+        room.phase = "lobby"
+        room.guided = GuidedRound(swapped=swapped, turn=game.turn)
+        return True
+    if me.role != "expert" or room.phase != "playing" or msg.get("turn") != game.turn or not game.clue:
+        return False
+    if kind == "guided_repeat":
+        game.repeat += 1
+        return True
+    if kind != "guided_action":
+        return False
+    control = msg.get("control")
+    if not any(option.id == control for option in (*BUTTONS, *WIRES)):
+        return False
+    if control != game.clue.id:
+        game.feedback = "try_again"
+        return True
+
+    game.move_to_next_clue()
+    game.feedback = "correct"
+    if game.step == "practice":
+        game.step = "ready"
+    else:
+        game.index += 1
+        if game.index == len(game.deck):
+            game.step = "unlocked"
+            end_game(room, "escaped", "The room unlocked.")
+    return True
+
+
+async def relay_video(room: Room, me: Player, msg: dict):
+    """Forward WebRTC setup only to the other seat during play."""
+    if room.phase != "playing" or me.role not in ROLES:
+        return
+    peer = next((p.ws for p in room.players.values()
+                 if p.role in ROLES and p.role != me.role), None)
+    signal, session = msg.get("signal"), msg.get("session")
+    if peer is None or not isinstance(session, str) or len(session) != 36:
+        return
+    payload = {"type": "video", "signal": signal, "session": session}
+    if signal in ("offer", "answer"):
+        sdp = msg.get("sdp")
+        if not isinstance(sdp, str) or not 0 < len(sdp) <= 24_000:
+            return
+        payload["sdp"] = sdp
+    elif signal != "stop":
+        return
+    try:
+        await peer.send_json(payload)
+    except (WebSocketDisconnect, RuntimeError, OSError):
+        pass  # The recipient may have disconnected during the send.
+
+
 # ---------------------------------------------------------------------------
 # HTTP + WebSocket routes
 # ---------------------------------------------------------------------------
@@ -232,12 +347,12 @@ def icons():
 
 
 @app.post("/api/rooms")
-def create_room():
+def create_room(mode: Literal["classic", "guided"] = "classic"):
     while True:
         code = "".join(secrets.choice(CODE_CHARS) for _ in range(4))
         if code not in rooms:
             break
-    rooms[code] = Room(code)
+    rooms[code] = Room(code, guided=GuidedRound() if mode == "guided" else None)
     return {"code": code}
 
 
@@ -276,7 +391,7 @@ async def ws_room(ws: WebSocket, code: str):
         room.players[me.pid] = me
     elif me.ws is not None:
         try:  # same player opened a second tab: the newest tab wins
-            await me.ws.close()
+            await me.ws.close(code=4000)
         except Exception:
             pass
     me.ws = ws
@@ -285,8 +400,13 @@ async def ws_room(ws: WebSocket, code: str):
     try:
         while True:
             msg = await ws.receive_json()
+            if me.ws is not ws:
+                break
             if isinstance(msg, dict):
-                await handle(room, me, msg)
+                if msg.get("type") == "video":
+                    await relay_video(room, me, msg)
+                else:
+                    await handle(room, me, msg)
     except (WebSocketDisconnect, ValueError, RuntimeError):
         pass
     finally:
@@ -304,9 +424,13 @@ def main():
     ap.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 so other laptops on the Wi-Fi can join")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--debug", action="store_true", help="enable the answer key at /api/rooms/<code>/answer-key")
+    ap.add_argument("--ssl-certfile", help="certificate for HTTPS camera access over Wi-Fi")
+    ap.add_argument("--ssl-keyfile", help="private key for the HTTPS certificate")
     a = ap.parse_args()
+    if bool(a.ssl_certfile) != bool(a.ssl_keyfile):
+        ap.error("--ssl-certfile and --ssl-keyfile must be used together")
     app.state.debug = a.debug
-    uvicorn.run(app, host=a.host, port=a.port)
+    uvicorn.run(app, host=a.host, port=a.port, ssl_certfile=a.ssl_certfile, ssl_keyfile=a.ssl_keyfile)
 
 
 if __name__ == "__main__":

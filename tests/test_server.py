@@ -1,4 +1,6 @@
 # Owner: Teammate 1 (Game, scenes, widgets)
+from contextlib import contextmanager
+
 from fastapi.testclient import TestClient
 
 from escape_pod.web import server
@@ -85,6 +87,99 @@ def test_expert_never_sees_the_bomb():
     assert sb["progress"] == {"total": 4, "defused": 0}
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_video_signals_reach_only_the_other_seat():
+    _, a, b, _, _ = _start_game()
+    session = "00000000-0000-4000-8000-000000000000"
+    try:
+        offer = {"type": "video", "session": session, "signal": "offer", "sdp": "example SDP"}
+        a.send_json({**offer, "sdp": {"invalid": True}})
+        a.send_json({**offer, "room": "OTHER", "extra": "discarded"})
+        assert b.receive_json() == offer
+        answer = {**offer, "signal": "answer"}
+        b.send_json(answer)
+        assert a.receive_json() == answer  # The offer was never echoed to its sender.
+
+        # The expert can independently send an offer for their own camera.
+        b.send_json(offer)
+        assert a.receive_json() == offer
+    finally:
+        a.__exit__(None, None, None)
+        b.__exit__(None, None, None)
+
+
+@contextmanager
+def _guided_pair():
+    with client:
+        code = client.post("/api/rooms?mode=guided").json()["code"]
+        with client.websocket_connect(f"/ws/{code}") as a, client.websocket_connect(f"/ws/{code}") as b:
+            a.send_json({"type": "hello", "name": "Child"})
+            assert a.receive_json()["type"] == "welcome"
+            b.send_json({"type": "hello", "name": "Parent"})
+            assert b.receive_json()["type"] == "welcome"
+            a.send_json({"type": "role", "role": "defuser"})
+            b.send_json({"type": "role", "role": "expert"})
+            _drain(b, lambda s: s["can_start"])
+            a.send_json({"type": "start"})
+            sa = _drain(a, lambda s: s["phase"] == "playing")
+            sb = _drain(b, lambda s: s["phase"] == "playing")
+            yield a, b, sa, sb
+
+
+def _guided_press(ws, state, control):
+    ws.send_json({"type": "guided_action", "turn": state["guided"]["turn"], "control": control})
+
+
+def test_guided_practice_privacy_feedback_completion_and_swap():
+    with _guided_pair() as (a, b, sa, sb):
+        practice = sa["guided"]
+        assert practice["step"] == "practice" and sa["remaining_s"] == 0
+        assert practice["clue"]["text"] == "Press blue 3"
+        assert "controls" not in practice and "clue" not in sb["guided"]
+        b.send_json({"type": "guided_begin"})
+        _guided_press(a, sa, "blue-3")  # The signer has no authority to operate the panel.
+        b.send_json({"type": "guided_repeat", "turn": practice["turn"]})
+        sa = _drain(a, lambda s: s["guided"]["repeat"] == 1)
+        assert sa["guided"]["clue"] == practice["clue"]
+        _guided_press(b, sa, "blue-1")
+        sa = _drain(a, lambda s: s["guided"]["feedback"] == "try_again")
+        assert sa["guided"]["turn"] == practice["turn"]
+        _guided_press(b, sa, "blue-3")
+        sa = _drain(a, lambda s: s["guided"]["step"] == "ready")
+        assert sa["remaining_s"] == 0
+        a.send_json({"type": "guided_begin"})
+        sa = _drain(a, lambda s: s["guided"]["step"] == "timed")
+        sb = _drain(b, lambda s: s["guided"]["step"] == "timed")
+        assert sa["remaining_s"] > 0 and "clue" not in sb["guided"]
+        for solved in range(1, 4):
+            answer = sa["guided"]["clue"]["picture"]["id"]
+            _guided_press(b, sa, answer)
+            _guided_press(b, sa, answer)  # An old confirmation cannot count for the next clue.
+            sa = _drain(a, lambda s: s["guided"]["solved"] == solved)
+        sb = _drain(b, lambda s: s["phase"] == "escaped")
+        assert len(sb["guided"]["review"]) == 4
+        assert sb["guided"]["step"] == "unlocked" and sb["remaining_s"] > 0
+        b.send_json({"type": "guided_swap"})
+        sa = _drain(a, lambda s: s["phase"] == "lobby")
+        sb = _drain(b, lambda s: s["phase"] == "lobby")
+        assert sa["me"]["role"] == "expert" and sb["me"]["role"] == "defuser"
+        assert sa["guided"]["swapped"]
+
+
+def test_guided_timeout_restarts_same_clues_without_timer(monkeypatch):
+    monkeypatch.setattr(server, "TIMED_SECONDS", 0.05)
+    with _guided_pair() as (a, b, sa, _):
+        _guided_press(b, sa, "blue-3")
+        _drain(b, lambda s: s["guided"]["step"] == "ready")
+        b.send_json({"type": "guided_begin"})
+        timed = _drain(a, lambda s: s["guided"]["step"] == "timed")
+        timeout = _drain(b, lambda s: s["guided"]["step"] == "timeout")
+        assert timeout["remaining_s"] == 0 and "clue" not in timeout["guided"]
+        a.send_json({"type": "guided_retry"})
+        retry = _drain(a, lambda s: s["guided"]["step"] == "untimed")
+        assert retry["remaining_s"] == 0 and retry["phase"] == "playing"
+        assert retry["guided"]["clue"] == timed["guided"]["clue"]
 
 
 def test_full_game_signs_reply_strike_and_escape():

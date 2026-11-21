@@ -42,7 +42,7 @@ Each puzzle has its own topic, so the signs alone identify the manual page. Sign
 5. **Learner-friendly failure.** An unclear description gets a question, never a wrong instruction.
 6. **Nothing blocks the server's event loop.** Run recognition, retrieval and LLM calls in a worker, and send the results when they are ready.
 7. **One topic per puzzle**, and every puzzle word must be recognizable (§13).
-8. **Webcam frames never leave the player's laptop.** No part of the game saves them, unless the player opts in to evaluation recordings.
+8. **Live webcam sharing is opt-in and peer-to-peer.** Each player controls their own camera during a round. The game server relays connection setup and never receives video frames. Solo practice sends only landmarks for scoring. The game saves webcam frames only for opt-in evaluation recordings.
 
 ---
 
@@ -102,6 +102,8 @@ src/escape_pod/
       widgets/              one file per widget, registered in widgets/index.js
       manual_view.js        expert view
       feed.js               messages, sign composer, reply box
+      room_video.js         opt-in peer-to-peer video
+      practice.js           solo camera capture and signing feedback
   assets/                   T1/T2: icons.json now, PNGs, sounds and fonts later (CC0)
   signs/                    T2 (not built yet): vocab.json, sign animations
   vision/                   T3 (not built yet): see §6.0 for where it goes
@@ -168,10 +170,28 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
 | `{"type": "again"}` | anyone | escaped or boom |
+| `{"type": "video", "signal": "offer" \| "answer" \| "stop", "session": "...", "sdp": "..."}` | either player, relayed to the other seat | playing |
+
+Each camera share has its own session ID. Offer and answer carry the WebRTC session description. Stop carries the session ID.
 
 After each change, the server sends each player its own `{"type": "state", ...}`. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
 
 HTTP: `GET /api/manual`, `GET /api/icons`, `POST /api/rooms` → `{"code"}`. Also `GET /api/rooms/<CODE>/answer-key`, which works only with `--debug`.
+
+Solo practice uses `GET /api/practice` for model vocabulary and the approval threshold. `POST /api/practice/score?target=<gloss>` takes little-endian float32 landmark frames in the order in §6.3. It returns the target confidence, the model's top guess, and whether the target matched at 75% confidence or higher.
+
+Create a guided room with `POST /api/rooms?mode=guided`. The defuser seat becomes the signer and the expert seat becomes the decoder. Guided states include a `guided` object. The active clue appears only in the signer's state and the available panel controls appear only in the decoder's state.
+
+| Guided client sends | Who | When |
+|---|---|---|
+| `{"type": "start"}` | either player | both roles connected in the lobby |
+| `{"type": "guided_action", "turn": ..., "control": "..."}` | decoder | a clue is active |
+| `{"type": "guided_repeat", "turn": ...}` | decoder | a clue is active |
+| `{"type": "guided_begin"}` | either player | the practice clue is solved |
+| `{"type": "guided_retry"}` | either player | the countdown expired |
+| `{"type": "guided_swap"}` | either player | the room is unlocked |
+
+The guided countdown starts after the untimed practice exchange. The server accepts responses only for the current turn. A wrong response keeps the clue active. A timeout offers another attempt at the same clues without a timer.
 
 ### 4.3 Shared models
 
@@ -298,7 +318,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 ### 6.0 Open decision: where recognition runs
 
-The game is a web app now, so the webcam is in the defuser's browser. Pick one option before M2:
+Solo practice uses MediaPipe Holistic in the browser and scores landmark clips with the existing TFLite ASL word model on the server. For in-game recognition, pick one option before M2:
 
 - **In the browser (recommended):** MediaPipe Tasks for JavaScript, and the TFLite model run with TensorFlow.js or LiteRT for the web. The frames stay on the laptop, which keeps rule 8. The code goes in `src/escape_pod/web/static/vision/`. The recognizer pushes confirmed glosses into `store.local.signs` (see `feed.js`).
 - **On the Python server (as the old spec said):** the browser sends landmarks to the server, and `src/escape_pod/vision/` runs the model. This option breaks rule 8 if the server runs on another laptop, unless the browser sends only landmarks.
@@ -441,9 +461,12 @@ The expert's manual already highlights the pages that contain the signed words (
 
 - **Home:** the player types a name, then creates a room or types a 4-letter code to join one. An invite link `/?room=CODE` fills in the code.
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role.
-- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the webcam (typed signs for now), the signs not sent yet, "Send to expert" and the message feed.
+- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has live video, the typed sign composer and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
-- **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red.
+- **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. Either player can share or stop their camera independently.
+- **Solo practice:** choose a model-supported word, sign to the camera after a countdown, and see the target confidence, the top guess and the approval result.
+- **Guided rooms:** the signer gets a private illustrated clue, a replayable fingerspelling demonstration and a self-view. The decoder gets the large peer video, a keyboard-operable fictional panel and an expandable ASL alphabet. Both can preview their cameras before sharing. The recap shows the practiced clues and offers a role swap.
+- **Solo progress:** the live preview draws MediaPipe landmarks and their connections. Approved words stay out of the list in the current browser until the player resets their progress.
 - **End:** "POD LAUNCHED!" or "BOOM", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
 
