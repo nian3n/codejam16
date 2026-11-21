@@ -138,3 +138,23 @@ def test_result_without_an_instruction_is_silent():
 
 def test_greeting():
     assert HqBot().greeting() == "HQ here. Which module do you need help with? Sign one thing you see on it."
+
+
+def test_no_twice_or_with_core_words_means_all_off():
+    # The recognizer can give NO twice, or NO with YES: still "none is on", not a loop.
+    for msg in (["no", "no"], ["yes", "no"], ["no", "finish"]):
+        bot = HqBot()
+        bot.reply(["lamp"])
+        bot.reply(["lamp", "bed", "tv", "chair"])
+        assert bot.reply(msg).startswith("You see: lamp (off), bed (off), TV (off), chair (off)."), msg
+
+
+def test_a_result_after_the_player_moved_on_keeps_the_new_page():
+    # Instruction for the Animal panel, then the player opens the Wire panel, then acts on the animals.
+    for defused in (True, False):
+        bot = HqBot()
+        bot.reply(["cat"])
+        bot.reply(["cat", "dog", "cow", "pig"])
+        bot.reply(["red"])
+        assert bot.on_result(defused) is None
+        assert bot.page.id == "colors"

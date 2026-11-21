@@ -18,8 +18,9 @@ export function renderLobby() {
       el("b", { text: k[0].toUpperCase() + k.slice(1) }),
       el("small", { text: `${l.modules} modules · ${fmt(l.timer_s)}${l.hard ? " · hard ones" : ""}` }))));
   $("#start").disabled = !s.can_start;
-  // Solo: no roles to pick, nobody to invite, no video call. Only the level and Start.
-  for (const sel of [".roles", "#copy-link", "#lobby-video"]) $(sel).classList.toggle("hidden", !!s.solo);
+  // Solo: no roles to pick and nobody to invite. The video dock stays: it shows only the
+  // self-view (rtc.js), so the player can frame their hands before Start.
+  for (const sel of [".roles", "#copy-link"]) $(sel).classList.toggle("hidden", !!s.solo);
   $("#lobby-hint").textContent = s.solo ? "Solo game: you are the field agent. A bot plays HQ. Pick a level and start."
     : s.players.length < 2
     ? "Waiting for a second player. Send them the room code or the invite link."

@@ -94,6 +94,10 @@ class HqBot:
         return s.q1.format(n=self.page.setup["shown"]) if self.round == 1 else str(s.q2)
 
     def _open(self, spec: PuzzleSpec) -> str:
+        if spec is not self.last:
+            # The agent moved on to another module: a later result is not about the
+            # instruction the bot gave before, so it must not close or replace this page.
+            self.last = None
         self.page, self.round, self.items = spec, 1, []
         return f"That is the {spec.title}. {self._question()}"
 
@@ -112,7 +116,8 @@ class HqBot:
             return self._find(known)
         page = self.page
         mine = [g for g in known if g in page.pool]
-        if self.page.widget == "switches" and self.round == 2 and raw == ["no"]:
+        # NO (maybe twice, or beside YES or FINISH) and no label: every switch is off.
+        if page.widget == "switches" and self.round == 2 and "no" in raw and not known:
             return self._answer({"switches": [{"label": g, "state": "off"} for g in self.items]})
         if not mine:
             if known:  # every word is from another page: the agent moved to another module
