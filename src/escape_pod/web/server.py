@@ -8,7 +8,7 @@ Roles (spec change, Nov 2026: two humans now, the LLM alien comes later):
 The server owns all game state and decides right and wrong with the rule engine
 (spec design rule 1). Clients only render what the server sends them.
 
-    python -m web.server [--host 0.0.0.0] [--port 8000] [--debug]
+    uv run escape-pod [--host 0.0.0.0] [--port 8000] [--debug]
 """
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
-import config
-from manual.build import all_pages
-from manual.solve import sheet_markdown
-from puzzles.engine import Module, draw
-from puzzles.models import Action
+from escape_pod import config
+from escape_pod.manual.build import all_pages
+from escape_pod.manual.solve import sheet_markdown
+from escape_pod.puzzles.engine import Module, draw
+from escape_pod.puzzles.models import Action
 
-STATIC = config.ROOT / "web" / "static"
+STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
 ROLES = ("defuser", "expert")
 MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
@@ -297,7 +297,7 @@ async def ws_room(ws: WebSocket, code: str):
             await broadcast(room)
 
 
-if __name__ == "__main__":
+def main():
     import uvicorn
 
     ap = argparse.ArgumentParser()
@@ -307,3 +307,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     app.state.debug = a.debug
     uvicorn.run(app, host=a.host, port=a.port)
+
+
+if __name__ == "__main__":
+    main()

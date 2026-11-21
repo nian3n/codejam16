@@ -5,16 +5,16 @@ The static manual (manual/build.py) says what to do in general. This sheet takes
 real draw (seed + level) and walks every rule against the module's facts, so you can
 see which condition is true, which rule fires, and the exact instruction.
 
-    python -m manual.solve --seed 7 --level intermediate
+    uv run answer-key --seed 7 --level intermediate
 """
 from __future__ import annotations
 
 import argparse
 import random
 
-import config
-from puzzles.engine import Module, cond_holds, draw
-from puzzles.phrase import condition, phrase, word
+from escape_pod import config
+from escape_pod.puzzles.engine import Module, cond_holds, draw
+from escape_pod.puzzles.phrase import condition, phrase, word
 
 
 def facts_text(m: Module) -> str:
@@ -82,7 +82,7 @@ def sheet_markdown(modules: list[Module], header: str = "") -> str:
     return "\n".join(lines)
 
 
-if __name__ == "__main__":
+def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--level", choices=list(config.LEVELS), default="intermediate")
@@ -91,3 +91,7 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]  # Windows consoles default to cp1252
     mods = draw(random.Random(a.seed), config.LEVELS[a.level])
     print(sheet_markdown(mods, f"Seed {a.seed}, level {a.level}."))
+
+
+if __name__ == "__main__":
+    main()

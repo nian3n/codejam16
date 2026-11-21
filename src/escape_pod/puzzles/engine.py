@@ -2,7 +2,7 @@
 """Rule engine: load the pool, draw modules, evaluate rules (spec §5).
 
 The widget *logic* hooks (generate / derive / resolve) live here as plain classes.
-Drawing and clicks moved to the browser (web/static/app.js) when the game became a
+Drawing and clicks moved to the browser (web/static/widgets/*.js) when the game became a
 two-player web app, so puzzles/widgets/ would only hold logic; keeping it in one file
 is the simplest option until Teammate 1 needs a Python-side widget again.
 """
@@ -12,8 +12,8 @@ import json
 import random
 from dataclasses import dataclass, field
 
-import config
-from puzzles.models import Action, PuzzleSpec
+from escape_pod import config
+from escape_pod.puzzles.models import Action, PuzzleSpec
 
 OPS = {
     "==": lambda a, b: a == b,

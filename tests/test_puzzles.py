@@ -4,11 +4,11 @@ import random
 
 import pytest
 
-import config
-from manual.build import all_pages, page_markdown
-from manual.solve import sheet_markdown, solve_module
-from puzzles.engine import WIDGETS, Module, draw, load_pool
-from puzzles.phrase import phrase
+from escape_pod import config
+from escape_pod.manual.build import all_pages, page_markdown
+from escape_pod.manual.solve import sheet_markdown, solve_module
+from escape_pod.puzzles.engine import WIDGETS, Module, draw, load_pool
+from escape_pod.puzzles.phrase import phrase
 
 POOL = load_pool()
 ICONS = json.loads(config.ICONS_FILE.read_text(encoding="utf-8"))

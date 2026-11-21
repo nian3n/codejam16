@@ -4,14 +4,14 @@
 The manual never changes during a game: it is built only from puzzles/data/*.json,
 the same rules the engine uses (spec design rule 2, one source of truth).
 
-    python -m manual.build          # writes manual/pages/<id>.md and MANUAL.md
+    uv run build-manual             # writes docs/manual/<id>.md and MANUAL.md
 """
 from __future__ import annotations
 
-import config
-from puzzles.engine import WIDGETS, load_pool
-from puzzles.models import PuzzleSpec
-from puzzles.phrase import condition, phrase, word
+from escape_pod import config
+from escape_pod.puzzles.engine import WIDGETS, load_pool
+from escape_pod.puzzles.models import PuzzleSpec
+from escape_pod.puzzles.phrase import condition, phrase, word
 
 WIDGET_NAMES = {"wires": "Wires", "keypad": "Keypad", "icons": "Picture buttons",
                 "dial": "Dial", "switches": "Switches", "big_button": "Big button"}
@@ -86,6 +86,10 @@ def build() -> list[str]:
     return [p["id"] for p in pages]
 
 
-if __name__ == "__main__":
+def main():
     ids = build()
     print(f"Wrote {len(ids)} pages and MANUAL.md to {config.MANUAL_PAGES_DIR}")
+
+
+if __name__ == "__main__":
+    main()

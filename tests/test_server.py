@@ -1,7 +1,7 @@
 # Owner: Teammate 1 (Game, scenes, widgets)
 from fastapi.testclient import TestClient
 
-from web import server
+from escape_pod.web import server
 
 client = TestClient(server.app)
 

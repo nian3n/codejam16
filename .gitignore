@@ -1,4 +1,13 @@
+# Python
 .venv/
 __pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets: everything in etc/ except the example
+etc/*
+!etc/.env.example
+
+# Downloaded or trained models, session logs
 models/
 logs/
