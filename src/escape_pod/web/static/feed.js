@@ -11,7 +11,7 @@ export function renderFeed() {
   const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
   feed.replaceChildren(...state.chat.map((m) => {
     if (m.kind === "event") return el("div", { class: "msg event" + (m.strike ? " strike" : ""), text: m.text });
-    if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (expert)` }), m.text);
+    if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (HQ)` }), m.text);
     const box = el("div", { class: "msg signs" }, el("span", { class: "who", text: `${m.from} signed` }),
       el("div", { class: "chips" }, m.glosses.map((g) => el("span", { class: "chip", text: g.toUpperCase() }))));
     if (state.me.role === "expert") {
@@ -34,7 +34,7 @@ export function defuserComposer() {
     if (g && store.local.signs.length < 12) { store.local.signs.push(g); renderSignChips(); }
     input.value = "";
   });
-  const sendBtn = el("button", { class: "btn primary", id: "send-signs", text: "Send to expert", onclick: () => {
+  const sendBtn = el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ", onclick: () => {
     if (!store.local.signs.length) return;
     send({ type: "signs", glosses: store.local.signs });
     store.local.signs = [];
@@ -61,12 +61,12 @@ export function renderSignChips() {
 }
 
 export function expertComposer() {
-  const input = el("input", { placeholder: "Tell the defuser what to do", maxlength: 300, autocomplete: "off" });
+  const input = el("input", { placeholder: "Tell the agent what to do", maxlength: 300, autocomplete: "off" });
   const say = (text) => { if (text.trim()) send({ type: "say", text: text.trim() }); };
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { say(input.value); input.value = ""; } });
   const quick = ["Which module?", "Sign that again, please.", "Show me more signs.", "Are you sure? Look again."];
   return el("div", { class: "composer" },
-    el("div", { class: "label", text: "Reply to the defuser" }),
+    el("div", { class: "label", text: "Reply to the agent" }),
     input,
     el("div", { class: "chips" }, quick.map((q) => el("button", { class: "btn small", text: q, onclick: () => say(q) }))));
 }

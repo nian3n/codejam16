@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Escape Pod</title>
+  <title>Keep Moving and Nobody Explodes</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -12,8 +12,8 @@
   <!-- HOME: create or join a room -->
   <section id="home" class="screen">
     <div class="card home-card">
-      <h1 class="logo">ESCAPE<span>POD</span></h1>
-      <p class="tag">Two players. One bomb. Sign to survive.</p>
+      <h1 class="logo">KEEP MOVING<span>and nobody explodes</span></h1>
+      <p class="tag">No words. Only hands. Keep moving.</p>
       <label>Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="off"></label>
       <button id="create" class="btn primary">Create a room</button>
       <div class="or">or join a friend</div>
@@ -33,16 +33,16 @@
         <button id="copy-link" class="btn small">Copy invite link</button></div>
       <div class="roles">
         <div class="role" data-role="defuser">
-          <div class="role-icon">💣</div>
-          <h2>Defuser</h2>
-          <p>You see the bomb. You sign what you see. You cut, press and turn.</p>
+          <div class="role-icon">🕵️</div>
+          <h2>Field agent</h2>
+          <p>You are on site with the bomb. Sign what you see. You cut, press and turn.</p>
           <div class="role-who"></div>
           <button class="btn take">Take this role</button>
         </div>
         <div class="role" data-role="expert">
-          <div class="role-icon">📖</div>
-          <h2>Expert</h2>
-          <p>You read the manual. You never see the bomb. You tell the defuser what to do.</p>
+          <div class="role-icon">🎧</div>
+          <h2>HQ handler</h2>
+          <p>You have the field manual. You never see the bomb. Tell the agent what to do.</p>
           <div class="role-who"></div>
           <button class="btn take">Take this role</button>
         </div>

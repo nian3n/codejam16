@@ -1,2 +1,2 @@
 # Owner: shared (package root)
-"""Escape Pod: a two-player ASL bomb-defusal game."""
+"""Keep Moving and Nobody Explodes: a two-player ASL bomb-defusal game."""

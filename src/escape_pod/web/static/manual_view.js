@@ -40,7 +40,7 @@ function pageView(p) {
   if (!p) {
     page.append(el("h2", { text: "Defusal manual" }),
       el("p", { class: "meta", text: "20 puzzles. Each page has its own topic." }),
-      el("p", { class: "blank", text: "Pick a page on the left. When the defuser signs, the pages with those words light up." }));
+      el("p", { class: "blank", text: "Pick a page on the left. When the agent signs, the pages with those words light up." }));
     return page;
   }
   const swatch = (g) => el("span", { style: `display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #000;background:${WIRE_COLORS[g]}` });

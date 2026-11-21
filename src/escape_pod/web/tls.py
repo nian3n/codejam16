@@ -44,7 +44,7 @@ def ensure_cert():
     from cryptography.x509.oid import NameOID
 
     key = ec.generate_private_key(ec.SECP256R1())
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Escape Pod (local)")])
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Keep Moving and Nobody Explodes (local)")])
     alt = [x509.DNSName("localhost"), x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]
     alt += [x509.IPAddress(ipaddress.ip_address(ip)) for ip in lan_ips()]
     now = datetime.datetime.now(datetime.timezone.utc)

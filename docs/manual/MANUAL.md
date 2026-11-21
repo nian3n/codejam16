@@ -1,6 +1,6 @@
-# Escape Pod defusal manual
+# Keep Moving and Nobody Explodes: field manual
 
-Find the page whose words match what the defuser signs. Each page has one topic.
+Find the page whose words match what the field agent signs. Each page has one topic.
 
 1. [Action panel](actions.md): actions
 2. [Letter keypad](alphabet.md): fingerspelling

@@ -109,6 +109,7 @@ def test_full_game_signs_reply_strike_and_escape():
         a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
     sa = _drain(a, lambda s: s["phase"] == "escaped")
     assert sa["progress"]["defused"] == 4
+    assert sa["chat"][-1]["text"] == "All modules defused. Device neutralized."
     sb = _drain(b, lambda s: s["phase"] == "escaped")
     assert "bomb" in sb  # debrief: both see the bomb at the end
     # Play again -> back to the lobby with the same roles.
@@ -125,6 +126,7 @@ def test_three_strikes_is_boom():
         a.send_json({"type": "act", "module": 0, "action": {"verb": "cut", "target": {"color": "nothing"}}})
     s = _drain(a, lambda s: s["phase"] == "boom")
     assert s["strikes"] == 3
+    assert s["chat"][-1]["text"] == "Three strikes. Detonation!"
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
 

@@ -42,7 +42,7 @@ MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
 ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
-app = FastAPI(title="Escape Pod")
+app = FastAPI(title="Keep Moving and Nobody Explodes")
 app.state.debug = False
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -166,7 +166,7 @@ async def watch_timer(room: Room):
     while room.phase == "playing":
         await asyncio.sleep(0.25)
         if room.phase == "playing" and room.remaining() <= 0:
-            end_game(room, "boom", "Time ran out. BOOM!")
+            end_game(room, "boom", "Time ran out. Detonation!")
             await broadcast(room)
 
 
@@ -215,12 +215,12 @@ def act(room: Room, index: int, action: Action):
         m.defused = True
         room.say({"kind": "event", "text": f"Module {index + 1} defused!"})
         if all(x.defused for x in room.modules):
-            end_game(room, "escaped", "All modules defused. The pod launches!")
+            end_game(room, "escaped", "All modules defused. Device neutralized.")
     else:
         room.strikes += 1
         room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
         if room.strikes >= config.MAX_STRIKES:
-            end_game(room, "boom", "Three strikes. BOOM!")
+            end_game(room, "boom", "Three strikes. Detonation!")
 
 
 def clean_glosses(raw) -> list[str]:

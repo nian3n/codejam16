@@ -154,7 +154,7 @@ function setupGame() {
   resetLocal();
   const s = store.state;
   $("#game-code").textContent = s.code;
-  $("#game-role").textContent = s.me.role === "defuser" ? "💣 Defuser" : "📖 Expert";
+  $("#game-role").textContent = s.me.role === "defuser" ? "🕵️ Field agent" : "🎧 HQ handler";
   $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
   const bar = $(".topbar");
   bar.querySelector(".dbg")?.remove();
@@ -187,7 +187,7 @@ function renderEnd() {
   const s = store.state;
   const win = s.phase === "escaped";
   $(".end-card").className = "card end-card " + (win ? "win" : "lose");
-  $("#end-title").textContent = win ? "POD LAUNCHED!" : "BOOM";
+  $("#end-title").textContent = win ? "DEVICE NEUTRALIZED" : "DETONATION";
   $("#end-stats").textContent = `Defused ${s.progress.defused} of ${s.progress.total} · Strikes ${s.strikes} · Time left ${fmt(Math.ceil(s.remaining_s))}`;
 }
 

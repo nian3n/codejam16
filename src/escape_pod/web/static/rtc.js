@@ -62,7 +62,8 @@ export function onRoomState(s) {
     dropPeer();
     wanted = false;
   }
-  remoteName.textContent = other ? `${other.name}${other.role ? " · " + other.role : ""}` : "";
+  const label = { defuser: "agent", expert: "HQ" }[other?.role] || "";
+  remoteName.textContent = other ? `${other.name}${label ? " · " + label : ""}` : "";
   if (!other) {
     setStatus("Waiting for the other player...");
   } else if (!other.online) {

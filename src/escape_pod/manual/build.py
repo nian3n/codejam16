@@ -78,8 +78,8 @@ def build() -> list[str]:
     pages = all_pages()
     for p in pages:
         (out / f"{p['id']}.md").write_text(page_markdown(p), encoding="utf-8")
-    index = ["# Escape Pod defusal manual", "",
-             "Find the page whose words match what the defuser signs. Each page has one topic.", ""]
+    index = ["# Keep Moving and Nobody Explodes: field manual", "",
+             "Find the page whose words match what the field agent signs. Each page has one topic.", ""]
     index += [f"{p['number']}. [{p['title']}]({p['id']}.md): {p['topic']}" for p in pages]
     full = "\n".join(index) + "\n\n---\n\n" + "\n---\n\n".join(page_markdown(p) for p in pages)
     (out / "MANUAL.md").write_text(full, encoding="utf-8")
