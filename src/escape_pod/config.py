@@ -19,6 +19,20 @@ MANUAL_PAGES_DIR = ROOT / "docs" / "manual"
 ETC_DIR = ROOT / "etc"
 ENV_FILE = ETC_DIR / ".env"
 TLS_DIR = ETC_DIR / "tls"                # self-signed cert for --https (git-ignored with etc/)
+MODELS_DIR = ROOT / "models"             # git-ignored; uv run download-models fills it
+ISLR_DIR = MODELS_DIR / "islr"
+HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # digit model (uv run train-digits)
+HANDSHAPE_DATA_DIR = ROOT / "data" / "handshape"  # recorded digit samples, git-ignored (uv run record-digits)
+LOGS_DIR = ROOT / "logs"                 # git-ignored
+
+# Sign recognition (spec §6). Thresholds are first guesses; tune them with sign-test.
+MIRROR_INPUT = False      # flip the frame before MediaPipe (the display is always mirrored)
+LEFT_HANDED = False       # mirror landmark x and swap the two hand blocks
+SEG_STILL_S = 0.4         # a sign ends when the hands stay still this long
+SEG_MIN_S = 0.3           # ignore clips shorter than this
+SEG_MAX_S = 3.0           # ignore clips longer than this
+SEG_MOVE = 0.006          # mean hand movement per frame (image widths) that counts as moving
+MANUAL_CAPTURE_S = 2.5    # Space: fixed capture window
 
 # WebRTC video between the two players. On one Wi-Fi the browsers find each other
 # without help. A public STUN server lets them connect across different networks; it

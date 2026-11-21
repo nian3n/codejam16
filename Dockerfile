@@ -13,10 +13,13 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 # Dependencies first, so code changes do not reinstall them.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --locked --no-dev --no-install-project
+# --extra model: the TFLite runtime for solo practice scoring (no MediaPipe: the browser runs it).
+RUN uv sync --locked --no-dev --extra model --no-install-project
 
 COPY src ./src
-RUN uv sync --locked --no-dev
+RUN uv sync --locked --no-dev --extra model
+# The word model (11 MB, MIT) from Hugging Face, baked into the image.
+RUN uv run --no-dev --extra model download-models
 
 ENV PATH="/app/.venv/bin:$PATH" \
     HOST=0.0.0.0 \

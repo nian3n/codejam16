@@ -33,6 +33,7 @@ from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
 from escape_pod.web.ice import ice_servers
+from escape_pod.web.practice import router as practice_router
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
@@ -47,6 +48,7 @@ app.state.debug = False
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 # Glossary clips (signs/fetch_popsign.py). check_dir=False: a fresh clone without clips still starts.
 app.mount("/signs", StaticFiles(directory=config.SIGN_CLIPS_DIR, check_dir=False), name="signs")
+app.include_router(practice_router)  # solo practice: score landmark clips with the word model
 
 
 @dataclass

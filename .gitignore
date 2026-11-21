@@ -11,3 +11,4 @@ etc/*
 # Downloaded or trained models, session logs
 models/
 logs/
+data/

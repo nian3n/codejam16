@@ -16,6 +16,7 @@ import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
+import { enterPractice, leavePractice } from "./practice.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -43,6 +44,8 @@ async function boot() {
   $("#exit-game").onclick = exitGame;
   bindLobby();
   bindGlossary();
+  $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
+  $("#close-practice").onclick = () => showScreen("home");
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
   // Reloading the page with ?room=CODE and a saved player id rejoins the same seat.
@@ -118,7 +121,8 @@ function disarmExit() {
 }
 
 function showScreen(id) {
-  for (const s of ["home", "lobby", "game"]) $("#" + s).classList.toggle("hidden", s !== id);
+  if (id !== "practice" && !$("#practice").classList.contains("hidden")) leavePractice();
+  for (const s of ["home", "lobby", "game", "practice"]) $("#" + s).classList.toggle("hidden", s !== id);
 }
 
 function onState(s) {

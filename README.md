@@ -51,6 +51,11 @@ Render builds again after each push to the branch in `render.yaml`. The free pla
 
 The TURN relay forwards the video only when the two browsers cannot connect directly, for example on phone data. The video stays encrypted end to end. Without the Metered values, the game still runs, but video can fail on strict networks.
 
+If you set up Render with the **Python** runtime instead of the Blueprint, set these commands in the service settings. They install the TFLite runtime and download the sign model, which solo practice needs:
+
+- **Build command:** `pip install uv && uv sync --locked --no-dev --extra model && uv run --no-dev --extra model download-models`
+- **Start command:** `uv run --no-dev --extra model escape-pod --host 0.0.0.0`
+
 To test the image on your laptop: `docker build -t escape-pod .` and then `docker run -p 8000:8000 escape-pod`.
 
 To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then click **Answer key (debug)** in the top bar.
@@ -61,6 +66,7 @@ To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then cli
 |---|---|
 | `uv sync` | installs the packages (first time, and after each pull) |
 | `uv run escape-pod` | starts the game server |
+| `uv sync --extra model` and `uv run download-models` | install the TFLite runtime and download the word model, for solo practice |
 | `uv run build-manual` | rebuilds `docs/manual/` after a rule change |
 | `uv run answer-key --seed 7` | prints the answer key for one bomb |
 | `uv run pytest` | runs the tests |
@@ -81,6 +87,12 @@ To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then cli
 | `tests/` | pytest tests | everyone |
 
 Not built yet: `signs/` (Teammate 2), the recognizer (Teammate 3), `brain/` (Teammates 3 and 4), `tools/`. See `CLAUDE.md` §3 and §14.
+
+## Solo practice
+
+On the home screen, **Practice signs solo** opens "Field training". Pick a word, watch its glossary clip, turn on the camera and click **Capture sign**. The browser runs MediaPipe and sends only the hand and body landmarks to the server, never the video. The server scores the clip with the word model and approves it at 75% confidence or more. The list has every game word, so each word has a clip.
+
+The server needs the model for this: run `uv sync --extra model` and `uv run download-models` once. Without the model, practice shows a setup message, and the rest of the game still works.
 
 ## Sign clips for the glossary
 
