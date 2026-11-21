@@ -2,8 +2,8 @@
 import { $, el, wordOf } from "./core.js";
 import { cameraError, cameraUnavailable, openCamera, stopCamera } from "./camera.js";
 import { drawLandmarks } from "./landmark_overlay.js";
+import { startTracker, track, trackerLoaded } from "./tracker.js";
 
-const HOLISTIC_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/";
 const FRAME_LAYOUT = [
   ["faceLandmarks", 468],
   ["leftHandLandmarks", 21],
@@ -24,7 +24,6 @@ const reset = $("#reset-practice");
 const progressKey = "ep:approved-words";
 let visit = null;
 let camera = null;
-let holisticScript = null;
 let words = [];
 let approved = new Set();
 
@@ -81,66 +80,23 @@ function renderWords(preferredIndex = 0) {
   return remaining.length;
 }
 
-function loadHolistic() {
-  if (!holisticScript) {
-    holisticScript = new Promise((resolve, reject) => {
-      const script = el("script", { src: HOLISTIC_URL + "holistic.js", crossorigin: "anonymous" });
-      script.onload = () => resolve(window.Holistic);
-      script.onerror = () => {
-        script.remove();
-        reject(new Error("MediaPipe could not load. Check your internet connection and try again."));
-      };
-      document.head.append(script);
-    }).catch((error) => {
-      holisticScript = null;
-      throw error;
-    });
-  }
-  return holisticScript;
-}
-
-// One MediaPipe instance for the whole visit. Building one compiles the WASM and loads
-// the models (seconds), so it is made once, ahead of time (preloadMediaPipe), and kept
-// when the camera turns off. Results go to whichever camera session is current.
-// One frame at a time through the shared instance: a frame from the previous camera
-// session may still be in flight when a new session starts.
+// The hand tracker runs in a Web Worker (tracker.js), so loading it never freezes the
+// page. One frame at a time: a frame from the previous camera session may still be in
+// flight when a new session starts. Results go to the current session's handler.
 let inflight = Promise.resolve();
-let holisticReady = null;
-let holisticLoaded = false;
 let resultsHandler = null;
 
-function getHolistic() {
-  if (!holisticReady) {
-    holisticReady = (async () => {
-      const Holistic = await loadHolistic();
-      const holistic = new Holistic({ locateFile: (file) => HOLISTIC_URL + file });
-      holistic.setOptions({ modelComplexity: 1, refineFaceLandmarks: false, selfieMode: false });
-      holistic.onResults((landmarks) => resultsHandler?.(landmarks));
-      await holistic.initialize();
-      // initialize() does not load the pose, face and hand models: the first frame does.
-      // Send one blank frame now, so that cost is paid in the background too.
-      const blank = el("canvas", { width: 64, height: 64 });
-      blank.getContext("2d").fillRect(0, 0, 64, 64);
-      inflight = inflight.catch(() => {}).then(() => holistic.send({ image: blank }));
-      await inflight;
-      holisticLoaded = true;
-      return holistic;
-    })().catch((error) => {
-      holisticReady = null;
-      throw error;
-    });
-  }
-  return holisticReady;
-}
-
-function sendFrame(holistic) {
-  inflight = inflight.catch(() => {}).then(() => holistic.send({ image: video }));
+function sendFrame() {
+  inflight = inflight.catch(() => {}).then(async () => {
+    const landmarks = await track(video);
+    resultsHandler?.(landmarks);
+  });
   return inflight;
 }
 
-/** Start loading MediaPipe in the background. Safe to call many times. */
+/** Start loading the hand tracker in the background. Safe to call many times. */
 export function preloadMediaPipe() {
-  void getHolistic().catch(() => {});  // a failure shows later, when the camera turns on
+  void startTracker().catch(() => {});  // a failure shows later, when the camera turns on
 }
 
 async function json(response) {
@@ -217,7 +173,7 @@ function packedLandmarks(landmarks) {
 }
 
 async function startPracticeCamera() {
-  const session = { stream: null, holistic: null, processing: null, abort: new AbortController() };
+  const session = { stream: null, processing: null, abort: new AbortController() };
   camera = session;
   cameraButton.textContent = "Turn off camera";
   status.textContent = "Waiting for camera permission…";
@@ -235,10 +191,9 @@ async function startPracticeCamera() {
     preview.classList.remove("hidden");
     await video.play();
     if (camera !== session) return;
-    if (!holisticLoaded) status.textContent = "Loading MediaPipe (only the first time)…";
-    const holistic = await getHolistic();
+    if (!trackerLoaded()) status.textContent = "Loading the hand tracker (only the first time)…";
+    await startTracker();
     if (camera !== session) return;
-    session.holistic = holistic;
     session.onResults = (landmarks) => {
       if (camera !== session) return;
       drawLandmarks(overlay, video, landmarks);
@@ -247,7 +202,7 @@ async function startPracticeCamera() {
     };
     resultsHandler = session.onResults;
     // Prime the graph before starting the timed clip. Its first frame can load model assets.
-    session.processing = sendFrame(holistic);
+    session.processing = sendFrame();
     await session.processing;
     if (camera !== session) return;
     captureButton.disabled = false;
@@ -257,7 +212,7 @@ async function startPracticeCamera() {
     void trackPreview(session);
   } catch (error) {
     if (camera !== session) return;
-    stopPracticeCamera(session.stream ? "MediaPipe camera setup failed. Check your internet connection and try again." : cameraError(error));
+    stopPracticeCamera(session.stream ? (error?.message || "The hand tracker could not start. Check your internet connection and try again.") : cameraError(error));
   }
 }
 
@@ -269,7 +224,7 @@ async function trackPreview(session) {
       if (camera !== session) break;
       if (video.currentTime === lastTime || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) continue;
       lastTime = video.currentTime;
-      session.processing = sendFrame(session.holistic);
+      session.processing = sendFrame();
       await session.processing;
     }
   } catch {

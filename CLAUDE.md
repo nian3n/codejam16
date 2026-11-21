@@ -341,6 +341,8 @@ The player needs both hands to sign, so **do not use hold-to-sign**.
 4. Each clip goes to `POST /api/practice/guess` at once, while the player signs the next word. It becomes a chip with the top 3 guesses. The player picks a guess or deletes the chip.
 5. Space stops the recording. `tests/test_sequence.py` runs the logic in Node with synthetic hands.
 
+**Hand tracking in the browser:** `static/tracker_worker.js` runs MediaPipe Tasks `HolisticLandmarker` (tasks-vision 0.10.21) in a classic Web Worker, and `static/tracker.js` is the page side. It returns the old Holistic shape: 468 face points, 33 pose points, 21 per hand. The old `@mediapipe/holistic` library ran on the main thread and froze the page for about 6 s on its first frame. The worker loads in the background when the player opens training. On the PopSign test video it also scored better: CAT, DOG and COW were all top-1.
+
 The older notes:
 
 - **Auto mode (default):** a sign starts when at least one hand is detected and moving above the waist. It ends when the hands drop or stay still for 0.4 s. Ignore clips under 0.3 s or over 3 s.
