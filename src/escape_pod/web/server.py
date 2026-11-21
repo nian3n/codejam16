@@ -182,6 +182,11 @@ def view(room: Room, me: Player) -> dict:
     }
     if room.mission is not None:
         v["mission"] = room.mission.view(me.role)
+        if (room.mission.stage != "case_lock"
+                and (room.phase in ("escaped", "boom")
+                     or (me.role == "defuser" and room.mission.stage == "modules"))):
+            # The cut tray remains part of the physical case after its gate.
+            v["case_tray"] = {"wires": room.mission.colors, "cuts": room.mission.cuts}
     if room.bot is not None and room.mission is not None and room.mission.stage == "modules":
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
         v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply

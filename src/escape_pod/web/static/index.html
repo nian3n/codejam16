@@ -7,6 +7,7 @@
   <title>Keep Moving and Nobody Explodes</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/workbench.css">
 </head>
 <body>
   <div class="alarm" aria-hidden="true"></div>
@@ -138,25 +139,57 @@
       </div>
     </header>
     <main class="game-main">
-      <div class="stage-area">
-        <div id="stage"></div>
-        <div id="stage-effect" aria-hidden="true"></div>
-      </div>
+      <section class="stage-area" id="workbench" aria-labelledby="bench-title">
+        <header class="bench-heading">
+          <span class="bench-location">Field workbench</span>
+          <h2 id="bench-title">Case lock</h2>
+          <p id="case-note" role="status"></p>
+        </header>
+        <div class="bench-world">
+          <div class="case-rig">
+            <div class="case-shadow" aria-hidden="true"></div>
+            <div class="case-body">
+              <div class="case-bay">
+                <div id="stage"></div>
+                <div id="stage-effect" aria-hidden="true"></div>
+                <div id="case-tray" aria-hidden="true"></div>
+              </div>
+              <div class="hinged-lid">
+                <div class="lid-exterior">
+                  <div class="lid-plaque" aria-hidden="true"><span>KM</span> FIELD SYSTEMS</div>
+                  <div id="case-lock-stage"></div>
+                </div>
+                <div class="lid-interior" aria-hidden="true"></div>
+              </div>
+              <div class="case-console">
+                <output class="seg" id="case-timer" aria-label="Time remaining"></output>
+                <div class="case-grip" aria-hidden="true"></div>
+                <div class="case-status"><i aria-hidden="true"></i><span id="case-status">Armed</span></div>
+              </div>
+            </div>
+            <div class="case-soot" aria-hidden="true"></div>
+            <div class="case-burst" aria-hidden="true"></div>
+            <div class="case-smoke" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="bench-fragments" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div id="handler-desk"></div>
+      </section>
       <aside class="side">
+        <div id="signing-progress"></div>
         <div id="feed" class="feed"></div>
         <div id="composer"></div>
+        <p id="detonation" class="hidden" role="status">Time ran out</p>
+        <section id="end" class="hidden" aria-labelledby="end-title">
+          <div class="card end-card">
+            <h2 id="end-title"></h2>
+            <p id="end-stats"></p>
+            <button id="again" class="btn primary big">Back to the lobby</button>
+          </div>
+        </section>
       </aside>
     </main>
   </section>
-
-  <div id="detonation" class="hidden" role="status"><span>Time ran out</span></div>
-  <div id="end" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="end-title">
-    <div class="card end-card">
-      <h1 id="end-title"></h1>
-      <p id="end-stats"></p>
-      <button id="again" class="btn primary big">Back to the lobby</button>
-    </div>
-  </div>
 
   <script type="module" src="/static/app.js"></script>
 </body>

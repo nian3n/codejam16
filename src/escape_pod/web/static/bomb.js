@@ -1,26 +1,24 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
-// Defuser view: the bomb casing, the timer module and one slot per module.
+// The working controls that sit in the case's recessed module bays.
 // Each widget lives in widgets/<name>.js; to add one, register it in widgets/index.js.
-import { $, el, fmt, secondsLeft, send, store } from "./core.js";
+import { $, el, send, store } from "./core.js";
 import { WIDGETS } from "./widgets/index.js";
 
 function sendAct(i, verb, target) {
   send({ type: "act", round_id: store.state.round_id, module: i, action: { verb, target } });
 }
 
-export function renderBomb() {
+export function renderBomb(force = false) {
   const s = store.state;
   const mods = s.bomb || [];
-  const ctx = { sendAct, rerender: renderBomb };
-  const slots = [el("div", { class: "module timer-mod" },
-    el("div", { class: "seg", text: fmt(Math.ceil(secondsLeft())) }),
-    el("div", { class: "strikes" }, Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") }))),
-    el("div", { class: "serial", text: `SN ${s.code}-${mods.length}` }))];
-  mods.forEach((m, i) => {
-    slots.push(el("div", { class: "module" + (m.defused ? " defused" : "") },
+  const stage = $("#stage");
+  const key = JSON.stringify([s.round_id, mods]);
+  if (!force && stage.firstElementChild?.dataset.bombView === key) return;
+  const ctx = { sendAct, rerender: () => renderBomb(true) };
+  const slots = mods.map((m, i) => (
+    el("div", { class: "module" + (m.defused ? " defused" : "") },
       el("div", { class: "mod-head" }, el("span", { class: "mod-title", text: `${i + 1} · ${m.title}` }), el("span", { class: "led" })),
-      el("div", { class: "mod-body" }, WIDGETS[m.widget](m, i, ctx))));
-  });
-  while (slots.length % 3) slots.push(el("div", { class: "module empty-mod" }));
-  $("#stage").replaceChildren(el("div", { class: "bomb" }, slots));
+      el("div", { class: "mod-body", inert: m.defused ? "" : null }, WIDGETS[m.widget](m, i, ctx)))
+  ));
+  stage.replaceChildren(el("div", { class: "bomb", "data-count": mods.length, "data-bomb-view": key }, slots));
 }

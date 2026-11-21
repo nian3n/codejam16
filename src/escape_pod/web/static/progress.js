@@ -84,7 +84,7 @@ export function approvedWordsKey(profile) {
 
 export function moveProgress(screen) {
   switch (screen) {
-    case "game": $("#game .topbar").after(panel); break;
+    case "game": $("#signing-progress").append(panel); break;
     case "practice": $("#practice-title").after(panel); break;
     case "lobby": $(".lobby-top").after(panel); break;
     default: $("#profile-picker").append(panel);

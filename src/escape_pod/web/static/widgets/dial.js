@@ -5,12 +5,13 @@ import { el, iconFace, store, wordOf } from "../core.js";
 
 export function dial(m, i, { sendAct, rerender }) {
   const opts = m.facts.options;
-  const at = store.local.needle[i] ?? m.facts.needle;
+  const accepted = m.done?.find((action) => action.verb === "turn")?.target.to;
+  const at = accepted ?? store.local.needle[i] ?? m.facts.needle;
   const box = el("div", { class: "dial" });
   opts.forEach((g, k) => {
     const a = (-90 + (k * 360) / opts.length) * (Math.PI / 180);
     box.append(el("button", {
-      class: "dial-opt", title: wordOf(g), style: `left:${50 + 38 * Math.cos(a)}%;top:${50 + 38 * Math.sin(a)}%`,
+      class: "dial-opt", title: wordOf(g), style: `left:${37 + 38 * Math.cos(a)}%;top:${37 + 38 * Math.sin(a)}%`,
       onclick: () => { store.local.needle[i] = g; sendAct(i, "turn", { to: g }); rerender(); },
     }, iconFace(g)));
   });

@@ -476,7 +476,7 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Round start (both roles):** Start opens the case lock and starts one server-owned timer. The agent's browser warms the hand tracker and sign models in the lobby. The case lock accepts typed digits if camera recognition is unavailable.
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
-- **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". When the server reports `timed_out`, both clients show a brief detonation effect before the report. At the end, the server also sends the bomb to the expert for a debrief.
+- **End:** "Defused" or "Detonation", the stats, and "Back to the lobby" beside a wide view of the workbench. The server sends `case_tray` (wire colors and cut positions) to the field agent after the wire gate and to both roles for the debrief. On timeout the case shows a brief blast, then stays on the damaged bench. Reduced motion opens the damaged scene directly.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
 
 ---
