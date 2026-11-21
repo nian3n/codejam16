@@ -658,3 +658,7 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
    wheels take clicks, and the empty case bay under the closed lid lets them through. */
 #case-lock-stage .case-lock.wheels { pointer-events: auto; }
 [data-stage="case_lock"] .case-bay { pointer-events: none; }
+
+/* ---------- sign hints (feed.js): the handler reads the video first ---------- */
+.hidden-signs .hint-note { margin: 4px 0 6px; color: var(--muted, #a9b0bb); font-size: .85rem; }
+.hint-btn:disabled { opacity: .6; cursor: default; }

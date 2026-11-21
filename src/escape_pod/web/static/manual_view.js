@@ -16,7 +16,8 @@ export function openPage(id) {
 export function renderManual() {
   const { state, local, pages, pageById } = store;
   const lastSigns = [...state.chat].reverse().find((m) => m.kind === "signs" && !m.mission_stage);
-  const matches = new Set(lastSigns ? pagesFor(lastSigns.glosses).map((p) => p.id) : []);
+  // A hidden message (no hint yet) lights no page: that would give the words away.
+  const matches = new Set(lastSigns?.glosses ? pagesFor(lastSigns.glosses).map((p) => p.id) : []);
   const q = local.search.toLowerCase();
   const shown = pages.filter((p) => !q || [p.title, p.topic, ...p.words, ...p.glosses].some((x) => x.toLowerCase().includes(q)));
   const search = el("input", { placeholder: "Search a word or topic", value: local.search });
@@ -40,7 +41,7 @@ function pageView(p) {
   if (!p) {
     page.append(el("h2", { text: "Defusal manual" }),
       el("p", { class: "meta", text: `${store.pages.length} puzzles. Each page has its own topic.` }),
-      el("p", { class: "blank", text: "Pick a page on the left. When the agent signs, the pages with those words light up." }));
+      el("p", { class: "blank", text: "Pick a page on the left. Read the agent's signs on the video. If you are stuck, use a hint to see the words: the pages with those words then light up." }));
     return page;
   }
   const swatch = (g) => el("span", { style: `display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #000;background:${WIRE_COLORS[g]}` });

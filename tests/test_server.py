@@ -145,10 +145,11 @@ def test_expert_never_sees_the_bomb():
 def test_full_game_signs_reply_strike_and_escape():
     code, a, b, sa, _ = _start_game()
     mods = server.rooms[code].modules
-    # Defuser signs, expert sees the signs and replies.
+    # Defuser signs. The expert gets the message without the words (hints test below).
     a.send_json({"type": "signs", "glosses": ["CAT", " dog "]})
-    sb = _drain(b, lambda s: s["chat"][-1].get("glosses") == ["cat", "dog"])
-    assert sb["chat"][-1]["kind"] == "signs"
+    sb = _drain(b, lambda s: s["chat"][-1]["kind"] == "signs")
+    assert sb["chat"][-1]["count"] == 2 and "glosses" not in sb["chat"][-1]
+    assert _drain(a, lambda s: s["chat"][-1]["kind"] == "signs")["chat"][-1]["glosses"] == ["cat", "dog"]
     b.send_json({"type": "say", "text": "Press the dog."})
     _drain(a, lambda s: any(m["kind"] == "say" for m in s["chat"]))
     # The expert cannot act on the bomb.
@@ -612,7 +613,7 @@ def test_two_player_gates_need_both_players_and_survive_a_reload():
             assert len(manual["practice_credits"]) == 3  # the handler made the signs
             assert manual["mission"]["wire_rank"] == mission.rank
             assert set(manual["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count",
-                                              "wire_rank", "signed_colors"}
+                                              "wire_rank", "colors_received"}
             assert "case_tray" not in manual
 
             # Wire tray: the cuts wait for all four colors. Wrong signs cost nothing.
@@ -622,9 +623,10 @@ def test_two_player_gates_need_both_players_and_survive_a_reload():
             off_tray = next(c for c in load_pool()["colors"].pool if c not in wires)
             state = _gate_action(agent, state, "signs", glosses=[wires[0], off_tray])
             assert state["mission"]["signed_colors"] == [wires[0]] and state["strikes"] == 1
-            shared = _drain(hq, lambda s: s["chat"][-1].get("glosses") == [wires[0], off_tray])
-            assert shared["chat"][-1]["mission_stage"] == "wire_tray"
-            assert shared["mission"]["signed_colors"] == [wires[0]]
+            shared = _drain(hq, lambda s: s["chat"][-1]["kind"] == "signs")
+            assert shared["chat"][-1]["mission_stage"] == "wire_tray" and shared["chat"][-1]["count"] == 2
+            assert "glosses" not in shared["chat"][-1]  # the handler reads the colors on the video
+            assert shared["mission"]["colors_received"] == 1
             agent.__exit__(None, None, None)
             agent = None
             agent = _join(code, "Ana", pid)
@@ -794,3 +796,53 @@ def test_custom_level_sets_modules_and_time():
     assert s["mission"]["stage"] == "case_lock" and s["progress"]["total"] == 5
     assert 419 < s["remaining_s"] <= 420
     a.__exit__(None, None, None)
+
+
+# ---------------------------------------------------------------------------
+# Hints: the handler reads the signs on the video first (spec 2026-11-21-sign-hints-design)
+# ---------------------------------------------------------------------------
+def test_handler_needs_a_hint_to_see_the_words(monkeypatch):
+    monkeypatch.setattr(server, "HINT_WAIT_S", 0.4)
+    code, a, b, sa, sb = _start_game()
+    a.send_json({"type": "signs", "glosses": ["cat", "dog"]})
+    s = _drain(b, lambda s: s["chat"][-1]["kind"] == "signs")
+    index = len(s["chat"]) - 1
+    hidden = s["chat"][index]
+    assert "glosses" not in hidden and hidden["count"] == 2 and 0 < hidden["hint_in_s"] <= 0.4
+    b.send_json({"type": "hint", "msg": index})  # too early: ignored
+    b.send_json({"type": "say", "text": "ping"})
+    s = _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
+    assert "glosses" not in s["chat"][index]
+    b.send_json({"type": "hint", "msg": len(s["chat"]) - 1})  # not a signs message: ignored
+    time.sleep(0.45)
+    b.send_json({"type": "hint", "msg": index})
+    s = _drain(b, lambda s: s["chat"][-1].get("text") == "Ben used a hint.")
+    assert s["chat"][index]["glosses"] == ["cat", "dog"] and s["chat"][index]["hinted"]
+    assert sum(1 for m in s["chat"] if m.get("text") == "Ben used a hint.") == 1
+    assert _drain(a, lambda s: s["chat"][-1].get("text") == "Ben used a hint.")
+    # The agent cannot ask for a hint, and the bad indexes do nothing.
+    a.send_json({"type": "signs", "glosses": ["cow"]})
+    s = _drain(b, lambda s: s["chat"][-1]["kind"] == "signs")
+    for bad in (-1, 999, "1", None):
+        b.send_json({"type": "hint", "msg": bad})
+    time.sleep(0.45)
+    a.send_json({"type": "hint", "msg": len(s["chat"]) - 1})
+    b.send_json({"type": "say", "text": "pong"})
+    s = _drain(b, lambda s: s["chat"][-1].get("text") == "pong")
+    assert "glosses" not in s["chat"][-2]
+    # The end of the game shows every word, for the debrief.
+    server.rooms[code].deadline = time.monotonic() - 1
+    b.send_json({"type": "say", "text": "late"})
+    s = _drain(b, lambda s: s["phase"] == "boom")
+    assert all("glosses" in m for m in s["chat"] if m["kind"] == "signs")
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_solo_player_sees_the_words():
+    code, a, s = _start_solo()
+    a.send_json({"type": "signs", "glosses": ["cat"]})
+    s = _drain(a, lambda s: any(m["kind"] == "signs" and "mission_stage" not in m for m in s["chat"]))
+    assert all("glosses" in m for m in s["chat"] if m["kind"] == "signs")
+    a.__exit__(None, None, None)
+

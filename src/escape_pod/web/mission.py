@@ -134,5 +134,6 @@ class Mission:
             if self.stage == "case_lock" and self.wheels:
                 payload["case_code"] = self.code
             elif self.stage == "wire_tray":
-                payload.update(wire_rank=self.rank, signed_colors=self.signed_colors)
+                # Only the count: the handler reads the colors on the video (or with a hint).
+                payload.update(wire_rank=self.rank, colors_received=len(self.signed_colors))
         return payload

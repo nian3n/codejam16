@@ -4,14 +4,32 @@
 import { $, el, send, store } from "./core.js";
 import { openPage, pagesFor } from "./manual_view.js";
 
+// Two players: the handler gets "Ana sent 3 signs" without the words (server chat_for).
+// They read the signs on the video. The hint button unlocks hint_in_s after the message.
+function hiddenSigns(m, i) {
+  const unlock = (store.local.hintAt[m.t] ??= performance.now() + m.hint_in_s * 1000);
+  const wait = Math.ceil((unlock - performance.now()) / 1000);
+  if (wait > 0 && !store.local.hintTimer) {
+    store.local.hintTimer = setTimeout(() => { store.local.hintTimer = null; renderFeed(); }, 1000);
+  }
+  const n = m.count === 1 ? "1 sign" : `${m.count} signs`;
+  return el("div", { class: "msg signs hidden-signs" },
+    el("span", { class: "who", text: `${m.from} sent ${n}` }),
+    el("p", { class: "hint-note", text: "Read the signs on the video." }),
+    el("button", { class: "btn small hint-btn", type: "button", disabled: wait > 0,
+      text: wait > 0 ? `Show the words (${wait} s)` : "Show the words",
+      onclick: () => send({ type: "hint", msg: i }) }));
+}
+
 export function renderFeed() {
   const { state, local } = store;
   const feed = $("#feed");
   const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
-  feed.replaceChildren(...state.chat.map((m) => {
+  feed.replaceChildren(...state.chat.map((m, i) => {
     if (m.kind === "event") return el("div", { class: "msg event" + (m.strike ? " strike" : ""), text: m.text });
     if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (handler)` }), m.text);
-    const box = el("div", { class: "msg signs" }, el("span", { class: "who", text: `${m.from} signed` }),
+    if (!m.glosses) return hiddenSigns(m, i);
+    const box = el("div", { class: "msg signs" }, el("span", { class: "who", text: `${m.from} signed${m.hinted ? " (hint)" : ""}` }),
       el("div", { class: "chips" }, m.glosses.map((g) => el("span", { class: "chip", text: g.toUpperCase() }))));
     if (state.me.role === "expert" && !m.mission_stage) {
       const hits = pagesFor(m.glosses);

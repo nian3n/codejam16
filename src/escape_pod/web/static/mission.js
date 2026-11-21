@@ -123,7 +123,7 @@ function wireTray(mission, newlyCut = []) {
       || "Sign the color of each wire, top to bottom." }));
 }
 
-function missionManual(mission) {
+function missionManual(mission, chat = []) {
   if (mission.stage === "case_lock") {
     // Only the handler sees the code. The pictures help a handler who does not know the signs.
     return el("article", { class: "page mission-gate mission-manual" },
@@ -135,17 +135,19 @@ function missionManual(mission) {
           el("img", { src: `/signs/pictures/${d}.png`, alt: `The sign for ${d}`, loading: "lazy" }),
           el("figcaption", { text: d })))));
   }
-  const signed = mission.signed_colors || [];
+  // Only the colors from messages that the handler revealed with a hint (server chat_for).
+  const signed = [...new Set(chat.filter((m) => m.kind === "signs" && m.mission_stage === "wire_tray" && m.glosses)
+    .flatMap((m) => m.glosses))];
   return el("article", { class: "page mission-gate mission-manual" },
     el("h2", { text: "Wire tray" }),
-    el("p", { class: "meta", text: `${trayProgress(mission.cut_count)} · ${signed.length} of 4 colors received` }),
+    el("p", { class: "meta", text: `${trayProgress(mission.cut_count)} · ${mission.colors_received ?? 0} of 4 colors received` }),
     el("p", { text: "The agent signs the colors of the four wires. Cut the wires in this order of colors. "
       + "Skip the colors that the agent does not have. Tell the agent the order." }),
     el("ol", { class: "wire-rank" }, mission.wire_rank.map((color) =>
       el("li", { class: signed.includes(color) ? "signed" : "" },
         el("span", { class: "rank-swatch", style: `background:${WIRE_COLORS[color]}` }),
         el("span", { class: "rank-color", text: color }),
-        signed.includes(color) ? el("span", { class: "rank-have", text: " ✓ the agent has it" }) : null))));
+        signed.includes(color) ? el("span", { class: "rank-have", text: " ✓ the agent signed it" }) : null))));
 }
 
 function freshCuts(previous, tray) {
@@ -154,10 +156,10 @@ function freshCuts(previous, tray) {
 
 export function renderMission(state, previous) {
   const { mission } = state;
-  const key = JSON.stringify([state.round_id, state.me.role, mission]);
+  const key = JSON.stringify([state.round_id, state.me.role, mission, state.me.role === "expert" ? state.chat : null]);
   const stage = $("#stage");
   if (stage.firstElementChild?.dataset.missionView === key) return;
-  const view = state.me.role === "expert" ? missionManual(mission)
+  const view = state.me.role === "expert" ? missionManual(mission, state.chat)
     : wireTray(mission, freshCuts(previous?.round_id === state.round_id ? previous.mission : null, mission));
   view.dataset.missionView = key;
   stage.replaceChildren(view);

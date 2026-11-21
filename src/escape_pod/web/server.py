@@ -48,6 +48,9 @@ ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
 ARM_TIMEOUT_S = 45.0    # the timer starts even if the agent's browser never says "ready"
 COUNTDOWN_S = 3.0       # "ready" starts a 3-2-1 that both players see, then the clock
 BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
+# Two players: the handler reads the agent's signs on the video first. The words of a
+# signs message unlock for the handler this long after it arrives ({"type": "hint"}).
+HINT_WAIT_S = 20.0
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
 app = FastAPI(title="Keep Moving and Nobody Explodes")
@@ -158,6 +161,21 @@ def prune_rooms(now: float | None = None) -> None:
 # ---------------------------------------------------------------------------
 # Views: what each player is allowed to see
 # ---------------------------------------------------------------------------
+def chat_for(room: Room, me: Player) -> list[dict]:
+    """The chat as this player may see it. In a two-player game, the handler gets no
+    words of a signs message until a hint (or the end of the game, for the debrief)."""
+    if room.solo or me.role != "expert" or room.phase != "playing":
+        return room.chat
+    now = time.time()
+    out = []
+    for entry in room.chat:
+        if entry["kind"] == "signs" and not entry.get("hinted"):
+            entry = {**{k: v for k, v in entry.items() if k != "glosses"}, "count": len(entry["glosses"]),
+                     "hint_in_s": round(max(0.0, HINT_WAIT_S - (now - entry["t"])), 1)}
+        out.append(entry)
+    return out
+
+
 def view(room: Room, me: Player) -> dict:
     other = next((p for p in room.players.values() if p.pid != me.pid), None)
     v = {
@@ -185,7 +203,7 @@ def view(room: Room, me: Player) -> dict:
         "timed_out": room.timed_out,
         "strikes": room.strikes,
         "max_strikes": config.MAX_STRIKES,
-        "chat": room.chat,
+        "chat": chat_for(room, me),
         "debug": app.state.debug,
         "solo": room.solo,
         "bot_name": BOT_NAME,  # the solo handler's name, for the page text
@@ -587,6 +605,13 @@ async def handle(room: Room, me: Player, msg: dict):
                 bot_later(room, lambda: bot.on_result(result))
     elif kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed:
         start_countdown(room)
+    elif kind == "hint" and room.phase == "playing" and me.role == "expert" and not room.solo:
+        index = msg.get("msg")
+        entry = room.chat[index] if type(index) is int and 0 <= index < len(room.chat) else None
+        if (entry is not None and entry["kind"] == "signs" and not entry.get("hinted")
+                and time.time() - entry["t"] >= HINT_WAIT_S):
+            entry["hinted"] = True
+            room.say({"kind": "event", "text": f"{me.name} used a hint."})
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":

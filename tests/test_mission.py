@@ -88,5 +88,6 @@ def test_views_split_the_code():
     m.confirm(m.colors[:2])
     agent, handler = m.view("defuser"), m.view("expert")
     assert agent["wires"] == m.colors and agent["signed_colors"] == m.colors[:2]
-    assert handler["wire_rank"] == m.rank and handler["signed_colors"] == m.colors[:2]
+    assert handler["wire_rank"] == m.rank and handler["colors_received"] == 2
+    assert "signed_colors" not in handler  # the handler reads the colors on the video
     assert "wires" not in handler and "cuts" not in handler and "case_code" not in handler
