@@ -1,7 +1,7 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 // Defuser view: the bomb casing, the timer module and one slot per module.
 // Each widget lives in widgets/<name>.js; to add one, register it in widgets/index.js.
-import { $, el, send, store } from "./core.js";
+import { $, el, fmt, secondsLeft, send, store } from "./core.js";
 import { WIDGETS } from "./widgets/index.js";
 
 function sendAct(i, verb, target) {
@@ -13,7 +13,7 @@ export function renderBomb() {
   const mods = s.bomb || [];
   const ctx = { sendAct, rerender: renderBomb };
   const slots = [el("div", { class: "module timer-mod" },
-    el("div", { class: "seg", text: "0:00" }),
+    el("div", { class: "seg", text: fmt(Math.ceil(secondsLeft())) }),
     el("div", { class: "strikes" }, Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") }))),
     el("div", { class: "serial", text: `SN ${s.code}-${mods.length}` }))];
   mods.forEach((m, i) => {

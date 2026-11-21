@@ -107,8 +107,9 @@ export class Sequencer {
     this.stillSince = null; // time the "next" shape became still
   }
 
-  start(t) {
+  start(t, { trimLongSigns = false } = {}) {
     this.reset();
+    this.trimLongSigns = trimLongSigns;
     this.phase = "arming";
     this.armUntil = t + this.cfg.ARM_MS;
     return [{ type: "phase", phase: "arming" }];
@@ -172,7 +173,11 @@ export class Sequencer {
         this.recent = shape ? [] : [...this.recent, frame].slice(-this.cfg.PRE_ROLL);
       }
     } else if (this.phase === "signing") {
-      this.seg.push(frame);
+      // The gates still wait for a separator when a player holds a sign past
+      // the model's clip limit. Keep one bounded clip for that signing action.
+      if (!this.trimLongSigns || (this.seg.length < this.cfg.MAX_FRAMES && t - this.seg[0].t <= this.cfg.MAX_SIGN_MS)) {
+        this.seg.push(frame);
+      }
       if (this.downSince != null && t - this.downSince >= this.cfg.DOWN_MS) {
         out.push(...this.close(this.seg.filter((f) => f.t < this.downSince)));
         this.seg = [];

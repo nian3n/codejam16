@@ -37,14 +37,24 @@ export const store = {
   pageById: {},
   deadlineAt: 0,
   faceTick: 0,
-  local: { init: null, signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: "", chatSeen: -1 },
+  local: { signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: "", chatSeen: -1 },
 };
 
 export function resetLocal() {
-  store.local = { init: null, signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: store.local.search, chatSeen: -1 };
+  store.local = { signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: store.local.search, chatSeen: -1 };
+}
+
+export function gameplayOpen() {
+  return store.state?.phase === "playing" && store.state.armed && performance.now() < store.deadlineAt;
+}
+
+export function secondsLeft() {
+  return store.state?.phase === "playing" ? Math.max(0, (store.deadlineAt - performance.now()) / 1000)
+    : store.state?.remaining_s ?? 0;
 }
 
 export function send(msg) {
+  if (["signs", "say", "act", "exit"].includes(msg.type) && !gameplayOpen()) return;
   if (store.ws && store.ws.readyState === 1) store.ws.send(JSON.stringify(msg));
 }
 

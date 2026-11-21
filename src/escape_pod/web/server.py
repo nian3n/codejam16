@@ -45,8 +45,6 @@ ROLES = ("defuser", "expert")
 MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
 MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
 ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
-ARM_TIMEOUT_S = 45.0    # the timer starts even if the agent's browser never says "ready"
-COUNTDOWN_S = 3.0       # "ready" starts a 3-2-1 that both players see, then the clock
 BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
@@ -98,12 +96,10 @@ class Room:
     strikes: int = 0
     deadline: float = 0.0
     ended_left: float = 0.0
+    timed_out: bool = False
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
-    # "Initializing": the clock waits until the agent's browser has loaded the hand tracker
-    # and the server has loaded the word model ({"type": "ready"}), or ARM_TIMEOUT_S.
     armed: bool = False
-    countdown_end: float | None = None  # monotonic time the 3-2-1 ends; None before "ready"
     voice_rng: random.Random = field(default_factory=random.Random)  # the solo bot's nervous words
     timer_s: float = 0.0
     last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
@@ -115,8 +111,6 @@ class Room:
     bot_task: asyncio.Task | None = None  # set while the bot is "typing"
 
     def remaining(self) -> float:
-        if self.phase == "playing" and not self.armed:
-            return self.timer_s
         if self.phase == "playing":
             return max(0.0, self.deadline - time.monotonic())
         return self.ended_left
@@ -178,8 +172,7 @@ def view(room: Room, me: Player) -> dict:
         "can_start": room.can_start(),
         "remaining_s": round(room.remaining(), 2),
         "armed": room.armed,
-        **({"countdown_s": round(max(0.0, room.countdown_end - time.monotonic()), 2)}
-           if room.phase == "playing" and not room.armed and room.countdown_end is not None else {}),
+        "timed_out": room.timed_out,
         "strikes": room.strikes,
         "max_strikes": config.MAX_STRIKES,
         "chat": room.chat,
@@ -242,40 +235,17 @@ def end_game(room: Room, result: Literal["escaped", "boom"], why: str):
     room.timer_task = None
 
 
-def arm(room: Room) -> None:
-    """Start the clock."""
-    room.armed = True
-    room.deadline = time.monotonic() + room.timer_s
-
-
 def expire_if_due(room: Room) -> bool:
     if room.phase != "playing" or not room.armed or room.remaining() > 0:
         return False
+    room.timed_out = True
     end_game(room, "boom", "Time ran out. Detonation!")
     return True
 
 
-def start_countdown(room: Room) -> None:
-    """The agent is ready: count 3-2-1, so nobody is caught out when signing goes live."""
-    if room.countdown_end is None:
-        room.countdown_end = time.monotonic() + COUNTDOWN_S
-
-
 async def watch_timer(room: Room):
-    waited = 0.0
-    while room.phase == "playing" and not room.armed:
-        await asyncio.sleep(0.05)
-        waited += 0.05
-        if room.phase != "playing" or room.armed:
-            break
-        if room.countdown_end is None and waited >= ARM_TIMEOUT_S:
-            start_countdown(room)
-            await broadcast(room)
-        elif room.countdown_end is not None and time.monotonic() >= room.countdown_end:
-            arm(room)
-            await broadcast(room)
     while room.phase == "playing":
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(min(0.25, room.remaining()))
         if expire_if_due(room):
             await broadcast(room)
 
@@ -299,8 +269,10 @@ def start_game(room: Room):
     room.chat = []
     room.phase = "playing"
     room.timer_s = float(level.timer_s or 600)
-    room.armed = False  # the clock starts after {"type": "ready"} and a 3-2-1 (see arm)
-    room.countdown_end = None
+    room.armed = True
+    room.deadline = time.monotonic() + room.timer_s
+    room.ended_left = 0.0
+    room.timed_out = False
     room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
     if room.solo:
         room.bot = HqBot()  # a fresh bot per game: no page from the last game
@@ -315,6 +287,9 @@ def back_to_lobby(room: Room, why: str | None = None):
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
     room.round_id = None
+    room.armed = False
+    room.ended_left = 0.0
+    room.timed_out = False
     room.mission = None
     stop_bot(room)
     room.bot = None
@@ -423,28 +398,40 @@ def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
         return False
     stage = mission.stage
     if msg["type"] == "signs":
+        previous_digits = mission.lock_confirmed
         glosses = mission.confirm(clean_glosses(msg.get("glosses")))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses, "mission_stage": stage})
-        if mission.stage != stage:
-            room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
-            if room.bot is not None:
-                bot_say(room, room.bot.wire_tray_prompt(mission.position_order[0]))
-        return True
+        if stage == "case_lock":
+            for slot in range(previous_digits, mission.lock_confirmed):
+                me.practice_credits.add(f"{room.round_id}:case_lock:{slot}")
+            if mission.stage == "wire_tray":
+                room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
+                if room.bot is not None:
+                    bot_say(room, room.bot.wire_tray_prompt(mission.position_order[0]))
+            return True
+        if not glosses:
+            return True
+        # Pass the next position to the existing cut check. It compares the
+        # confirmed color against that wire and applies the same strike rules.
+        index = mission.wire_order[len(mission.cuts)]
+    else:
+        index = msg.get("wire")
+        if (stage != "wire_tray" or type(index) is not int
+                or not 0 <= index < len(mission.colors) or index in mission.cuts):
+            return False
 
-    index = msg.get("wire")
-    if (stage != "wire_tray" or type(index) is not int
-            or not 0 <= index < len(mission.colors) or index in mission.cuts):
-        return False
     outcome = mission.cut(index)
     if outcome == "strike":
         strike(room)
-    elif outcome == "cut" and mission.stage == "modules":
-        room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
-        if room.bot is not None:
-            bot_say(room, room.bot.greeting())
-    elif outcome == "cut" and room.bot is not None:
-        bot_say(room, room.bot.wire_tray_prompt(mission.position_order[len(mission.cuts)]))
+    elif outcome == "cut":
+        me.practice_credits.add(f"{room.round_id}:wire_tray:{index}")
+        if mission.stage == "modules":
+            room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
+            if room.bot is not None:
+                bot_say(room, room.bot.greeting())
+        elif room.bot is not None:
+            bot_say(room, room.bot.wire_tray_prompt(mission.position_order[len(mission.cuts)]))
     return True
 
 
@@ -474,7 +461,7 @@ async def handle(room: Room, me: Player, msg: dict):
             # Until the browser confirms storage, a reconnect can replay these credits.
             me.practice_credits.difference_update(credit for credit in credits if isinstance(credit, str))
         return
-    if kind in ("signs", "wire_cut", "act") and expire_if_due(room):
+    if kind in ("signs", "wire_cut", "act", "say", "exit") and expire_if_due(room):
         await broadcast(room)
         return
     mission = room.mission
@@ -540,8 +527,6 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None and result is not None and room.phase == "playing":
                 bot = room.bot
                 bot_later(room, lambda: bot.on_result(result))
-    elif kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed:
-        start_countdown(room)
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":

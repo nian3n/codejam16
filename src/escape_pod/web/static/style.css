@@ -266,7 +266,7 @@ button.chip:hover { border-color: var(--warn); }
 .mission-count { margin: 0; color: #ecebe6; font: 700 .9rem var(--mono); }
 .mission-note { margin: 12px 0 0; color: #ecebe6; }
 .tray-wires {
-  margin: 12px 0; padding: 7px; display: grid; gap: 3px; background: #12161f;
+  margin: 12px 0; padding: 7px; display: grid; gap: 3px; list-style: none; background: #12161f;
 }
 .mission-wire {
   display: grid; grid-template-columns: 2ch minmax(0, 1fr) minmax(9ch, auto);
@@ -277,8 +277,6 @@ button.chip:hover { border-color: var(--warn); }
 .mission-wire svg { display: block; width: 100%; height: 44px; }
 .mission-wire .wire-position { color: var(--acc); }
 .mission-wire .wire-name { text-transform: capitalize; }
-.mission-wire:enabled:is(:hover, :focus-visible) { border-color: var(--acc); outline-color: var(--acc); }
-.mission-wire:disabled { cursor: default; }
 .mission-note + .mission-count { margin-top: 8px; }
 .mission-manual.page { padding-top: 64px; }
 .mission-manual li[aria-current="step"] { font-weight: 800; }
@@ -362,18 +360,6 @@ button.chip:hover { border-color: var(--warn); }
 }
 .bb-btn.held { transform: translateY(5px); box-shadow: 0 1px 0 #400; }
 
-/* ---------- initializing (init.js) ---------- */
-.init-card { text-align: center; min-width: 320px; }
-.init-steps { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 10px; text-align: left; }
-.init-step { display: flex; gap: 10px; align-items: center; font-family: var(--mono); }
-.init-step .mark { width: 1.6em; text-align: center; font-weight: 800; }
-.init-step.wait .mark { animation: blink 1s steps(1) infinite; color: var(--acc); }
-.init-step.ok .mark { color: var(--ok); }
-.init-step.fail .mark { color: var(--warn); }
-.init-count { display: none; font-family: var(--mono); font-weight: 800; font-size: 5.5rem; line-height: 1; color: var(--acc); margin: 6px 0 14px; }
-#init.counting .init-count { display: block; animation: count-pop 1s ease-out infinite; }
-@keyframes count-pop { from { transform: scale(1.25); opacity: .6; } 30% { transform: scale(1); opacity: 1; } }
-
 /* ---------- the bomb fills the stage ----------
    The stage is a size container. The bomb has 2 rows of 3 square modules (the timer plus
    up to 5 modules), so the module side s is the largest that fits both ways:
@@ -449,6 +435,29 @@ button.chip:hover { border-color: var(--warn); }
 .end-card h1 { margin: 0; font-size: 2.1rem; font-family: var(--mono); letter-spacing: .12em; }
 .end-card.win h1 { color: var(--ok); }
 .end-card.lose h1 { color: var(--warn); }
+#detonation {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  overflow: hidden; background: #160c0a; color: #fff0db;
+  font: 800 clamp(1.6rem, 6vw, 4rem) var(--mono); text-transform: uppercase;
+  animation: detonation var(--detonation-duration) ease-out both;
+}
+#detonation::before {
+  content: ""; position: absolute; inset: -50%; pointer-events: none;
+  background: radial-gradient(ellipse, #fff1ba 4%, #f4a140 15%, #b33c20 29%, #441c16 42%, transparent 64%);
+  animation: blast var(--detonation-duration) ease-out both;
+}
+#detonation span { position: relative; text-shadow: 0 2px 10px #170704, 0 2px 3px #170704; }
+@keyframes detonation { from { background: #481b10; } to { background: #160c0a; } }
+@keyframes blast {
+  from { opacity: .9; transform: scale(.15); }
+  45% { opacity: .8; }
+  to { opacity: 0; transform: scale(1.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #detonation { animation-name: detonation-still; }
+  #detonation::before { display: none; }
+}
+@keyframes detonation-still { from, to { background: #2e1412; } }
 /* The wall is a background image now, so the flash is an overlay (body::after), not a background color. */
 body.flash::after { animation: flash .45s; }
 @keyframes flash { 0%, 100% { opacity: 0; } 30% { opacity: .45; } }

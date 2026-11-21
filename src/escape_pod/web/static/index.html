@@ -149,16 +149,8 @@
     </main>
   </section>
 
-  <div id="init" class="overlay hidden" aria-live="polite">
-    <div class="card init-card">
-      <h1 id="init-title">INITIALIZING</h1>
-      <ul id="init-steps" class="init-steps"></ul>
-      <div id="init-count" class="init-count" aria-live="assertive"></div>
-      <p id="init-hint" class="hint">The timer starts when everything is ready.</p>
-    </div>
-  </div>
-
-  <div id="end" class="overlay hidden">
+  <div id="detonation" class="hidden" role="status"><span>Time ran out</span></div>
+  <div id="end" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="end-title">
     <div class="card end-card">
       <h1 id="end-title"></h1>
       <p id="end-stats"></p>

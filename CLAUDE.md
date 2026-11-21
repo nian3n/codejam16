@@ -171,10 +171,8 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | `{"type": "start"}` | anyone, when both roles are taken | lobby |
 | `{"type": "signs", "glosses": ["cat", "dog"]}` | defuser | playing |
 | `{"type": "signs", "glosses": ["0"], "round_id": ..., "mission_revision": ...}` | defuser | armed, case lock or wire tray |
-| `{"type": "wire_cut", "wire": 0, "round_id": ..., "mission_revision": ...}` | defuser | armed, wire tray. Wire indexes count from zero, top to bottom |
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
-| `{"type": "ready"}`: the agent's hand tracker and the word model are loaded. The server counts 3-2-1 (`countdown_s` in the state), then the clock starts (`armed` becomes true). Without `ready`, the count starts after 45 s | defuser | playing |
 | `{"type": "again"}` | anyone | escaped or boom |
 | `{"type": "exit"}`: ends the game for both players. Both go back to the lobby with their roles | anyone | playing |
 | `{"type": "leave"}`: frees the seat and the role. A running game ends. The last player out deletes the room | anyone | any |
@@ -184,7 +182,7 @@ The server forwards an `rtc` message to the other player as `{"type": "rtc", "da
 
 After each change, the server sends each player its own `{"type": "state", ...}`. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
 
-**Mission:** While a round exists, `state.mission` has `stage` (`case_lock`, `wire_tray`, or `modules`), `revision`, `lock_confirmed`, and `cut_count`. The defuser also gets `feedback` and the active gate's private fields (`case_code` at the lock, or `wires`, `cuts`, and `confirmed_color` at the tray). The expert gets the manual's `wire_rule` at the tray. Gate inputs use the round's `round_id` and the most recently acknowledged `mission.revision`. Gate sign chat entries also carry `mission_stage`. The module board becomes available after the tray. Both gates share the board's timer and strikes.
+**Mission:** While a round exists, `state.mission` has `stage` (`case_lock`, `wire_tray`, or `modules`), `revision`, `lock_confirmed`, and `cut_count`. The defuser also gets `feedback` and the active gate's private fields (`case_code` at the lock, or `wires` and `cuts` at the tray). The expert gets the manual's `wire_rule` at the tray. Gate inputs use the round's `round_id` and the most recently acknowledged `mission.revision`. Gate sign chat entries also carry `mission_stage`. Confirming the next wire's color cuts it automatically. Each correct digit and cut earns the signer one practice point. The module board becomes available after the tray. Both gates share the board's timer and strikes.
 
 **Solo rooms:** `POST /api/rooms` with the body `{"solo": true}` makes a room for one player. The player is the defuser at once, and a second player gets the error "This is a solo room." The scripted bot (`brain/hq_bot.py`) takes the HQ seat, but it is not in `players`. Its lines are chat entries `{"kind": "say", "from": "HQ bot", "text": ...}`. They follow each `signs` message and each action that defuses a module or costs a strike. In a solo room, the server ignores `role` and `say`. The state always has `solo` (true or false). In a solo game, it also has `bot_stage`: `"module"` (the bot waits for one item of a module) or `"details"` (the bot waits for the items of the open page).
 
@@ -476,9 +474,9 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
 - **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to <handler name>" and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
-- **Initializing (both roles):** after Start, an "INITIALIZING" screen covers the game, and the timer holds the full time. The agent's browser loads the hand tracker and asks the server to load the word model (`GET /api/practice/warmup`), then sends `ready` (`static/init.js`). The screen then shows "GET READY" and a 3-2-1 for both players, so signing never goes live without warning. The server also loads the model in the background when it starts, because the first load takes about 6 s.
+- **Round start (both roles):** Start opens the case lock and starts one server-owned timer. The agent's browser warms the hand tracker and sign models in the lobby. The case lock accepts typed digits if camera recognition is unavailable.
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
-- **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
+- **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". When the server reports `timed_out`, both clients show a brief detonation effect before the report. At the end, the server also sends the bomb to the expert for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
 
 ---

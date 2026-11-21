@@ -11,7 +11,8 @@
 //
 // Each page load has its own session id (sid). When the other player reloads, their
 // messages carry a new sid, and we throw our old connection away and start fresh.
-import { $, el, send, store } from "./core.js";
+import { el, send, store } from "./core.js";
+import { cameraError, cameraUnavailable, openCamera, stopCamera } from "./camera.js";
 
 const mySid = Math.random().toString(36).slice(2) + Date.now().toString(36);
 let pc = null;
@@ -20,13 +21,11 @@ let remoteSid = null;
 let makingOffer = false;
 let ignoreOffer = false;
 let wanted = false;          // true once two players are in the room
-let cameraError = "";
 let otherOnline = false;     // from the server state: is the other player's tab connected?
 let solo = false;            // a solo room: the camera feeds the sign recognizer only, no peer
-// Resolves when the camera request has finished (granted or not). onRtc waits for it:
-// otherwise an offer from a player whose camera is already on makes us build the
-// connection before our camera is ready, and we would only receive, never send.
-let cameraStarting = Promise.resolve();
+let cameraIssue = "";
+let cameraStarting = null;
+let videoSession = 0;
 
 // STUN/TURN servers come from /api/ice: the server holds the TURN API key and hands
 // out only short-lived logins. Fetched once per page load, before the first connection.
@@ -42,13 +41,14 @@ const remoteName = el("span", { class: "vname" });
 // "● LIVE" shows only while the other player's video actually plays; the label names the channel in the story.
 const liveLabel = el("span", { text: "AGENT CAM" });
 const liveTag = el("span", { class: "live-tag hidden" }, el("span", { class: "live-dot", text: "● " }), "LIVE · ", liveLabel);
-const camBtn = el("button", { class: "btn small", text: "Camera off", onclick: toggleCamera });
-const retryBtn = el("button", { class: "btn small hidden", text: "Try the camera again", onclick: () => { cameraError = ""; startCamera(true); } });
+const camBtn = el("button", { class: "btn small", text: "Camera on", onclick: toggleCamera });
+const retryBtn = el("button", { class: "btn small hidden", text: "Try the camera again", onclick: startCamera });
+const cameraStatus = el("p", { class: "camera-status hidden", role: "status" });
 remoteVideo.muted = true;   // no audio track anyway; muted lets autoplay start without a click
 localVideo.muted = true;
 const dock = el("div", { class: "video-dock" },
   el("div", { class: "remote-wrap" }, remoteVideo, status, remoteName, liveTag, localVideo),
-  el("div", { class: "vbar" }, camBtn, retryBtn));
+  el("div", { class: "vbar" }, camBtn, retryBtn), cameraStatus);
 
 /** The player's own camera <video>, or null while the camera is off or not open.
  *  The sign recognizer (game_signs.js) reads frames from it: one camera, two uses. */
@@ -66,13 +66,14 @@ export function placeDock(parent) {
 }
 
 // ---------------------------------------------------------------- state from the server
-export function onRoomState(s) {
+export function onRoomState(s, autoCamera) {
   solo = !!s.solo;
   dock.classList.toggle("solo", solo);
   if (solo) {
-    // The bot has no camera. Open ours once, for signing, and show it full size.
-    setStatus(cameraError);
-    if (!wanted) { wanted = true; startCamera(false); }
+    setStatus("");
+    wanted = true;
+    if (autoCamera && !cameraIssue) startCamera();
+    renderCamera();
     return;
   }
   const other = s.players.find((p) => !p.you) || null;
@@ -81,6 +82,7 @@ export function onRoomState(s) {
     // The other player left the room. Drop the old connection; when someone new joins,
     // the block below starts a fresh one.
     dropPeer();
+    releaseCamera();
     wanted = false;
   }
   const label = { defuser: "agent", expert: "handler" }[other?.role] || "";
@@ -92,12 +94,11 @@ export function onRoomState(s) {
   } else if (!other.online) {
     setStatus(`${other.name} is offline. Waiting...`);
   } else if (!remoteVideo.srcObject) {
-    setStatus(cameraError || "Connecting video...");
+    setStatus("Connecting video...");
   }
-  if (s.players.length === 2 && !wanted) {
-    wanted = true;
-    startCamera(false);
-  }
+  wanted = !!other;
+  if (wanted && autoCamera && !cameraIssue) startCamera();
+  renderCamera();
 }
 
 // LIVE only when frames can really arrive: a track, a connected peer connection and the other
@@ -114,52 +115,75 @@ function setStatus(text) {
 }
 
 // ---------------------------------------------------------------- camera
-async function startCamera(retry) {
-  let done;
-  cameraStarting = new Promise((r) => (done = r));
-  try {
-    await iceReady;
-    await openCamera();
-  } finally {
-    done();
-  }
-  retryBtn.classList.toggle("hidden", !cameraError);
-  camBtn.classList.toggle("hidden", !localStream);
-  localVideo.classList.toggle("hidden", !localStream);
-  if (cameraError) setStatus(cameraError);
-  if (solo) return;  // nobody to call: the self-view is the whole dock
-  // Without a camera we still connect, to receive the other player's video.
-  if (retry && pc) resetPc();
-  else ensurePc();
+function renderCamera() {
+  const track = localStream?.getVideoTracks()[0];
+  const enabled = !!track?.enabled;
+  camBtn.textContent = enabled ? "Camera off" : "Camera on";
+  camBtn.classList.toggle("hidden", !wanted || !!cameraIssue || !!cameraStarting);
+  retryBtn.classList.toggle("hidden", !wanted || !cameraIssue || !!cameraStarting);
+  localVideo.classList.toggle("hidden", !track);
+  localVideo.classList.toggle("off", !!track && !enabled);
+  cameraStatus.textContent = cameraStarting ? "Opening the camera…" : cameraIssue;
+  cameraStatus.classList.toggle("hidden", !cameraStatus.textContent);
 }
 
-async function openCamera() {
-  if (!localStream) {
-    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      cameraError = "This page is not secure, so the browser blocks the camera. Ask the host to start the server with --https.";
-    } else {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
-          audio: false,  // ASL is visual; no audio also means no echo with two tabs on one laptop
-        });
-        localVideo.srcObject = localStream;
-        localVideo.play().catch(() => {});
-        cameraError = "";
-      } catch (e) {
-        cameraError = e.name === "NotAllowedError" ? "Camera permission was denied. Allow it in the address bar."
-          : e.name === "NotFoundError" ? "No camera found." : `Camera error: ${e.name}`;
-      }
+function startCamera() {
+  if (!wanted || cameraStarting || localStream) return;
+  const session = videoSession;
+  cameraStarting = acquireCamera(session).then(async () => {
+    if (session !== videoSession) return;
+    cameraStarting = null;
+    renderCamera();
+    if (solo) return;
+    await iceReady;
+    if (session !== videoSession || !wanted) return;
+    // A peer may already be receiving only after a denied camera request.
+    if (localStream && pc && !pc.getSenders().some((sender) => sender.track)) resetPc();
+    else ensurePc();
+  });
+  renderCamera();
+}
+
+async function acquireCamera(session) {
+  cameraIssue = cameraUnavailable();
+  if (cameraIssue) return;
+  try {
+    const stream = await openCamera();
+    if (session !== videoSession) {
+      stopCamera(stream);
+      return;
     }
+    localStream = stream;
+    localVideo.srcObject = stream;
+    stream.getVideoTracks()[0].addEventListener("ended", () => {
+      if (localStream !== stream) return;
+      stopCamera(stream);
+      localStream = localVideo.srcObject = null;
+      dropPeer();
+      cameraIssue = "The camera disconnected. Reconnect it and try again.";
+      renderCamera();
+    });
+    // placeDock also resumes playback if the video moved while permission was pending.
+    localVideo.play().catch(() => {});
+  } catch (error) {
+    if (session === videoSession) cameraIssue = cameraError(error);
   }
+}
+
+function releaseCamera() {
+  videoSession++;
+  cameraStarting = null;
+  cameraIssue = "";
+  stopCamera(localStream);
+  localStream = localVideo.srcObject = null;
+  renderCamera();
 }
 
 function toggleCamera() {
   const track = localStream?.getVideoTracks()[0];
-  if (!track) return;
+  if (!track) { startCamera(); return; }
   track.enabled = !track.enabled;  // the other side sees black; no renegotiation needed
-  camBtn.textContent = track.enabled ? "Camera off" : "Camera on";
-  localVideo.classList.toggle("off", !track.enabled);
+  renderCamera();
 }
 
 // ---------------------------------------------------------------- peer connection
@@ -180,14 +204,15 @@ function ensurePc() {
   };
   pc.onicecandidate = (e) => { if (e.candidate) sendRtc({ candidate: e.candidate.toJSON() }); };
   pc.onnegotiationneeded = async () => {
+    const conn = pc;
     try {
       makingOffer = true;
-      await pc.setLocalDescription();
-      sendRtc({ description: pc.localDescription.toJSON() });
+      await conn.setLocalDescription();
+      if (pc === conn) sendRtc({ description: conn.localDescription.toJSON() });
     } catch (e) {
       console.warn("rtc offer failed", e);
     } finally {
-      makingOffer = false;
+      if (pc === conn) makingOffer = false;
     }
   };
   pc.onconnectionstatechange = () => {
@@ -220,28 +245,24 @@ function resetPc() {
 export function stopVideo() {
   dropPeer();
   wanted = false;
-  cameraError = "";
-  for (const t of localStream?.getTracks() || []) t.stop();  // turns the camera light off
-  localStream = null;
-  localVideo.srcObject = null;
-  localVideo.classList.remove("off");
-  camBtn.textContent = "Camera off";
+  releaseCamera();
   setStatus("Waiting for the other player...");
   dock.remove();
 }
 
 /** A set-up message from the other player, relayed by the server. */
 export async function onRtc(data) {
-  if (!data || typeof data !== "object") return;
+  if (!wanted || solo || !data || typeof data !== "object") return;
+  const session = videoSession;
   await iceReady;
   await cameraStarting;
+  if (session !== videoSession || !wanted || !store.state) return;
   if (data.sid !== remoteSid) {
     // The other player has a new page (first contact or a reload): start over.
     const fresh = remoteSid !== null;
     remoteSid = data.sid;
     if (fresh) resetPc();
   }
-  wanted = true;
   const conn = ensurePc();
   if (!conn) return;
   try {
@@ -253,7 +274,7 @@ export async function onRtc(data) {
       await conn.setRemoteDescription(d);  // a polite peer rolls back its own offer here
       if (d.type === "offer") {
         await conn.setLocalDescription();
-        sendRtc({ description: conn.localDescription.toJSON() });
+        if (pc === conn) sendRtc({ description: conn.localDescription.toJSON() });
       }
     } else if (data.candidate) {
       try {

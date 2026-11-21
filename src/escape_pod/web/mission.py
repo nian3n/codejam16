@@ -56,7 +56,6 @@ class Mission:
             self.feedback = "Confirm one wire color at a time."
             return []
         self.confirmed_color = glosses[0]
-        self.feedback = "Color confirmed. Select the wire."
         return glosses
 
     def cut(self, index: int) -> Literal["retry", "strike", "cut"]:
@@ -66,7 +65,7 @@ class Mission:
             return "retry"
         color, self.confirmed_color = self.confirmed_color, None
         if color != self.colors[index]:
-            self.feedback = "The selected wire differs from your confirmed color. Sign again."
+            self.feedback = "That color does not match the next wire. Check the order with HQ and sign again."
             return "strike"
         if index != self.wire_order[len(self.cuts)]:
             self.feedback = "Wrong position. Check the order with HQ, then sign again."

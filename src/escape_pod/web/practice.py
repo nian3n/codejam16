@@ -8,7 +8,6 @@ from starlette.concurrency import run_in_threadpool
 
 from escape_pod.vision.handshape import DIGITS
 from escape_pod.vision.landmarks import LEFT, N_POINTS, RIGHT
-from escape_pod.vision.handshape import DIGITS
 from escape_pod.vision.recognizer import game_words, hand_model, model, rank, rank_mixed
 
 router = APIRouter(prefix="/api/practice")
@@ -57,7 +56,6 @@ def recognition_status() -> dict:
 
 @router.get("/warmup")
 async def practice_warmup():
-    # The game's "Initializing" screen waits for this before the timer starts.
     return await run_in_threadpool(recognition_status)
 
 
@@ -117,23 +115,30 @@ def score_clip(data: bytearray, target: str):
 def guess_clip(data: bytearray, words: str | None):
     """Top 3 guesses for one clip of a sequence, among the game words (or a subset)."""
     clip = parse_clip(data)
-    logits, glosses = logits_for(clip)
-    allowed = game_words(set(glosses))
-    if words:
-        allowed &= {w.strip() for w in words.split(",")}
-        if not allowed:
-            raise HTTPException(400, "None of those words is a game word.")
-    guesses = rank(logits, allowed, k=3)
-    if allowed & set(DIGITS):
-        # A keypad is on the bomb: the digit model takes the probability the word model
-        # does not give to the allowed words (recognizer.rank_mixed). Without a digit
-        # model, digits stay typed only.
-        try:
-            with model_lock:
-                hand = hand_model().scores(clip)
-            guesses = rank_mixed(logits, hand, allowed, k=3)
-        except FileNotFoundError:
-            pass
+    requested = {word.strip() for word in words.split(",")} if words else set()
+    if requested and requested <= set(DIGITS):
+        with model_lock:
+            classifier = digit_classifier()
+            if classifier is None:
+                raise HTTPException(503, DIGIT_FALLBACK)
+            guesses = rank(classifier.scores(clip) or {}, requested, k=3)
+    else:
+        logits, glosses = logits_for(clip)
+        allowed = game_words(set(glosses))
+        if words:
+            allowed &= requested
+            if not allowed:
+                raise HTTPException(400, "None of those words is a game word.")
+        guesses = rank(logits, allowed, k=3)
+        if allowed & set(DIGITS):
+            # A keypad is on the bomb. Keep word signs and handshapes in the same ranking.
+            try:
+                with model_lock:
+                    hand = hand_model().scores(clip)
+                if hand and allowed.intersection(hand):
+                    guesses = rank_mixed(logits, hand, allowed, k=3)
+            except (OSError, ValueError, KeyError):
+                pass
     return {"guesses": [{"gloss": g.gloss, "score": g.score} for g in guesses]}
 
 

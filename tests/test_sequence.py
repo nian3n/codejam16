@@ -57,7 +57,7 @@ const results = {};
 for (const [name, steps] of Object.entries(scenarios)) {
   const seq = new Sequencer();
   let t = 0, id = 0;
-  const events = [...seq.start(0)];
+  const events = [...seq.start(0, { trimLongSigns: name === "gate" })];
   for (const [kind, ms] of steps) {
     if (kind === "stop") { events.push(...seq.stop()); continue; }
     const n = Math.round(ms / (1000 / 30));
@@ -130,6 +130,13 @@ def test_a_twitch_is_dropped_and_a_long_stretch_is_unclear():
     assert clips(r["twitch"]) == []
     (c,) = clips(r["long"])
     assert c["unclear"] and c["clip"] == 0
+
+
+def test_gate_records_a_held_sign_once_and_allows_the_same_sign_again():
+    r = run({"gate": [["rest", 1100], ["sign", 5000], ["rest", 1400], ["sign", 800], ["rest", 500]]})
+    first, second = clips(r["gate"])
+    assert first["clip"] == 75 and not first["unclear"]
+    assert second["clip"] > 0 and not second["unclear"]
 
 
 def test_lowering_the_hands_after_the_pose_records_nothing():

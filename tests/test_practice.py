@@ -94,6 +94,7 @@ def test_digit_captures_use_the_handshape_model_or_report_the_fallback(monkeypat
 
     monkeypatch.setattr(practice, "hand_model", digits)
     monkeypatch.setattr(practice, "warm_model", lambda: {"ready": False})
+    monkeypatch.setattr(practice, "model", lambda: pytest.fail("A digit-only clip does not need the word model."))
     assert client.get("/api/practice/warmup").json()["digits_ready"] is trained
     clip = np.full((3, N_POINTS, 3), np.nan, dtype="<f4")
     clip[:, LEFT] = 0.5
