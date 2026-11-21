@@ -33,7 +33,7 @@ from escape_pod.puzzles.engine import ALPHA, ORDERS, WIDGETS, cond_holds, load_p
 from escape_pod.puzzles.models import Action, PuzzleSpec
 from escape_pod.puzzles.phrase import phrase, word
 
-BOT_NAME = "Bob"  # the solo handler. Players found "HQ" unclear, so the bot has a name
+BOT_NAME = "Rob"  # the solo handler. Players found "HQ" unclear, so the bot has a name
 CORE = {"yes", "no", "finish"}
 POSITIONS = ("first", "last")
 
