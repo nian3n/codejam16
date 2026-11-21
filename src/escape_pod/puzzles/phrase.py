@@ -21,6 +21,18 @@ def word(g: str, spec: PuzzleSpec | None = None) -> str:
     return {"frenchfries": "french fries", "icecream": "ice cream", "tv": "TV"}.get(g, g)
 
 
+# Puzzles whose words are verbs: "Press the dance." reads wrong, so these say
+# "the dance picture" instead. Nouns keep the short form ("Press the cow.").
+VERB_PUZZLES = {"actions", "senses"}
+
+
+def the(g: str, spec: PuzzleSpec | None = None) -> str:
+    """'the cow', or 'the dance picture' for a verb puzzle."""
+    if spec is not None and spec.id in VERB_PUZZLES:
+        return f"the {word(g, spec)} picture"
+    return f"the {word(g, spec)}"
+
+
 def _keys(keys: list[str]) -> str:
     return ", ".join(k.upper() for k in keys)
 
@@ -47,10 +59,10 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
         }[t["keys_from"]]
     if v == "press":
         g = t["icon"]
-        return f"Press the {g} button." if g in POSITIONS else f"Press the {word(g)}."
+        return f"Press the {g} button." if g in POSITIONS else f"Press {the(g, spec)}."
     if v == "turn":
         g = t["to"]
-        return f"Turn the dial to the {g} picture." if g in POSITIONS else f"Turn the dial to the {word(g)}."
+        return f"Turn the dial to the {g} picture." if g in POSITIONS else f"Turn the dial to {the(g, spec)}."
     if v == "set":
         label, state = t["switch"], t["state"]
         if state == "flip":
@@ -85,7 +97,7 @@ def condition(cond: list, spec: PuzzleSpec) -> str:
     if key.startswith("state_of:"):
         return f"the {word(key[9:])} switch is {val}" if op == "==" else f"the {word(key[9:])} switch is not {val}"
     if key == "needle":
-        return f"the needle points at the {word(val)}" if op == "==" else f"the needle does not point at the {word(val)}"
+        return f"the needle points at {the(val, spec)}" if op == "==" else f"the needle does not point at {the(val, spec)}"
     if key == "count_on":
         if op == "==" and val == 0:
             return "no switch is on"
@@ -100,6 +112,6 @@ def condition(cond: list, spec: PuzzleSpec) -> str:
             return f"the {key} {noun} is {rel} the {val} {noun}"
         neg = "not " if op == "!=" else ""
         if spec.widget in ("icons", "dial"):
-            return f"the {key} {noun} {'does not show' if neg else 'shows'} the {word(val, spec)}"
+            return f"the {key} {noun} {'does not show' if neg else 'shows'} {the(val, spec)}"
         return f"the {key} {noun} is {neg}{word(val, spec)}"
     return f"{key} {op} {val}"

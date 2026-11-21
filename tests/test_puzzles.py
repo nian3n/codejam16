@@ -15,8 +15,8 @@ ICONS = json.loads(config.ICONS_FILE.read_text(encoding="utf-8"))
 
 
 def test_pool_has_20_unique_topics():
-    assert len(POOL) == 19  # the alphabet puzzle was removed: the game uses digits, not letters
-    assert len({s.topic for s in POOL.values()}) == 19
+    assert len(POOL) == 20  # alphabet (letters) was replaced by senses
+    assert len({s.topic for s in POOL.values()}) == 20
 
 
 def test_no_gloss_in_two_pools():
@@ -115,7 +115,7 @@ def test_draw_is_seeded():
 
 def test_manual_pages_build():
     pages = all_pages()
-    assert len(pages) == 19
+    assert len(pages) == 20
     for p in pages:
         text = page_markdown(p)
         assert p["title"] in text and "Otherwise" in text
@@ -128,3 +128,11 @@ def test_answer_key_matches_engine():
         assert s["instruction"] == phrase(m.solution(), m)
         assert s["rules"][s["fired"] - 1]["matched"]
     assert "Do this:" in sheet_markdown(mods)
+
+
+def test_verb_puzzles_say_picture_and_noun_puzzles_do_not():
+    from escape_pod.puzzles.models import Action
+    from escape_pod.puzzles.phrase import phrase
+    assert phrase(Action("press", {"icon": "dance"}), spec=POOL["actions"]) == "Press the dance picture."
+    assert phrase(Action("turn", {"to": "listen"}), spec=POOL["senses"]) == "Turn the dial to the listen picture."
+    assert phrase(Action("press", {"icon": "cow"}), spec=POOL["pets_farm"]) == "Press the cow."

@@ -1,0 +1,17 @@
+{
+  "id": "senses",
+  "title": "Sensor dial",
+  "widget": "dial",
+  "topic": "senses",
+  "hard": false,
+  "looks_like": "A dial with four senses around it, like seeing, hearing or tasting, and a needle pointing at one.",
+  "pool": ["see", "look", "hear", "listen", "taste", "touch", "smile", "think"],
+  "target_words": "name",
+  "setup": {"shown": 4},
+  "rules": [
+    {"if": [["has:hear", "==", true], ["has:listen", "==", true]], "then": {"verb": "turn", "target": {"to": "listen"}}},
+    {"if": [["needle", "==", "see"]], "then": {"verb": "turn", "target": {"to": "last"}}},
+    {"if": [["has:taste", "==", true], ["needle", "!=", "taste"]], "then": {"verb": "turn", "target": {"to": "taste"}}},
+    {"else": {"verb": "turn", "target": {"to": "first"}}}
+  ]
+}

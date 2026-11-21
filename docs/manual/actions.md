@@ -14,6 +14,6 @@ Buttons are counted left to right, top row first.
 
 Read the rules in order. Do the first rule that is true.
 
-1. **If** dance is shown: Press the dance.
-2. **If** sleep is shown and read is shown: Press the read.
+1. **If** dance is shown: Press the dance picture.
+2. **If** sleep is shown and read is shown: Press the read picture.
 3. **Otherwise:** Press the last button.

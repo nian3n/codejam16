@@ -19,7 +19,7 @@ The game is inspired by *Keep Talking and Nobody Explodes*. Two players join one
 - **Defuser** (on screen: **Field agent**): sees the bomb, but not the manual. Signs what they see to the webcam, one sign at a time. Clicks the bomb to act.
 - **Expert** (on screen: **HQ handler**): sees the manual, but never the bomb. Reads the signs, finds the page and tells the defuser what to do in English text.
 
-Each game **draws modules from a pool of 19 puzzles**. **Every puzzle teaches a different vocabulary topic** (colors, numbers, animals and so on). Every word in a puzzle is a sign the recognizer knows (§5.1).
+Each game **draws modules from a pool of 20 puzzles**. **Every puzzle teaches a different vocabulary topic** (colors, numbers, animals and so on). Every word in a puzzle is a sign the recognizer knows (§5.1).
 
 One exchange:
 
@@ -89,7 +89,7 @@ src/escape_pod/
   config.py                 shared: paths, levels, limits, loads etc/.env
   puzzles/                  T4
     models.py               Action, Rule, PuzzleSpec (shared)
-    data/*.json             the 19 puzzle files
+    data/*.json             the 20 puzzle files
     engine.py               load_pool, draw, Module, widget logic, rule evaluation
     phrase.py               English wording for instructions and rule conditions
   manual/                   T4
@@ -223,15 +223,16 @@ class Verdict(BaseModel):
 
 ## 5. Puzzles (Teammate 4)
 
-### 5.1 The pool: 19 puzzles, 19 topics
+### 5.1 The pool: 20 puzzles, 20 topics
 
-All 19 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map, except the digits, which use the handshape classifier (§6.4). The `alphabet` (fingerspelling) puzzle was removed in November 2026: the game needs digits, not letters. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
+All 20 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map, except the digits, which use the handshape classifier (§6.4). In November 2026, the `senses` puzzle replaced the `alphabet` (fingerspelling) puzzle: the game reads digits, not letters. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
 
 | id | Topic | Widget | Pool (glosses) |
 |---|---|---|---|
 | `colors` | Colors | wires | red, blue, green, yellow, black, white, brown, orange |
 | `numbers` | Numbers 0–9 | keypad | 0–9 (handshapes) |
 | `pets_farm` | Pets and farm animals | icons | cat, dog, cow, pig, horse, duck, hen, donkey |
+| `senses` | Senses | dial | see, look, hear, listen, taste, touch, smile, think |
 | `wild_animals` | Wild animals | icons | lion, tiger, zebra, giraffe, elephant, alligator, wolf, owl |
 | `family` | Family | icons | mom, dad, grandma, grandpa, brother, aunt, uncle |
 | `people_jobs` | People and jobs | icons | fireman, police, cowboy, clown, boy, girl, man, child |
@@ -400,8 +401,8 @@ The word model does not cover numbers. Train a small classifier:
 
 The expert's manual already highlights the pages that contain the signed words (`pagesFor` in `manual_view.js`). Each gloss is in one pool only, so this vote is exact. Embedding retrieval matters only when the LLM alien plays the expert:
 
-- **Index:** for each puzzle, embed `title + looks_like + "Words: " + pool` with `all-MiniLM-L6-v2`. Build the 19 vectors at startup.
-- **Query:** the confirmed glosses joined into a string ("cat dog cow pig"). Search all 19 pages.
+- **Index:** for each puzzle, embed `title + looks_like + "Words: " + pool` with `all-MiniLM-L6-v2`. Build the 20 vectors at startup.
+- **Query:** the confirmed glosses joined into a string ("cat dog cow pig"). Search all 20 pages.
 - **Decision:** best score under `config.RETRIEVAL_MIN_SCORE` → `ask_more`. Top two within `config.RETRIEVAL_MARGIN` → `ask_which`. Otherwise, answer.
 - Also compute the vote (the puzzle that owns most glosses). If the vote and the embeddings disagree, trust the vote.
 
@@ -450,7 +451,7 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
 - **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the typed signs not sent yet (until recognition is in), "Send to expert" and the message feed.
-- **Game, expert:** the manual. It has an index of the 19 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
+- **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
 - **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
@@ -541,7 +542,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 
 ## 15. Milestones
 
-1. **M1: two players, typed signs. Done.** Rooms, roles, the lobby, the bomb with all 6 widgets and the manual view. Also the timer, strikes, all 20 puzzles (19 since the alphabet puzzle was removed), the static manual and the answer key.
+1. **M1: two players, typed signs. Done.** Rooms, roles, the lobby, the bomb with all 6 widgets and the manual view. Also the timer, strikes, all 20 puzzles (`senses` later replaced `alphabet`), the static manual and the answer key.
 2. **M2: signs from the webcam.** Decide §6.0. Then the camera, MediaPipe to `(543, 3)`, the word model with the day-one checks, the segmenter, and guess chips with YES/NO. *Done when* a teammate can sign the words of 3 puzzles at Beginner, and the game confirms them reliably.
 3. **M3: numbers.** The handshape classifier for the digits 0–9. The sign eval runs, and the pools get adjusted. The gloss check against the label map passes.
 4. **M4: assets and polish.** CC0 icons and module art in place of emoji, sounds, a credits screen.

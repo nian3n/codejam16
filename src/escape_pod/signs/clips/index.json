@@ -420,6 +420,13 @@
    "seconds": 1.83,
    "source": "popsign_v1_0/game/test/hat.tar"
   },
+  "hear": {
+   "bytes": 23392,
+   "downloaded": 14694400,
+   "file": "hear.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/hear.tar"
+  },
   "helicopter": {
    "bytes": 30063,
    "downloaded": 11827200,
@@ -510,6 +517,20 @@
    "file": "lion.mp4",
    "seconds": 1.74,
    "source": "popsign_v1_0/game/test/lion.tar"
+  },
+  "listen": {
+   "bytes": 53482,
+   "downloaded": 17633280,
+   "file": "listen.mp4",
+   "seconds": 2.01,
+   "source": "popsign_v1_0/game/test/listen.tar"
+  },
+  "look": {
+   "bytes": 35440,
+   "downloaded": 18268160,
+   "file": "look.mp4",
+   "seconds": 1.88,
+   "source": "popsign_v1_0/game/test/look.tar"
   },
   "loud": {
    "bytes": 31148,
@@ -749,6 +770,13 @@
    "seconds": 1.98,
    "source": "popsign_v1_0/game/test/scissors.tar"
   },
+  "see": {
+   "bytes": 63370,
+   "downloaded": 12113920,
+   "file": "see.mp4",
+   "seconds": 2.41,
+   "source": "popsign_v1_0/game/test/see.tar"
+  },
   "shirt": {
    "bytes": 23707,
    "downloaded": 6809600,
@@ -783,6 +811,13 @@
    "file": "sleepy.mp4",
    "seconds": 1.93,
    "source": "popsign_v1_0/game/test/sleepy.tar"
+  },
+  "smile": {
+   "bytes": 28456,
+   "downloaded": 4362240,
+   "file": "smile.mp4",
+   "seconds": 2.27,
+   "source": "popsign_v1_0/game/test/smile.tar"
   },
   "snow": {
    "bytes": 32671,
@@ -819,6 +854,20 @@
    "seconds": 2.17,
    "source": "popsign_v1_0/game/test/table.tar"
   },
+  "taste": {
+   "bytes": 21079,
+   "downloaded": 10240000,
+   "file": "taste.mp4",
+   "seconds": 1.67,
+   "source": "popsign_v1_0/game/test/taste.tar"
+  },
+  "think": {
+   "bytes": 55259,
+   "downloaded": 13271040,
+   "file": "think.mp4",
+   "seconds": 2.08,
+   "source": "popsign_v1_0/game/test/think.tar"
+  },
   "thirsty": {
    "bytes": 22796,
    "downloaded": 3809280,
@@ -853,6 +902,13 @@
    "file": "tooth.mp4",
    "seconds": 1.9,
    "source": "popsign_v1_0/game/test/tooth.tar"
+  },
+  "touch": {
+   "bytes": 24081,
+   "downloaded": 9687040,
+   "file": "touch.mp4",
+   "seconds": 1.98,
+   "source": "popsign_v1_0/game/test/touch.tar"
   },
   "toy": {
    "bytes": 38265,

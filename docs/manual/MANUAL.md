@@ -16,11 +16,12 @@ Find the page whose words match what the field agent signs. Each page has one to
 12. [Animal panel](pets_farm.md): pets and farm animals
 13. [Room lights](places.md): places
 14. [School supplies](school.md): school things
-15. [Time panel](time_words.md): time words
-16. [Toy box](toys.md): toys and play
-17. [Travel dial](transport.md): transport
-18. [Sky dial](weather_sky.md): weather and sky
-19. [Safari panel](wild_animals.md): wild animals
+15. [Sensor dial](senses.md): senses
+16. [Time panel](time_words.md): time words
+17. [Toy box](toys.md): toys and play
+18. [Travel dial](transport.md): transport
+19. [Sky dial](weather_sky.md): weather and sky
+20. [Safari panel](wild_animals.md): wild animals
 
 ---
 
@@ -40,8 +41,8 @@ Buttons are counted left to right, top row first.
 
 Read the rules in order. Do the first rule that is true.
 
-1. **If** dance is shown: Press the dance.
-2. **If** sleep is shown and read is shown: Press the read.
+1. **If** dance is shown: Press the dance picture.
+2. **If** sleep is shown and read is shown: Press the read picture.
 3. **Otherwise:** Press the last button.
 
 ---
@@ -336,7 +337,30 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 15. Time panel
+# 15. Sensor dial
+
+**Topic:** senses · **Widget:** Dial
+
+## How to recognize it
+
+A dial with four senses around it, like seeing, hearing or tasting, and a needle pointing at one.
+
+Words you can see on it: see, look, hear, listen, taste, touch, smile, think.
+
+Pictures are counted clockwise, starting at the top.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** hear is shown and listen is shown: Turn the dial to the listen picture.
+2. **If** the needle points at the see picture: Turn the dial to the last picture.
+3. **If** taste is shown and the needle does not point at the taste picture: Turn the dial to the taste picture.
+4. **Otherwise:** Turn the dial to the first picture.
+
+---
+
+# 16. Time panel
 
 **Topic:** time words · **Widget:** Picture buttons · **Hard**
 
@@ -358,7 +382,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 16. Toy box
+# 17. Toy box
 
 **Topic:** toys and play · **Widget:** Picture buttons
 
@@ -380,7 +404,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 17. Travel dial
+# 18. Travel dial
 
 **Topic:** transport · **Widget:** Dial
 
@@ -402,7 +426,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 18. Sky dial
+# 19. Sky dial
 
 **Topic:** weather and sky · **Widget:** Dial
 
@@ -425,7 +449,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 19. Safari panel
+# 20. Safari panel
 
 **Topic:** wild animals · **Widget:** Picture buttons
 

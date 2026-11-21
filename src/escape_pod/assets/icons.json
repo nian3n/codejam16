@@ -57,5 +57,9 @@
 
   "morning": {"emoji": "🌅", "caption": true}, "night": {"emoji": "🌃", "caption": true},
   "now": {"emoji": "⏱️", "caption": true}, "later": {"emoji": "⏳", "caption": true},
-  "yesterday": {"emoji": "⏪", "caption": true}, "tomorrow": {"emoji": "⏩", "caption": true}
+  "yesterday": {"emoji": "⏪", "caption": true}, "tomorrow": {"emoji": "⏩", "caption": true},
+  "see": {"emoji": "👀", "caption": true}, "look": {"emoji": "🔍", "caption": true},
+  "hear": {"emoji": "🦻", "caption": true}, "listen": {"emoji": "🎧", "caption": true},
+  "taste": {"emoji": "😋", "caption": true}, "touch": {"emoji": "🫳", "caption": true},
+  "smile": {"emoji": "😊", "caption": true}, "think": {"emoji": "🤔", "caption": true}
 }

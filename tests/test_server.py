@@ -46,7 +46,7 @@ def _start_game(level="intermediate"):
 
 
 def test_manual_and_icons_endpoints():
-    assert len(client.get("/api/manual").json()) == 19
+    assert len(client.get("/api/manual").json()) == 20
     assert "cow" in client.get("/api/icons").json()
 
 
