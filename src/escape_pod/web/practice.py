@@ -26,6 +26,22 @@ def practice_model():
         ) from exc
 
 
+def warm_model() -> dict:
+    """Load the word model now (about 6 s the first time), so the first sign is not slow."""
+    try:
+        with model_lock:
+            practice_model()
+    except HTTPException as exc:
+        return {"ready": False, "detail": exc.detail}
+    return {"ready": True}
+
+
+@router.get("/warmup")
+async def practice_warmup():
+    # The game's "Initializing" screen waits for this before the timer starts.
+    return await run_in_threadpool(warm_model)
+
+
 @router.get("")
 def practice_options():
     with model_lock:

@@ -67,3 +67,18 @@ def test_guess_returns_the_top_three_game_words(monkeypatch):
     got = client.post("/api/practice/guess", params={"words": "pig,cow"}, content=body, headers=headers).json()
     assert [g["gloss"] for g in got["guesses"]] == ["cow", "pig"]
     assert client.post("/api/practice/guess", params={"words": "zzz"}, content=body, headers=headers).status_code == 400
+
+
+def test_warmup_loads_the_model_once(monkeypatch):
+    loads = []
+    monkeypatch.setattr(practice, "model", lambda: loads.append(1) or SimpleNamespace(glosses=["cat"]))
+    assert client.get("/api/practice/warmup").json() == {"ready": True}
+    assert loads
+
+
+def test_warmup_without_the_model_says_so(monkeypatch):
+    def missing():
+        raise FileNotFoundError("models/islr/model.tflite")
+    monkeypatch.setattr(practice, "model", missing)
+    body = client.get("/api/practice/warmup").json()
+    assert body["ready"] is False and "download-models" in body["detail"]

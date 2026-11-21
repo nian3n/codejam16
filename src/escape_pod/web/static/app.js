@@ -15,10 +15,10 @@ import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
+import { renderInit } from "./init.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
 import { bindSequence } from "./practice_sequence.js";
-import { preloadSignTracker } from "./game_signs.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -157,6 +157,7 @@ function onState(s) {
   $("#end").classList.toggle("hidden", !over);
   if (over) renderEnd();
   if (prev && prev.phase === "playing" && s.strikes > prev.strikes) flashStrike();
+  renderInit();
   tickTimer();
 }
 
@@ -177,7 +178,6 @@ function setupGame() {
   const by = (role) => s.players.find((p) => p.role === role)?.name || (s.solo && role === "expert" ? "bot" : "?");
   $("#op-line").textContent = `Operation KMNE-${s.code} · Agent ${by("defuser")} · HQ ${by("expert")}`;
   $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
-  if (s.me.role === "defuser") preloadSignTracker();  // in a worker: never freezes the page
   const bar = $(".topbar");
   bar.querySelector(".dbg")?.remove();
   if (s.debug) bar.append(el("a", { class: "btn small dbg", href: `/api/rooms/${s.code}/answer-key`, target: "_blank", text: "Answer key (debug)" }));
@@ -198,7 +198,8 @@ function renderGame() {
 function tickTimer() {
   const s = store.state;
   if (!s) { document.body.classList.remove("critical"); return; }
-  const left = s.phase === "playing" ? Math.max(0, (store.deadlineAt - performance.now()) / 1000) : s.remaining_s;
+  // Before the clock starts (the Initializing screen), the server sends the full time: hold it.
+  const left = s.phase === "playing" && s.armed ? Math.max(0, (store.deadlineAt - performance.now()) / 1000) : s.remaining_s;
   // The alarm speeds up in the last 30 s of a running game only, so it never leaks into the lobby or end screen.
   document.body.classList.toggle("critical", s.phase === "playing" && left < 30);
   const t = fmt(Math.ceil(left));

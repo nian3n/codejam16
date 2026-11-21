@@ -37,11 +37,11 @@ export const store = {
   pageById: {},
   deadlineAt: 0,
   faceTick: 0,
-  local: { signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: "", chatSeen: -1 },
+  local: { init: null, signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: "", chatSeen: -1 },
 };
 
 export function resetLocal() {
-  store.local = { signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: store.local.search, chatSeen: -1 };
+  store.local = { init: null, signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, openPage: null, search: store.local.search, chatSeen: -1 };
 }
 
 export function send(msg) {

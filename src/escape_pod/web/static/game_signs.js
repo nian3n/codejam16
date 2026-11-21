@@ -244,7 +244,3 @@ document.addEventListener("keydown", (e) => {
   toggleRecording();
 });
 
-/** Load the tracker in the background, so the first recording starts at once. */
-export function preloadSignTracker() {
-  void startTracker().catch(() => {});
-}

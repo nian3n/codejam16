@@ -6,6 +6,8 @@ is much more reliable than among all 250.
 """
 from __future__ import annotations
 
+import threading
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -24,10 +26,15 @@ _model: WordModel | None = None
 _hand: HandshapeModel | None = None
 
 
+_load_lock = threading.Lock()  # the startup preload and a first request may race
+
+
 def model() -> WordModel:
     global _model
     if _model is None:
-        _model = WordModel()
+        with _load_lock:
+            if _model is None:
+                _model = WordModel()
     return _model
 
 

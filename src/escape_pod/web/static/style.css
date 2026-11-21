@@ -252,6 +252,15 @@ button.chip:hover { border-color: var(--warn); }
 }
 .bb-btn.held { transform: translateY(5px); box-shadow: 0 1px 0 #400; }
 
+/* ---------- initializing (init.js) ---------- */
+.init-card { text-align: center; min-width: 320px; }
+.init-steps { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 10px; text-align: left; }
+.init-step { display: flex; gap: 10px; align-items: center; font-family: var(--mono); }
+.init-step .mark { width: 1.6em; text-align: center; font-weight: 800; }
+.init-step.wait .mark { animation: blink 1s steps(1) infinite; color: var(--acc); }
+.init-step.ok .mark { color: var(--ok); }
+.init-step.fail .mark { color: var(--warn); }
+
 /* ---------- the bomb fills the stage ----------
    The stage is a size container. The bomb has 2 rows of 3 square modules (the timer plus
    up to 5 modules), so the module side s is the largest that fits both ways:

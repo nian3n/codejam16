@@ -4,6 +4,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from escape_pod import config
 from escape_pod.web import server
 
 client = TestClient(server.app)
@@ -445,3 +446,34 @@ def test_solo_bot_thinks_before_it_replies(monkeypatch):
     assert time.monotonic() - t0 >= 0.3
     assert done["bot_typing"] is False and done["bot_stage"] == "details"
     a.__exit__(None, None, None)
+
+
+# ---------------------------------------------------------------------------
+# Initializing: the timer waits until the agent's tracker and the sign model are ready
+# ---------------------------------------------------------------------------
+def test_the_timer_waits_for_the_agent_to_be_ready():
+    code, a, b, sa, sb = _start_game()
+    full = config.LEVELS["intermediate"].timer_s
+    assert sa["armed"] is False and sa["remaining_s"] == full
+    time.sleep(0.3)
+    assert server.rooms[code].remaining() == full  # frozen while initializing
+    b.send_json({"type": "ready"})  # HQ cannot start the clock
+    b.send_json({"type": "say", "text": "ping"})
+    _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
+    assert server.rooms[code].armed is False
+    a.send_json({"type": "ready"})
+    s = _drain(b, lambda s: s["armed"])
+    time.sleep(0.3)
+    assert server.rooms[code].remaining() < full
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_the_timer_starts_anyway_after_a_while(monkeypatch):
+    monkeypatch.setattr(server, "ARM_TIMEOUT_S", 0.3)
+    code, a, b, sa, sb = _start_game()
+    # b sent "start", so the timer task runs on b's TestClient loop; only b's socket can
+    # receive that task's broadcast here (the real server has one loop for every socket).
+    _drain(b, lambda s: s["armed"])
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)

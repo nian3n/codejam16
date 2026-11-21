@@ -18,6 +18,7 @@ import json
 import os
 import random
 import secrets
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -34,7 +35,7 @@ from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
 from escape_pod.web.ice import ice_servers
-from escape_pod.web.practice import router as practice_router
+from escape_pod.web.practice import router as practice_router, warm_model
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
@@ -42,6 +43,7 @@ ROLES = ("defuser", "expert")
 MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
 MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
 ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
+ARM_TIMEOUT_S = 45.0    # the timer starts even if the agent's browser never says "ready"
 BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
@@ -88,6 +90,10 @@ class Room:
     ended_left: float = 0.0
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
+    # "Initializing": the clock waits until the agent's browser has loaded the hand tracker
+    # and the server has loaded the word model ({"type": "ready"}), or ARM_TIMEOUT_S.
+    armed: bool = False
+    timer_s: float = 0.0
     last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
     # Solo: one human (the defuser) and the scripted bot in the HQ seat. The bot is not
     # in `players`, so the video code never waits for a second person.
@@ -97,6 +103,8 @@ class Room:
     bot_task: asyncio.Task | None = None  # set while the bot is "typing"
 
     def remaining(self) -> float:
+        if self.phase == "playing" and not self.armed:
+            return self.timer_s
         if self.phase == "playing":
             return max(0.0, self.deadline - time.monotonic())
         return self.ended_left
@@ -153,6 +161,7 @@ def view(room: Room, me: Player) -> dict:
                    for k, l in config.LEVELS.items()},
         "can_start": room.can_start(),
         "remaining_s": round(room.remaining(), 2),
+        "armed": room.armed,
         "strikes": room.strikes,
         "max_strikes": config.MAX_STRIKES,
         "chat": room.chat,
@@ -195,7 +204,20 @@ def end_game(room: Room, result: Literal["escaped", "boom"], why: str):
     room.timer_task = None
 
 
+def arm(room: Room) -> None:
+    """Start the clock."""
+    room.armed = True
+    room.deadline = time.monotonic() + room.timer_s
+
+
 async def watch_timer(room: Room):
+    waited = 0.0
+    while room.phase == "playing" and not room.armed:
+        await asyncio.sleep(0.1)
+        waited += 0.1
+        if room.phase == "playing" and not room.armed and waited >= ARM_TIMEOUT_S:
+            arm(room)
+            await broadcast(room)
     while room.phase == "playing":
         await asyncio.sleep(0.25)
         if room.phase == "playing" and room.remaining() <= 0:
@@ -210,7 +232,8 @@ def start_game(room: Room):
     room.strikes = 0
     room.chat = []
     room.phase = "playing"
-    room.deadline = time.monotonic() + (level.timer_s or 600)
+    room.timer_s = float(level.timer_s or 600)
+    room.armed = False  # the clock starts on {"type": "ready"} (see arm)
     room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
     if room.solo:
         room.bot = HqBot()  # a fresh bot per game: no page from the last game
@@ -364,6 +387,8 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None and result is not None and room.phase == "playing":
                 bot = room.bot
                 bot_later(room, lambda: bot.on_result(result))
+    elif kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed:
+        arm(room)
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":
@@ -496,6 +521,9 @@ def main():
                          "localhost or HTTPS, so a second laptop needs this)")
     a = ap.parse_args()
     app.state.debug = a.debug
+    # Load the word model in the background now: it takes about 6 s, and the first sign of
+    # the first game would otherwise wait for it.
+    threading.Thread(target=warm_model, daemon=True, name="warm-model").start()
     ssl = {}
     if a.https:
         from escape_pod.web.tls import ensure_cert
