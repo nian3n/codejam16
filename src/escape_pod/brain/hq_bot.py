@@ -3,68 +3,65 @@
 
 The bot is a human HQ without the human. It knows the 20 manual pages and nothing about
 the bomb (spec rule 3): it sees only the glosses the agent sends and whether the last
-action defused a module or cost a strike. It never checks the signs against the real
+action defused a module or cost a strike. It never checks the answers against the real
 module. A wrong but clear sign gives a wrong instruction, on purpose: the solo game is
 there to practice signing properly.
 
 One exchange per module:
   round 0  the agent signs one or more items; each gloss is in exactly one pool, so the
-           page with the most words is the module (test_no_gloss_in_two_pools).
-  round 1  the bot asks for every item in reading order (the widget's reading_order).
-  round 2  dials: which picture the needle points at; switches: which ones are on.
-Then the bot builds a Module from the signed facts and answers with the rule engine and
-phrase(), so the bot, the manual and the server's check never disagree.
+           page with the most words is the module (test_no_gloss_in_two_pools). The
+           items also count as facts: "there is a cat".
+  then     the bot walks the page's rules in order, like a human HQ reading the manual,
+           and asks only for the fact that the next undecided condition needs ("Do you
+           see DOG?", "Tell me the color of the top wire."). A false condition skips its
+           rule. The first rule that holds gives the action; if its target is a position
+           ("press the last button") the bot asks for that item too.
+Playtesting showed that signing every item before any answer was too slow, so the bot
+asks the fewest questions the rules allow.
+
+Conditions use engine.cond_holds() and the wording comes from phrase(), so the bot, the
+manual and the server's check never disagree.
 
 Pure logic, no I/O: the server calls reply() inline (rule 6 holds, it takes microseconds).
 """
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
 from typing import Literal
 
-from escape_pod.puzzles.engine import Module, load_pool
-from escape_pod.puzzles.models import PuzzleSpec
+from escape_pod.puzzles.engine import ALPHA, ORDERS, WIDGETS, cond_holds, load_pool
+from escape_pod.puzzles.models import Action, PuzzleSpec
 from escape_pod.puzzles.phrase import phrase, word
 
 BOT_NAME = "HQ bot"
 CORE = {"yes", "no", "finish"}
+POSITIONS = ("first", "last")
 
-GREETING = "HQ here. Which module do you need help with? Sign one thing you see on it."
-NEXT = "Good work. Which module is next? Sign one thing you see on it."
+GREETING = "HQ here. Which module do you need help with? Tell me one thing you see on it."
+NEXT = "Good work. Which module is next? Tell me one thing you see on it."
+UNKNOWN = "I do not know that word. Tell me one thing from the module again."
 
-
-@dataclass(frozen=True)
-class Script:
-    items: str                                   # what the items are called in replies
-    q1: str                                      # {n}: how many items the module shows
-    q2: str | None = None                        # the second question, if the widget has one
-    key: str = ""                                # the facts key for round 1 (not dial/switches)
-
-
-SCRIPTS: dict[str, Script] = {
-    "wires": Script("wire colors", "Sign the wire colors, top to bottom.", key="colors"),
-    "keypad": Script("numbers", "Sign the {n} numbers on the display, left to right.", key="display"),
-    "icons": Script("pictures", "Sign the {n} pictures, left to right, top row first.", key="icons"),
-    "dial": Script("pictures", "Sign the {n} pictures, clockwise from the top.",
-                   "Which picture does the needle point at?"),
-    "switches": Script("switch labels", "Sign the switch labels, left to right.",
-                       "Now sign only the switches that are on. Sign NO if none is on."),
-    "big_button": Script("faces", "Sign the faces in the order the screen shows them.", key="faces"),
+# How to name the first and the last item of each widget, in the manual's reading order.
+PLACES = {
+    "wires": ("the color of the top wire", "the color of the bottom wire"),
+    "keypad": ("the first number on the display, on the left", "the last number on the display, on the right"),
+    "icons": ("the top-left picture", "the bottom-right picture"),
+    "dial": ("the picture at the top of the dial", "the last picture, going clockwise from the top"),
+    "switches": ("the label of the leftmost switch", "the label of the rightmost switch"),
+    "big_button": ("the face marked 1", "the face marked {n}"),
 }
+NOUNS = {"wires": "wire color", "keypad": "number", "icons": "picture", "dial": "picture",
+         "switches": "switch label", "big_button": "face"}
+TARGET_SLOTS = ("icon", "wire", "to", "release_on", "switch")
 
 
-def _unique(words: list[str]) -> list[str]:
-    return list(dict.fromkeys(words))
+def _sign(g: str, spec: PuzzleSpec) -> str:
+    """A gloss in sign-name capitals, as the glossary and the chips show it: DOG, FRENCH FRIES."""
+    return word(g, spec).upper()
 
 
-def _recast(spec: PuzzleSpec, facts: dict) -> str:
-    w = lambda g: word(g, spec)  # noqa: E731
-    if spec.widget == "dial":
-        return f"You see: {', '.join(map(w, facts['options']))}. The needle points at {w(facts['needle'])}."
-    if spec.widget == "switches":
-        return "You see: " + ", ".join(f"{w(s['label'])} ({s['state']})" for s in facts["switches"]) + "."
-    return f"You see: {', '.join(map(w, facts[SCRIPTS[spec.widget].key]))}."
+def _an(text: str) -> str:
+    return ("an " if text[:1].lower() in "aeiou" else "a ") + text
 
 
 class HqBot:
@@ -72,8 +69,9 @@ class HqBot:
         self.pool = pool or load_pool()
         self.owner = {g: spec for spec in self.pool.values() for g in spec.pool}
         self.page: PuzzleSpec | None = None   # the open page; None at round 0
-        self.round = 1
-        self.items: list[str] = []            # round 1 answer, kept for round 2
+        self.known: dict = {}                 # derived facts so far: "has:cat", "first", "needle", ...
+        self.on: set[str] | None = None       # every switch that is on, once the agent listed them
+        self.pending: str | None = None       # the fact key the last question asked for
         self.last: PuzzleSpec | None = None   # the page of the last instruction, until its result
 
     @property
@@ -83,83 +81,203 @@ class HqBot:
     def greeting(self) -> str:
         return GREETING
 
-    # -- helpers -----------------------------------------------------------------
-    def _script(self) -> Script:
-        assert self.page is not None
-        return SCRIPTS[self.page.widget]
+    # -- questions -----------------------------------------------------------------
+    def _question(self, key: str) -> str:
+        spec = self.page
+        assert spec is not None
+        w = spec.widget
+        if key.startswith("has:"):
+            g = key[4:]
+            if w == "wires":
+                return f"Is there {_an(word(g, spec) + ' wire')}?"
+            if w == "keypad":
+                return f"Does the display show {_sign(g, spec)}?"
+            if w == "switches":
+                return f"Do you see {_an(_sign(g, spec) + ' switch')}?"
+            return f"Do you see {_sign(g, spec)}?"
+        if key in POSITIONS:
+            place = PLACES[w][POSITIONS.index(key)].format(n=spec.setup["shown"])
+            return f"Tell me {place}."
+        if key == "needle":
+            return "Tell me the picture that the needle points at."
+        if key.startswith("state_of:"):
+            return f"Is the {_sign(key[9:], spec)} switch on?"
+        if key == "count_on":
+            return "Tell me which switches are on. Tell me NO if none is on."
+        if key == "display":
+            return f"Tell me the {spec.setup['shown']} numbers on the display, left to right."
+        if key == "items":  # for an alphabet rule: the order does not matter
+            where = " on the dial" if w == "dial" else ""
+            return f"Tell me the {spec.setup['shown']} pictures{where}, in any order."
+        raise ValueError(key)
 
-    def _question(self) -> str:
-        s = self._script()
-        assert self.page is not None
-        return s.q1.format(n=self.page.setup["shown"]) if self.round == 1 else str(s.q2)
+    def _ask(self, key: str) -> str:
+        if self.page is not None and self.page.widget == "keypad" and key in POSITIONS:
+            key = "display"  # 3 numbers answer first, last and every has: at once
+        self.pending = key
+        return self._question(key)
 
-    def _open(self, spec: PuzzleSpec) -> str:
+    # -- the rule walk -----------------------------------------------------------------
+    def _missing(self, cond: list) -> str | None:
+        """The fact key this condition still needs, or None when it can be decided."""
+        k, _, v = cond
+        if k.startswith("state_of:"):
+            label = k[9:]
+            if self.known.get("has:" + label) is False:
+                return None  # no such switch: the engine's missing key never matches
+            if k not in self.known and self.on is not None and self.known.get("has:" + label):
+                self.known[k] = "on" if label in self.on else "off"
+        if k not in self.known:
+            return k
+        if k in POSITIONS and v in POSITIONS and v not in self.known:
+            return v
+        return None
+
+    def _derived(self) -> dict:
+        # cond_holds treats a missing has:<g> as False, so a known False stays out.
+        return {k: v for k, v in self.known.items() if v is not False}
+
+    def _step(self) -> str:
+        """Ask for the next fact, or give the instruction."""
+        spec = self.page
+        assert spec is not None
+        for rule in spec.rules:
+            if not rule.is_else:
+                when = rule.when or []
+                decided = [c for c in when if self._missing(c) is None]
+                if any(not cond_holds(c, self._derived()) for c in decided):
+                    continue  # a known condition is false: skip this rule
+                need = next((m for c in when if (m := self._missing(c))), None)
+                if need:
+                    return self._ask(need)
+            return self._act(rule.action())
+        raise AssertionError("the last rule is always else")
+
+    def _act(self, action: Action) -> str:
+        """Fill in a position target ("the last button"), then give the instruction."""
+        spec = self.page
+        assert spec is not None
+        t = dict(action.target)
+        if t.get("order") in ORDERS or t.get("to") in ALPHA:
+            if "items" not in self.known:
+                return self._ask("items")
+            items = self.known["items"]
+            if "order" in t:
+                t = {"icons": sorted(items, reverse=ORDERS[t["order"]])}
+            else:
+                t = {"to": (min if t["to"] == "alpha_first" else max)(items)}
+        if "keys_from" in t:
+            if "display" not in self.known:
+                return self._ask("display")
+            t = {"keys": WIDGETS["keypad"].derive({"display": self.known["display"]})[t["keys_from"]]}
+        for slot in TARGET_SLOTS:
+            if t.get(slot) in POSITIONS:
+                pos = t[slot]
+                if pos not in self.known:
+                    return self._ask(pos)
+                if slot == "wire":
+                    t = {"color": self.known[pos]}
+                else:
+                    t[slot] = self.known[pos]
+        if t.get("state") == "flip":
+            key = f"state_of:{t['switch']}"
+            self.known.setdefault(f"has:{t['switch']}", True)
+            if self._missing([key, "==", "on"]):
+                return self._ask(key)
+            t["state"] = "off" if self.known[key] == "on" else "on"
+        text = phrase(Action(action.verb, t), spec=spec)
+        self.last = spec
+        self._close()
+        return text
+
+    def _close(self) -> None:
+        self.page, self.known, self.on, self.pending = None, {}, None, None
+
+    # -- the exchange ----------------------------------------------------------------
+    def _open(self, spec: PuzzleSpec, items: list[str], intro: str = "") -> str:
         if spec is not self.last:
             # The agent moved on to another module: a later result is not about the
             # instruction the bot gave before, so it must not close or replace this page.
             self.last = None
-        self.page, self.round, self.items = spec, 1, []
-        return f"That is the {spec.title}. {self._question()}"
+        self._close()
+        self.page = spec
+        self.known = {f"has:{g}": True for g in items if g in spec.pool}
+        return f"{intro or f'That is the {spec.title}.'} {self._step()}"
 
-    def _answer(self, facts: dict) -> str:
-        assert self.page is not None
-        module = Module(self.page, facts)
-        text = f"{_recast(self.page, facts)} {phrase(module.solution(), module)}"
-        self.last, self.page, self.round, self.items = self.page, None, 1, []
-        return text
+    def _find(self, known: list[str]) -> str:
+        if not known:
+            self._close()
+            return UNKNOWN
+        votes = Counter(self.owner[g].id for g in known)
+        best = max(votes.values())
+        top = [spec for spec in self.pool.values() if votes.get(spec.id) == best]
+        if len(top) > 1:
+            self._close()
+            return f"Is it the {top[0].title} or the {top[1].title}? Tell me one more thing from the module."
+        return self._open(top[0], known)
 
-    # -- the exchange ------------------------------------------------------------
     def reply(self, glosses: list[str]) -> str:
         raw = [g.strip().lower() for g in glosses if g and g.strip()]
         known = [g for g in raw if g in self.owner and g not in CORE]
         if self.page is None:
             return self._find(known)
+        mine = [g for g in known if g in self.page.pool]
+        if known and not mine:  # every word is from another page: the agent moved to another module
+            return self._find(known)
+        key = self.pending
+        assert key is not None
+        again = self._take(key, raw, mine)
+        if again is not None:
+            return again
+        for g in mine:  # any item the agent names is on the module
+            self.known.setdefault(f"has:{g}", True)
+        return self._step()
+
+    def _take(self, key: str, raw: list[str], mine: list[str]) -> str | None:
+        """Store the answer to `key`. Returns a new question when the answer does not fit."""
         page = self.page
-        mine = [g for g in known if g in page.pool]
-        # NO (maybe twice, or beside YES or FINISH) and no label: every switch is off.
-        if page.widget == "switches" and self.round == 2 and "no" in raw and not known:
-            return self._answer({"switches": [{"label": g, "state": "off"} for g in self.items]})
-        if not mine:
-            if known:  # every word is from another page: the agent moved to another module
-                return self._find(known)
-            return f"I did not see any {self._script().items} from the {page.title}. {self._question()}"
-        return self._round1(mine) if self.round == 1 else self._round2(mine, known)
-
-    def _find(self, known: list[str]) -> str:
-        if not known:
-            self.page = None
-            return "I do not know that word. Sign one thing from the module again."
-        votes = Counter(self.owner[g].id for g in known)
-        best = max(votes.values())
-        top = [spec for spec in self.pool.values() if votes.get(spec.id) == best]
-        if len(top) > 1:
-            self.page = None
-            return f"Is it the {top[0].title} or the {top[1].title}? Sign one more thing from the module."
-        return self._open(top[0])
-
-    def _round1(self, mine: list[str]) -> str:
-        assert self.page is not None
-        n, got = self.page.setup["shown"], _unique(mine)
-        if len(got) != n:
-            return f"I need {n} different {self._script().items}. You signed {len(got)}. Sign all {n} again."
-        s = self._script()
-        if s.q2 is None:
-            return self._answer({s.key: got})
-        self.items, self.round = got, 2
-        return s.q2
-
-    def _round2(self, mine: list[str], known: list[str]) -> str:
-        assert self.page is not None
-        if self.page.widget == "dial":
-            got = _unique(mine)
-            if len(got) != 1 or got[0] not in self.items:
-                return "Sign the one picture that the needle points at."
-            return self._answer({"options": self.items, "needle": got[0]})
-        # switches: every signed word must be one of the labels from round 1
-        if any(g not in self.items for g in known):
-            return "Sign only the switches that are on, or NO if none is on."
-        on = set(mine)
-        return self._answer({"switches": [{"label": g, "state": "on" if g in on else "off"} for g in self.items]})
+        assert page is not None
+        says_yes, says_no = "yes" in raw, "no" in raw
+        if key.startswith(("has:", "state_of:")):
+            kind, g = key.split(":", 1)
+            yes = says_yes or (kind == "has" and g in mine) or (kind == "state_of" and "on" in raw)
+            if yes == says_no:  # neither, or both
+                return f"Tell me YES or NO. {self._question(key)}"
+            if kind == "has":
+                self.known[key] = yes
+            else:
+                self.known[key] = "on" if yes else "off"
+                self.known.setdefault(f"has:{g}", True)
+            return None
+        got = list(dict.fromkeys(mine))
+        if key in POSITIONS or key == "needle":
+            if len(got) != 1:
+                return f"Tell me one {NOUNS[page.widget]}. {self._question(key)}"
+            self.known[key] = got[0]
+            return None
+        if key == "count_on":
+            if not got and not says_no:
+                return f"Tell me the switch labels, or NO. {self._question(key)}"
+            self.known["count_on"] = len(got)
+            self.on = set(got)
+            self.known.update({f"has:{g}": True for g in got})
+            return None
+        if key == "items":
+            n = page.setup["shown"]
+            if len(got) != n:
+                return f"I need {n} different pictures. You told me {len(got)}. {self._question(key)}"
+            self.known["items"] = got
+            self.known.update({f"has:{g}": g in got for g in page.pool})
+            return None
+        if key == "display":
+            n = page.setup["shown"]
+            if len(got) != n:
+                return f"I need {n} different numbers. You told me {len(got)}. {self._question(key)}"
+            d = WIDGETS["keypad"].derive({"display": got})
+            self.known.update(first=d["first"], last=d["last"], display=got)
+            self.known.update({f"has:{g}": g in got for g in page.pool})
+            return None
+        raise ValueError(key)
 
     def on_result(self, defused: bool) -> str | None:
         """The agent acted after an instruction. None when there was no instruction to judge."""
@@ -167,9 +285,7 @@ class HqBot:
         if spec is None:
             return None
         if defused:
-            self.page = None
+            self._close()
             return NEXT
-        # The bot cannot tell which sign was wrong: it trusts the signs. Ask for the details again.
-        self._open(spec)
-        return f"That was a strike. Check the {spec.title} again. {self._question()}"
-
+        # The bot cannot tell which answer was wrong: it trusts the signs. Walk the page again.
+        return self._open(spec, [], f"That was a strike. Let us check the {spec.title} again.")

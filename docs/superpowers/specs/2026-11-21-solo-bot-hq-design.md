@@ -1,6 +1,24 @@
 # Solo game with a bot HQ: design
 
-Date: 2026-11-21. Status: draft for review.
+Date: 2026-11-21. Status: built. Revised after the first playtest (see the next section).
+
+## Revision after the playtest
+
+The playtest found that signing every item before any answer was too hard. The bot now follows the page's rules, one question at a time:
+
+- It reads the rules in order. For the next condition it cannot decide yet, it asks one question.
+- A condition that is false skips its rule. The first rule that holds gives the instruction.
+- If the action names a position ("press the last button"), the bot also asks for that item.
+- The item from round 0 counts as a fact: "there is a cat".
+- Questions say "Tell me…", not "Sign…". For example: "Do you see DOG?", "Tell me the color of the top wire.", "Tell me the picture that the needle points at.", "Is the LAMP switch on?" and "Tell me which switches are on. Tell me NO if none is on."
+- The answer is YES, NO or an item. Signing the item that the bot asked about also means YES.
+- The keypad asks for the whole display at once.
+- After a strike, the bot walks the same page again from the start.
+- The frame above the chips reads "My answer:" instead of "Here is what I see:".
+
+Over 600 random modules, a perfect player needs 3.4 exchanges on average, and 6 at most. The sections below describe the first version. Where they differ, this section wins.
+
+Also from the playtest: the glossary button moved from the top bar to the side panel, and the G key opens it. The LAMP icon (a light bulb) now shows its word.
 
 ## Intent
 

@@ -88,7 +88,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** hat is shown and mitten is shown: Press the mitten.
 2. **If** jacket is shown: Press the jacket.
-3. **Otherwise:** Press the first button.
+3. **If** shoe is shown: Press all the buttons in reverse alphabetical order (Z to A).
+4. **Otherwise:** Press the first button.
 
 ---
 
@@ -133,7 +134,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** mom is shown and dad is shown: Press the dad.
 2. **If** grandma is shown: Press the grandma.
-3. **Otherwise:** Press the last button.
+3. **If** uncle is shown: Press all the buttons in alphabetical order (A to Z).
+4. **Otherwise:** Press the last button.
 
 ---
 
@@ -178,7 +180,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** pizza is shown and the needle does not point at the pizza: Turn the dial to the pizza.
 2. **If** the needle points at the apple: Turn the dial to the last picture.
-3. **Otherwise:** Turn the dial to the first picture.
+3. **If** nuts is shown: Turn the dial to the picture that comes first in the alphabet.
+4. **Otherwise:** Turn the dial to the first picture.
 
 ---
 
@@ -289,7 +292,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** cat is shown and dog is shown: Press the dog.
 2. **If** cow is shown: Press the cow.
-3. **Otherwise:** Press the last button.
+3. **If** horse is shown: Press all the buttons in alphabetical order (A to Z).
+4. **Otherwise:** Press the last button.
 
 ---
 
@@ -333,7 +337,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** scissors is shown: Press the scissors.
 2. **If** the first button shows the flag: Press the last button.
-3. **Otherwise:** Press the pencil.
+3. **If** the first button shows the book: Press all the buttons in reverse alphabetical order (Z to A).
+4. **Otherwise:** Press the pencil.
 
 ---
 
@@ -400,7 +405,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** balloon is shown: Press the balloon.
 2. **If** the first button shows the doll: Press the last button.
-3. **Otherwise:** Press the first button.
+3. **If** the first button shows the puzzle: Press all the buttons in alphabetical order (A to Z).
+4. **Otherwise:** Press the first button.
 
 ---
 
@@ -445,7 +451,8 @@ Read the rules in order. Do the first rule that is true.
 1. **If** the needle points at the sun: Turn the dial to the moon.
 2. **If** the needle points at the rain: Turn the dial to the snow.
 3. **If** the first picture shows the cloud: Turn the dial to the last picture.
-4. **Otherwise:** Turn the dial to the sun.
+4. **If** the first picture shows the moon: Turn the dial to the picture that comes last in the alphabet.
+5. **Otherwise:** Turn the dial to the sun.
 
 ---
 

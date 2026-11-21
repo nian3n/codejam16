@@ -60,8 +60,15 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
     if v == "press":
         g = t["icon"]
         return f"Press the {g} button." if g in POSITIONS else f"Press {the(g, spec)}."
+    if v == "press_all":
+        if "order" in t:
+            return {"alpha": "Press all the buttons in alphabetical order (A to Z).",
+                    "reverse": "Press all the buttons in reverse alphabetical order (Z to A)."}[t["order"]]
+        return f"Press the buttons in this order: {', '.join(word(g, spec) for g in t['icons'])}."
     if v == "turn":
         g = t["to"]
+        if g in ("alpha_first", "alpha_last"):
+            return f"Turn the dial to the picture that comes {g[6:]} in the alphabet."
         return f"Turn the dial to the {g} picture." if g in POSITIONS else f"Turn the dial to {the(g, spec)}."
     if v == "set":
         label, state = t["switch"], t["state"]

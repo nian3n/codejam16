@@ -8,7 +8,8 @@ from escape_pod import config
 from escape_pod.manual.build import all_pages, page_markdown
 from escape_pod.manual.solve import sheet_markdown, solve_module
 from escape_pod.puzzles.engine import WIDGETS, Module, draw, load_pool
-from escape_pod.puzzles.phrase import phrase
+from escape_pod.puzzles.models import Action
+from escape_pod.puzzles.phrase import phrase, word
 
 POOL = load_pool()
 ICONS = json.loads(config.ICONS_FILE.read_text(encoding="utf-8"))
@@ -59,6 +60,8 @@ def test_500_seeds_give_a_valid_target(pid):
             assert sorted(t["keys"]) == sorted(items)
         elif sol.verb == "press":
             assert t["icon"] in items
+        elif sol.verb == "press_all":
+            assert sorted(t["icons"]) == sorted(items) and t["icons"] in (sorted(items), sorted(items, reverse=True))
         elif sol.verb == "turn":
             assert t["to"] in items
         elif sol.verb == "set":
@@ -84,6 +87,8 @@ def test_known_answers():
     m = Module(pets, {"icons": ["cat", "pig", "dog", "hen"]})
     assert phrase(m.solution(), m) == "Press the dog."
     m = Module(pets, {"icons": ["duck", "pig", "horse", "hen"]})
+    assert phrase(m.solution(), m) == "Press the buttons in this order: duck, hen, horse, pig."  # horse rule
+    m = Module(pets, {"icons": ["duck", "pig", "donkey", "hen"]})
     assert phrase(m.solution(), m) == "Press the hen."
     nums = POOL["numbers"]
     m = Module(nums, {"display": ["7", "4", "2"]})
@@ -132,7 +137,32 @@ def test_answer_key_matches_engine():
 
 def test_verb_puzzles_say_picture_and_noun_puzzles_do_not():
     from escape_pod.puzzles.models import Action
-    from escape_pod.puzzles.phrase import phrase
+    from escape_pod.puzzles.phrase import phrase, word
     assert phrase(Action("press", {"icon": "dance"}), spec=POOL["actions"]) == "Press the dance picture."
     assert phrase(Action("turn", {"to": "listen"}), spec=POOL["senses"]) == "Turn the dial to the listen picture."
     assert phrase(Action("press", {"icon": "cow"}), spec=POOL["pets_farm"]) == "Press the cow."
+
+
+def test_order_rules():
+    """Press all in alphabetical order (icons), and the first or last picture in the alphabet (dials)."""
+    m = Module(POOL["pets_farm"], {"icons": ["pig", "horse", "duck", "hen"]})
+    assert m.solution() == Action("press_all", {"icons": ["duck", "hen", "horse", "pig"]})
+    assert phrase(m.solution(), m) == "Press the buttons in this order: duck, hen, horse, pig."
+    m = Module(POOL["clothes"], {"icons": ["hat", "shoe", "jeans", "zipper"]})
+    assert m.solution().target["icons"] == ["zipper", "shoe", "jeans", "hat"]
+    m = Module(POOL["food"], {"options": ["pizza", "nuts", "carrot", "apple", "cereal"], "needle": "pizza"})
+    assert phrase(m.solution(), m) == "Turn the dial to the apple."
+    m = Module(POOL["weather_sky"], {"options": ["moon", "sun", "cloud", "rain", "snow"], "needle": "cloud"})
+    assert phrase(m.solution(), m) == "Turn the dial to the sun."
+    spec = POOL["pets_farm"]
+    assert phrase(spec.rules[2].action(), spec=spec) == "Press all the buttons in alphabetical order (A to Z)."
+    spec = POOL["clothes"]
+    assert phrase(spec.rules[2].action(), spec=spec) == "Press all the buttons in reverse alphabetical order (Z to A)."
+    spec = POOL["food"]
+    assert phrase(spec.rules[2].action(), spec=spec) == "Turn the dial to the picture that comes first in the alphabet."
+
+
+def test_alphabet_order_of_glosses_matches_the_english_words():
+    # The engine sorts glosses; players sort the English words. They must agree in every pool.
+    for spec in POOL.values():
+        assert sorted(spec.pool) == sorted(spec.pool, key=lambda g: word(g, spec).lower()), spec.id

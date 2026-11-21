@@ -48,6 +48,21 @@
       }
     },
     {
+      "if": [
+        [
+          "first",
+          "==",
+          "book"
+        ]
+      ],
+      "then": {
+        "verb": "press_all",
+        "target": {
+          "order": "reverse"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "press",
         "target": {

@@ -29,10 +29,21 @@ function mark(g, cls) {
   return el("span", { class: cls, text: CONTROL_SIGNS[g] || icon(g).emoji });
 }
 
+const isOpen = () => !root.classList.contains("hidden");
+const toggleGlossary = () => (isOpen() ? closeGlossary() : openGlossary());
+const markButtons = (on) => { for (const b of document.querySelectorAll(".glossary-btn")) b.classList.toggle("on", on); };
+
 export function bindGlossary() {
   document.body.append(root);
-  $("#open-glossary").onclick = () => (root.classList.contains("hidden") ? openGlossary() : closeGlossary());
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !root.classList.contains("hidden")) closeGlossary(); });
+  $("#open-glossary").onclick = toggleGlossary;  // in the top bar, for both roles
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isOpen()) { closeGlossary(); return; }
+    // G opens and closes it during a game, but never while the player types (search, reply, typed signs).
+    if (e.key.toLowerCase() !== "g" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if ($("#game").classList.contains("hidden") || ["INPUT", "SELECT", "TEXTAREA"].includes(e.target?.tagName)) return;
+    e.preventDefault();
+    toggleGlossary();
+  });
 }
 
 export async function openGlossary(gloss = null) {
@@ -47,14 +58,14 @@ export async function openGlossary(gloss = null) {
   }
   if (gloss) current = gloss;
   root.classList.remove("hidden");
-  $("#open-glossary").classList.add("on");
+  markButtons(true);
   render();
   root.querySelector(".gl-search")?.focus();
 }
 
 export function closeGlossary() {
   root.classList.add("hidden");
-  $("#open-glossary")?.classList.remove("on");
+  markButtons(false);
   root.querySelector("video")?.pause();
 }
 

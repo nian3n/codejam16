@@ -16,4 +16,5 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** balloon is shown: Press the balloon.
 2. **If** the first button shows the doll: Press the last button.
-3. **Otherwise:** Press the first button.
+3. **If** the first button shows the puzzle: Press all the buttons in alphabetical order (A to Z).
+4. **Otherwise:** Press the first button.

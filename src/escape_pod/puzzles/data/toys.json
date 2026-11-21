@@ -48,6 +48,21 @@
       }
     },
     {
+      "if": [
+        [
+          "first",
+          "==",
+          "puzzle"
+        ]
+      ],
+      "then": {
+        "verb": "press_all",
+        "target": {
+          "order": "alpha"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "press",
         "target": {

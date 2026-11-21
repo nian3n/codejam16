@@ -21,7 +21,7 @@ import secrets
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Callable, Literal
 
 from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -42,10 +42,25 @@ ROLES = ("defuser", "expert")
 MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
 MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
 ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
+BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
 app = FastAPI(title="Keep Moving and Nobody Explodes")
 app.state.debug = False
+
+
+@app.middleware("http")
+async def revalidate_pages(request, call_next):
+    """The page and its ES modules: the browser must check each one before it uses a cached copy.
+
+    Without a Cache-Control header, browsers guess a freshness time and may run an old
+    module beside a new one after a deploy. One missing export then stops every script
+    on the page. no-cache still allows a cheap 304 when the file did not change.
+    """
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 # Glossary clips (signs/fetch_popsign.py). check_dir=False: a fresh clone without clips still starts.
 app.mount("/signs", StaticFiles(directory=config.SIGN_CLIPS_DIR, check_dir=False), name="signs")
@@ -78,6 +93,8 @@ class Room:
     # in `players`, so the video code never waits for a second person.
     solo: bool = False
     bot: HqBot | None = None
+    bot_queue: list[Callable[[], str | None]] = field(default_factory=list)  # replies still to give
+    bot_task: asyncio.Task | None = None  # set while the bot is "typing"
 
     def remaining(self) -> float:
         if self.phase == "playing":
@@ -144,6 +161,7 @@ def view(room: Room, me: Player) -> dict:
     }
     if room.bot is not None:
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
+        v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
@@ -171,6 +189,7 @@ def end_game(room: Room, result: Literal["escaped", "boom"], why: str):
     room.ended_left = room.remaining()
     room.phase = result
     room.say({"kind": "event", "text": why})
+    stop_bot(room)  # no "…" and no late reply after the end
     if room.timer_task and room.timer_task is not asyncio.current_task():
         room.timer_task.cancel()
     room.timer_task = None
@@ -205,6 +224,7 @@ def back_to_lobby(room: Room, why: str | None = None):
         room.timer_task.cancel()
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+    stop_bot(room)
     room.bot = None
     if why:
         room.say({"kind": "event", "text": why})
@@ -227,6 +247,39 @@ def leave(room: Room, me: Player):
 
 def bot_say(room: Room, text: str) -> None:
     room.say({"kind": "say", "from": BOT_NAME, "text": text})
+
+
+def bot_later(room: Room, answer: Callable[[], str | None]) -> None:
+    """Queue one bot reply. It comes BOT_DELAY_S later, in order, like a person typing.
+
+    The bot's state moves only when the reply is given, so bot_stage and the reply
+    always match, and signs sent while the bot "types" queue behind it.
+    """
+    room.bot_queue.append(answer)
+    if room.bot_task is None:
+        room.bot_task = asyncio.create_task(_bot_worker(room, room.bot))
+
+
+async def _bot_worker(room: Room, bot: HqBot | None) -> None:
+    while room.bot_queue:
+        await asyncio.sleep(BOT_DELAY_S)
+        if room.bot is not bot or room.phase != "playing":
+            room.bot_queue.clear()
+            break
+        text = room.bot_queue.pop(0)()
+        if text:
+            bot_say(room, text)
+        if not room.bot_queue:
+            room.bot_task = None
+        await broadcast(room)
+    room.bot_task = None
+
+
+def stop_bot(room: Room) -> None:
+    room.bot_queue.clear()
+    if room.bot_task and room.bot_task is not asyncio.current_task():
+        room.bot_task.cancel()
+    room.bot_task = None
 
 
 def act(room: Room, index: int, action: Action) -> bool | None:
@@ -293,7 +346,8 @@ async def handle(room: Room, me: Player, msg: dict):
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses})
             if room.bot is not None:
-                bot_say(room, room.bot.reply(glosses))
+                bot = room.bot
+                bot_later(room, lambda: bot.reply(glosses))
     elif kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo:
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
@@ -308,9 +362,8 @@ async def handle(room: Room, me: Player, msg: dict):
                 return
             result = act(room, i, action)
             if room.bot is not None and result is not None and room.phase == "playing":
-                text = room.bot.on_result(result)
-                if text:
-                    bot_say(room, text)
+                bot = room.bot
+                bot_later(room, lambda: bot.on_result(result))
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":

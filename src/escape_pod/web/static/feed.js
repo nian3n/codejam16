@@ -20,8 +20,15 @@ export function renderFeed() {
     }
     return box;
   }));
-  if (nearBottom || local.chatSeen !== state.chat.length) feed.scrollTop = feed.scrollHeight;
-  local.chatSeen = state.chat.length;
+  // Solo: the bot "thinks" for a second before each reply (server BOT_DELAY_S).
+  if (state.bot_typing) {
+    feed.append(el("div", { class: "msg say typing", "aria-label": "HQ bot is typing" },
+      el("span", { class: "who", text: "HQ bot (HQ)" }),
+      el("span", { class: "dots" }, el("i"), el("i"), el("i"))));
+  }
+  const seen = state.chat.length + (state.bot_typing ? 0.5 : 0);
+  if (nearBottom || local.chatSeen !== seen) feed.scrollTop = feed.scrollHeight;
+  local.chatSeen = seen;
 }
 
 // The field agent's composer (webcam signs, with a typed fallback) is in game_signs.js.

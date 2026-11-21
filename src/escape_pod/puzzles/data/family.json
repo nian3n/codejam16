@@ -55,6 +55,21 @@
       }
     },
     {
+      "if": [
+        [
+          "has:uncle",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press_all",
+        "target": {
+          "order": "alpha"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "press",
         "target": {

@@ -16,4 +16,5 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** hat is shown and mitten is shown: Press the mitten.
 2. **If** jacket is shown: Press the jacket.
-3. **Otherwise:** Press the first button.
+3. **If** shoe is shown: Press all the buttons in reverse alphabetical order (Z to A).
+4. **Otherwise:** Press the first button.

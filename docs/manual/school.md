@@ -16,4 +16,5 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** scissors is shown: Press the scissors.
 2. **If** the first button shows the flag: Press the last button.
-3. **Otherwise:** Press the pencil.
+3. **If** the first button shows the book: Press all the buttons in reverse alphabetical order (Z to A).
+4. **Otherwise:** Press the pencil.

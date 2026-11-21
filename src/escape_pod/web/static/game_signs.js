@@ -55,6 +55,8 @@ export function signComposer() {
   const typed = el("input", { placeholder: "Type a sign, press Enter", list: "glosses", autocomplete: "off", id: "type-sign" });
   typed.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
+    e.stopPropagation();  // the document handler below would send at once
+    if (!typed.value.trim()) { sendSigns(); return; }  // Enter on an empty field sends, as elsewhere
     const g = typed.value.trim().toLowerCase().replace(/\s+/g, "");
     if (g && chips().length < MAX_SIGNS) chips().push({ id: nextId++, state: "done", guesses: [], pick: g, typed: true });
     typed.value = "";
@@ -62,7 +64,9 @@ export function signComposer() {
   });
   const all = [...new Set(store.pages.flatMap((p) => p.glosses))].sort();
   return el("div", { class: "composer sign-composer" },
-    el("div", { class: "label", text: "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at." }),
+    el("div", { class: "label", text: store.state?.solo
+      ? "Answer HQ: sign to your camera, one sign at a time. YES and NO work too."
+      : "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at." }),
     el("div", { class: "seq-banner hidden", id: "game-banner", "aria-live": "polite" }),
     el("div", { class: "sign-buttons" },
       el("button", { class: "btn primary", id: "sign-record", text: "Start signing (Space)", onclick: toggleRecording }),
@@ -70,7 +74,7 @@ export function signComposer() {
     el("div", { class: "label sign-note", id: "sign-note" }),
     el("div", { class: "sign-frame hidden", id: "sign-frame" }),
     el("div", { class: "seq-chips", id: "sign-chips" }),
-    el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ", onclick: sendSigns }),
+    el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ (Enter)", onclick: sendSigns }),
     el("details", { class: "type-instead" },
       el("summary", { text: "No camera? Type the signs instead" }),
       typed,
@@ -214,11 +218,22 @@ export function renderSignChips() {
   $("#sign-clear").disabled = !list.length;
   $("#sign-note").textContent = note;
   // Solo: the bot's template around the chips. "module": one item names the module.
-  // "details": the items the bot asked for.
+  // "details": the answer to the bot's last question.
   const frame = $("#sign-frame");
   frame.classList.toggle("hidden", !store.state?.solo || !store.state.bot_stage);
-  frame.textContent = store.state?.bot_stage === "details" ? "Here is what I see:" : "I need help with:";
+  frame.textContent = store.state?.bot_stage === "details" ? "My answer:" : "I need help with:";
 }
+
+// Enter sends the chips to HQ. Outside text fields only: Enter in the typed-sign field adds a
+// chip (and sends when the field is empty). On a focused button it sends too, instead of
+// clicking that button again: the player's hands are busy, Enter is the one key to find.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !$("#send-signs") || $("#game").classList.contains("hidden")) return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target?.tagName) || e.repeat) return;
+  if (!$("#glossary")?.classList.contains("hidden")) return;
+  e.preventDefault();
+  if (!$("#send-signs").disabled) sendSigns();
+});
 
 // Space starts and stops a recording, as in solo practice. Not while typing.
 document.addEventListener("keydown", (e) => {

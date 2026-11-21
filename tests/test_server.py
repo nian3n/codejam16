@@ -1,4 +1,7 @@
 # Owner: Teammate 1 (Game, scenes, widgets)
+import time
+
+import pytest
 from fastapi.testclient import TestClient
 
 from escape_pod.web import server
@@ -309,7 +312,12 @@ def test_leave_during_a_game_ends_it_and_last_one_out_deletes_the_room():
 # Solo rooms: one field agent, the scripted bot in the HQ seat
 # ---------------------------------------------------------------------------
 from escape_pod.brain.hq_bot import BOT_NAME, HqBot  # noqa: E402
-from test_hq_bot import signs_for  # noqa: E402
+from test_hq_bot import answer  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _fast_bot(monkeypatch):
+    monkeypatch.setattr(server, "BOT_DELAY_S", 0)  # the 1 s "thinking" pause, off in tests
 
 
 def _start_solo(level="beginner"):
@@ -323,6 +331,18 @@ def _start_solo(level="beginner"):
 
 def _bot_said(ws, n_before):
     return _drain(ws, lambda s: len(s["chat"]) > n_before and s["chat"][-1].get("from") == BOT_NAME)
+
+
+def _talk(code, ws, s, m):
+    """Name module m with its first item, then answer each of the bot's questions."""
+    msg = [m.widget.items(m.facts)[0]]
+    while True:
+        n = len(s["chat"])
+        ws.send_json({"type": "signs", "glosses": msg})
+        s = _bot_said(ws, n)
+        if s["bot_stage"] == "module":
+            return s
+        msg = answer(server.rooms[code].bot.pending, m)
 
 
 def test_solo_room_starts_with_one_player_and_greets():
@@ -348,10 +368,7 @@ def test_solo_bot_answers_signs():
 def test_solo_full_game_reaches_escaped():
     code, a, s = _start_solo()
     for i, m in enumerate(server.rooms[code].modules):
-        for msg in [[m.widget.items(m.facts)[0]], *signs_for(m)]:
-            n = len(s["chat"])
-            a.send_json({"type": "signs", "glosses": msg})
-            s = _bot_said(a, n)
+        s = _talk(code, a, s, m)
         a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
         s = _drain(a, lambda s, i=i: s["progress"]["defused"] == i + 1)
     assert s["phase"] == "escaped"
@@ -361,13 +378,10 @@ def test_solo_full_game_reaches_escaped():
 def test_solo_strike_gets_a_bot_reply():
     code, a, s = _start_solo()
     m = server.rooms[code].modules[0]
-    for msg in [[m.widget.items(m.facts)[0]], *signs_for(m)]:
-        n = len(s["chat"])
-        a.send_json({"type": "signs", "glosses": msg})
-        s = _bot_said(a, n)
+    s = _talk(code, a, s, m)
     a.send_json({"type": "act", "module": 0, "action": {"verb": "nope", "target": {}}})
     s = _drain(a, lambda s: s["strikes"] == 1 and s["chat"][-1].get("from") == BOT_NAME)
-    assert s["chat"][-1]["text"].startswith(f"That was a strike. Check the {m.spec.title} again.")
+    assert s["chat"][-1]["text"].startswith(f"That was a strike. Let us check the {m.spec.title} again.")
     assert s["bot_stage"] == "details"
     a.__exit__(None, None, None)
 
@@ -410,3 +424,24 @@ def test_two_player_rooms_are_unchanged():
     assert sa["solo"] is False and "bot_stage" not in sa and "bot_stage" not in sb
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_static_files_are_revalidated():
+    # Browsers must not run a stale module next to a new one after a deploy: one missing
+    # export stops every script on the page (found in playtest: "Play solo" did nothing).
+    for path in ("/static/app.js", "/static/glossary.js", "/static/style.css", "/"):
+        assert client.get(path).headers.get("cache-control") == "no-cache", path
+
+
+def test_solo_bot_thinks_before_it_replies(monkeypatch):
+    monkeypatch.setattr(server, "BOT_DELAY_S", 0.3)
+    code, a, s = _start_solo()
+    m = server.rooms[code].modules[0]
+    t0 = time.monotonic()
+    a.send_json({"type": "signs", "glosses": [m.widget.items(m.facts)[0]]})
+    typing = _drain(a, lambda s: s["chat"][-1]["kind"] == "signs")
+    assert typing["bot_typing"] is True and typing["bot_stage"] == "module"
+    done = _bot_said(a, len(typing["chat"]))
+    assert time.monotonic() - t0 >= 0.3
+    assert done["bot_typing"] is False and done["bot_stage"] == "details"
+    a.__exit__(None, None, None)

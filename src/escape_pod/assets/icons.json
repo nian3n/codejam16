@@ -36,7 +36,7 @@
   "jump": {"emoji": "🤸", "caption": true}, "dance": {"emoji": "💃"}, "sleep": {"emoji": "🛌", "caption": true},
   "read": {"emoji": "📖"}, "cry": {"emoji": "😭"}, "kiss": {"emoji": "💋"}, "hide": {"emoji": "🙈"}, "ride": {"emoji": "🚴"},
 
-  "bed": {"emoji": "🛏️"}, "chair": {"emoji": "🪑"}, "table": {"emoji": "🪵", "caption": true}, "lamp": {"emoji": "💡"},
+  "bed": {"emoji": "🛏️"}, "chair": {"emoji": "🪑"}, "table": {"emoji": "🪵", "caption": true}, "lamp": {"emoji": "💡", "caption": true},
   "tv": {"emoji": "📺"}, "radio": {"emoji": "📻"}, "refrigerator": {"emoji": "🧊", "caption": true},
   "drawer": {"emoji": "🗄️", "caption": true},
 

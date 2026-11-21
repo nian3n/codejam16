@@ -63,6 +63,21 @@
       }
     },
     {
+      "if": [
+        [
+          "first",
+          "==",
+          "moon"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "alpha_last"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "turn",
         "target": {

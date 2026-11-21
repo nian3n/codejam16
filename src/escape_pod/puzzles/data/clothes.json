@@ -56,6 +56,21 @@
       }
     },
     {
+      "if": [
+        [
+          "has:shoe",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press_all",
+        "target": {
+          "order": "reverse"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "press",
         "target": {

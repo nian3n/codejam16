@@ -56,6 +56,21 @@
       }
     },
     {
+      "if": [
+        [
+          "has:nuts",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "alpha_first"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "turn",
         "target": {

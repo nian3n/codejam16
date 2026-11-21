@@ -26,6 +26,10 @@ OPS = {
 }
 
 
+ALPHA = ("alpha_first", "alpha_last")  # dial targets: the picture first or last in the alphabet
+ORDERS = {"alpha": False, "reverse": True}  # press_all orders -> sorted(reverse=...)
+
+
 def _pick(items: list, which):
     """'first' / 'last' -> the concrete item; anything else passes through."""
     if which == "first":
@@ -123,6 +127,12 @@ class Icons(Widget):
         return d
 
     def resolve(self, action, facts):
+        if action.verb == "press_all":
+            # Glosses sort like their English words in every pool (test_alphabet_order_...).
+            order = action.target.get("order")
+            if order in ORDERS:
+                return Action("press_all", {"icons": sorted(facts["icons"], reverse=ORDERS[order])})
+            return action
         return Action("press", {"icon": _pick(facts["icons"], action.target["icon"])})
 
     def known_keys(self, spec):
@@ -146,7 +156,10 @@ class Dial(Widget):
         return d
 
     def resolve(self, action, facts):
-        return Action("turn", {"to": _pick(facts["options"], action.target["to"])})
+        to = action.target["to"]
+        if to in ALPHA:
+            return Action("turn", {"to": (min if to == "alpha_first" else max)(facts["options"])})
+        return Action("turn", {"to": _pick(facts["options"], to)})
 
     def known_keys(self, spec):
         return super().known_keys(spec) | {"needle"}
