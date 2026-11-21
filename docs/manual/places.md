@@ -16,4 +16,5 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** backyard is shown and the backyard switch is on: Flip the backyard switch.
 2. **If** no switch is on: Flip the first switch.
-3. **Otherwise:** Flip the last switch.
+3. **If** 3 or more switches are on: Turn every switch off.
+4. **Otherwise:** Flip the last switch.

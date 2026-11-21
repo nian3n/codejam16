@@ -15,5 +15,6 @@ Switches are counted from left to right.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** up is shown and down is shown: Flip the down switch.
-2. **If** 2 or more switches are on: Flip the last switch.
-3. **Otherwise:** Flip the first switch.
+2. **If** wet is shown and dry is shown: Flip every switch.
+3. **If** 2 or more switches are on: Flip the last switch.
+4. **Otherwise:** Flip the first switch.

@@ -43,6 +43,29 @@
     {
       "if": [
         [
+          "has:giraffe",
+          "==",
+          true
+        ],
+        [
+          "has:elephant",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icons": [
+            "elephant",
+            "giraffe"
+          ]
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "first",
           "==",
           "owl"

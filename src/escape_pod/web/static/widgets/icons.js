@@ -1,5 +1,7 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
-// Picture buttons: a 2x2 grid. A tap presses one button (verb "press").
+// Picture buttons: a 2x2 grid. A tap presses one button (verb "press"). Some answers
+// are two presses in a row ("Press the elephant, then the giraffe."): the server checks
+// each one, and a right press shows a tick (m.done).
 //
 // ORDER mode, for the rules "press all the buttons in alphabetical order": each tap
 // numbers a button, and the last tap sends the whole order (verb "press_all"). The
@@ -24,8 +26,10 @@ export function icons(m, i, { sendAct, rerender }) {
   return el("div", { class: "icon-mod" + (seq.on ? " ordering" : "") },
     el("div", { class: "icon-grid" }, m.facts.icons.map((g) => {
       const k = seq.picks.indexOf(g);
-      return el("button", { class: "icon-btn" + (k >= 0 ? " picked" : ""), title: wordOf(g), onclick: () => tap(g) },
-        iconFace(g), k >= 0 ? el("span", { class: "pick-n", text: String(k + 1) }) : null);
+      const done = (m.done || []).some((a) => a.verb === "press" && a.target.icon === g);
+      return el("button", { class: "icon-btn" + (k >= 0 ? " picked" : "") + (done ? " done" : ""), title: wordOf(g), onclick: () => tap(g) },
+        iconFace(g), k >= 0 ? el("span", { class: "pick-n", text: String(k + 1) })
+          : done ? el("span", { class: "pick-n", text: "✓" }) : null);
     })),
     el("div", { class: "icon-bar" },
       el("button", { class: "key fn order-btn" + (seq.on ? " on" : ""), type: "button", onclick: toggle,

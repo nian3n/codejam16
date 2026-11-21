@@ -15,6 +15,7 @@ Buttons are counted left to right, top row first.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** lion is shown and tiger is shown: Press the tiger.
-2. **If** the first button shows the owl: Press the last button.
-3. **If** zebra is shown: Press the zebra.
-4. **Otherwise:** Press the first button.
+2. **If** giraffe is shown and elephant is shown: Press the elephant, then the giraffe.
+3. **If** the first button shows the owl: Press the last button.
+4. **If** zebra is shown: Press the zebra.
+5. **Otherwise:** Press the first button.

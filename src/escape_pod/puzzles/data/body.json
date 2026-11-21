@@ -45,6 +45,29 @@
     {
       "if": [
         [
+          "has:ear",
+          "==",
+          true
+        ],
+        [
+          "has:eye",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icons": [
+            "ear",
+            "eye"
+          ]
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "last",
           "==",
           "eye"

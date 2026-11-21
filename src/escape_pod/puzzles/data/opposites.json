@@ -46,6 +46,26 @@
     {
       "if": [
         [
+          "has:wet",
+          "==",
+          true
+        ],
+        [
+          "has:dry",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "all": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "count_on",
           ">=",
           2

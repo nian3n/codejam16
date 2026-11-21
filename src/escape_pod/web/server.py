@@ -185,18 +185,18 @@ def view(room: Room, me: Player) -> dict:
     if room.modules and (me.role == "defuser" or room.phase in ("escaped", "boom")):
         v["bomb"] = [{"id": m.spec.id, "title": m.spec.title, "widget": m.spec.widget,
                       "target_words": m.spec.target_words, "pool": m.spec.pool,
-                      "facts": shown_facts(m), "defused": m.defused} for m in room.modules]
+                      "facts": shown_facts(m), "defused": m.defused,
+                      "done": [a.to_json() for a in m.done]} for m in room.modules]
     return v
 
 
 def shown_facts(m) -> dict:
-    """The facts the bomb draws. A defused switch board shows the lever where the agent
+    """The facts the bomb draws. A switch shows the lever where the agent's right clicks
     put it. m.facts keep the start state, because the answer key and solution() read it."""
-    if not (m.defused and m.spec.widget == "switches"):
+    if m.spec.widget != "switches" or not m.done:
         return m.facts
-    sol = m.solution()  # a correct action equals the solution, so this is what was set
-    return {**m.facts, "switches": [{**s, "state": sol.target["state"]} if s["label"] == sol.target["switch"] else s
-                                    for s in m.facts["switches"]]}
+    now = {a.target["switch"]: a.target["state"] for a in m.done}
+    return {**m.facts, "switches": [{**s, "state": now.get(s["label"], s["state"])} for s in m.facts["switches"]]}
 
 
 async def broadcast(room: Room):
@@ -330,11 +330,15 @@ def stop_bot(room: Room) -> None:
 
 
 def act(room: Room, index: int, action: Action) -> bool | None:
-    """True: defused. False: a strike. None: ignored (the module was already defused)."""
+    """True: defused. False: a strike. None: nothing to judge yet (the module was already
+    defused, or the click was a right step of a longer answer, see Module.apply)."""
     m = room.modules[index]
     if m.defused:
         return None
-    ok = m.check(action)
+    result = m.apply(action)
+    if result == "step":
+        return None
+    ok = result == "defused"
     if ok:
         m.defused = True
         # A solved module confirms the outcome of a signed clue and HQ reply.

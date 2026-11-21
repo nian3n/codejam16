@@ -40,6 +40,21 @@
     {
       "if": [
         [
+          "has:5",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "type",
+        "target": {
+          "keys_from": "plus_one"
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "first",
           ">",
           "last"

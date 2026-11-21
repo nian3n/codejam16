@@ -556,3 +556,19 @@ def test_a_defused_switch_shows_its_new_position():
     assert next(x["state"] for x in m.facts["switches"] if x["label"] == sol.target["switch"]) == before  # the engine's facts stay
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_a_two_cut_answer_is_checked_click_by_click():
+    code, a, b, sa, sb = _start_game()
+    m = Module(load_pool()["colors"], {"colors": ["green", "white", "black", "orange"]})
+    server.rooms[code].modules[0] = m
+    cut = lambda c: a.send_json({"type": "act", "module": 0, "action": {"verb": "cut", "target": {"color": c}}})
+    cut("white")
+    s = _drain(a, lambda s: s["bomb"][0]["done"])
+    assert s["strikes"] == 0 and not s["bomb"][0]["defused"]
+    assert s["bomb"][0]["done"] == [{"verb": "cut", "target": {"color": "white"}}]
+    cut("black")
+    s = _drain(a, lambda s: s["bomb"][0]["defused"])
+    assert s["strikes"] == 0 and s["chat"][-1]["text"] == "Module 1 defused!"
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)

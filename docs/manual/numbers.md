@@ -15,5 +15,6 @@ The display is read from left to right.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** the display shows 0: Type the display from smallest to largest.
-2. **If** the first digit is bigger than the last digit: Type the display in reverse order.
-3. **Otherwise:** Type the display as shown.
+2. **If** the display shows 5: Add 1 to each number on the display and type the result (9 becomes 0).
+3. **If** the first digit is bigger than the last digit: Type the display in reverse order.
+4. **Otherwise:** Type the display as shown.

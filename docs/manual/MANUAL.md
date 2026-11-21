@@ -64,9 +64,10 @@ Buttons are counted left to right, top row first.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** nose is shown and mouth is shown: Press the mouth.
-2. **If** the last button shows the eye: Press the first button.
-3. **If** hair is shown: Press the hair.
-4. **Otherwise:** Press the last button.
+2. **If** ear is shown and eye is shown: Press the ear, then the eye.
+3. **If** the last button shows the eye: Press the first button.
+4. **If** hair is shown: Press the hair.
+5. **Otherwise:** Press the last button.
 
 ---
 
@@ -110,9 +111,11 @@ Wires are counted from top to bottom.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** there is a red wire and there is a blue wire: Cut the blue wire.
-2. **If** the last wire is white: Cut the first wire.
-3. **If** there is no yellow wire: Cut the last wire.
-4. **Otherwise:** Cut the yellow wire.
+2. **If** there is a black wire and there is a white wire: Cut the white wire, then the black wire.
+3. **If** the first wire is green: Cut every wire, from the bottom to the top.
+4. **If** the last wire is white: Cut the first wire.
+5. **If** there is no yellow wire: Cut the last wire.
+6. **Otherwise:** Cut the yellow wire.
 
 ---
 
@@ -201,10 +204,12 @@ Switches are counted from left to right.
 
 Read the rules in order. Do the first rule that is true.
 
-1. **If** lamp is shown and the lamp switch is off: Flip the lamp switch.
-2. **If** 3 or more switches are on: Flip the first switch.
-3. **If** TV is shown: Flip the TV switch.
-4. **Otherwise:** Flip the last switch.
+1. **If** every switch is on: Turn every switch off.
+2. **If** lamp is shown and the lamp switch is off: Flip the lamp switch.
+3. **If** no switch is on: Turn every switch on.
+4. **If** 3 or more switches are on: Flip the first switch.
+5. **If** TV is shown: Flip the TV switch.
+6. **Otherwise:** Flip the last switch.
 
 ---
 
@@ -225,8 +230,9 @@ The display is read from left to right.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** the display shows 0: Type the display from smallest to largest.
-2. **If** the first digit is bigger than the last digit: Type the display in reverse order.
-3. **Otherwise:** Type the display as shown.
+2. **If** the display shows 5: Add 1 to each number on the display and type the result (9 becomes 0).
+3. **If** the first digit is bigger than the last digit: Type the display in reverse order.
+4. **Otherwise:** Type the display as shown.
 
 ---
 
@@ -247,8 +253,9 @@ Switches are counted from left to right.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** up is shown and down is shown: Flip the down switch.
-2. **If** 2 or more switches are on: Flip the last switch.
-3. **Otherwise:** Flip the first switch.
+2. **If** wet is shown and dry is shown: Flip every switch.
+3. **If** 2 or more switches are on: Flip the last switch.
+4. **Otherwise:** Flip the first switch.
 
 ---
 
@@ -315,7 +322,8 @@ Read the rules in order. Do the first rule that is true.
 
 1. **If** backyard is shown and the backyard switch is on: Flip the backyard switch.
 2. **If** no switch is on: Flip the first switch.
-3. **Otherwise:** Flip the last switch.
+3. **If** 3 or more switches are on: Turn every switch off.
+4. **Otherwise:** Flip the last switch.
 
 ---
 
@@ -473,6 +481,7 @@ Buttons are counted left to right, top row first.
 Read the rules in order. Do the first rule that is true.
 
 1. **If** lion is shown and tiger is shown: Press the tiger.
-2. **If** the first button shows the owl: Press the last button.
-3. **If** zebra is shown: Press the zebra.
-4. **Otherwise:** Press the first button.
+2. **If** giraffe is shown and elephant is shown: Press the elephant, then the giraffe.
+3. **If** the first button shows the owl: Press the last button.
+4. **If** zebra is shown: Press the zebra.
+5. **Otherwise:** Press the first button.

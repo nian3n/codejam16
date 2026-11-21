@@ -134,6 +134,7 @@ class Module:
     defused: bool
     def solution(self) -> Action: ...          # resolved: {"icon": "cow"}, never {"icon": "last"}
     def check(self, action: Action) -> bool: ...
+    def apply(self, action: Action) -> str: ...   # one click: "step", "defused" or "strike" (the server uses this)
     def fired_rule(self) -> int: ...           # index of the rule that fires
 
 # escape_pod.puzzles.phrase
@@ -264,14 +265,15 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 | Widget | Facts | Derived keys | Verbs |
 |---|---|---|---|
-| wires | `colors: [..]` | `count`, `first`, `last`, `has:<color>` | `cut {color: c}` or `{wire: "first"\|"last"}` |
-| keypad | `display: [..]` | `count`, `first`, `last`, `has:<x>`, `display`, `reversed`, `sorted` | `type {keys: [..]}` or `{keys_from: "display"\|"reversed"\|"sorted"}` |
-| icons | `icons: [4 glosses]` | `has:<g>`, `position_of:<g>`, `first`, `last` | `press {icon: g\|"first"\|"last"}`, or `press_all {order: "alpha"\|"reverse"}` (all 4 buttons in alphabetical order, A to Z or Z to A; resolved to `{icons: [..]}`, sent from the panel's ORDER mode) |
+| wires | `colors: [..]` | `count`, `first`, `last`, `has:<color>` | `cut {color: c}` or `{wire: "first"\|"last"}`, or several cuts in a row: `{colors: [c1, c2]}` or `{order: "top_down"\|"bottom_up"}` (every wire) |
+| keypad | `display: [..]` | `count`, `first`, `last`, `has:<x>`, `display`, `reversed`, `sorted`, `plus_one` | `type {keys: [..]}` or `{keys_from: "display"\|"reversed"\|"sorted"\|"plus_one"}` (`plus_one`: each digit plus 1, 9 becomes 0) |
+| icons | `icons: [4 glosses]` | `has:<g>`, `position_of:<g>`, `first`, `last` | `press {icon: g\|"first"\|"last"}`, or two presses in a row: `press {icons: [g1, g2]}`, or `press_all {order: "alpha"\|"reverse"}` (all 4 buttons in alphabetical order, A to Z or Z to A; resolved to `{icons: [..]}`, sent from the panel's ORDER mode) |
 | dial | `options: [..]`, `needle: g` | `needle`, `has:<g>`, `first`, `last` | `turn {to: g\|"first"\|"last"\|"alpha_first"\|"alpha_last"}` (the picture that comes first or last in the alphabet) |
-| switches | `switches: [{label, state}]` | `count_on`, `state_of:<label>`, `has:<label>` | `set {switch: label\|"first"\|"last", state: "on"\|"off"\|"flip"}` |
+| switches | `switches: [{label, state}]` | `count_on`, `state_of:<label>`, `has:<label>` | `set {switch: label\|"first"\|"last", state: "on"\|"off"\|"flip"}`, or `set {all: "on"\|"off"\|"flip"}` (every switch, in any order; resolved with `flips: {label: state}`) |
 | big_button | `faces: [..]` | `faces`, `first`, `last`, `has:<g>` | `hold {release_on: g\|"first"\|"last"}` |
 
 - Rules are data: `[derived_key, op, value]` conditions with the ops `== != < <= > >= in`. The conditions in one rule are ANDed. The first rule that matches wins. The last rule is `else`. **No `eval`.** One action per puzzle.
+- **Steps:** some actions take several clicks (the lists above). `Widget.steps()` splits the resolved action into clicks. The server checks each click with `Module.apply()`: a right click counts (the state lists them in `done`), a wrong click is a strike and keeps the progress. Order matters for wires and pictures, not for switches.
 - `"first"` and `"last"` follow the reading order that the manual prints for each widget. For example, wires go top to bottom and the dial goes clockwise from the top. `resolve()` turns them into the real item, so `solution()` is always concrete.
 - `has:<g>` for an item that is not shown is `false`. Any other missing key never matches.
 - `first > last` compares the two derived values, not the words.
