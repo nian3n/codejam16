@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from escape_pod.brain.hq_bot import HqBot
+from escape_pod.brain.hq_bot import BOT_NAME, HqBot
 from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
 from escape_pod.puzzles.phrase import phrase
 
@@ -181,7 +181,7 @@ def test_a_result_after_the_player_moved_on_keeps_the_new_page():
 
 
 def test_greeting():
-    assert HqBot().greeting() == "Riley here. Which module do you need help with? Tell me one thing you see on it."
+    assert HqBot().greeting() == f"{BOT_NAME} here. Which module do you need help with? Tell me one thing you see on it."
 
 
 def test_alphabet_rules_ask_for_every_picture():
