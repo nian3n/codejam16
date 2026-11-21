@@ -14,7 +14,8 @@ import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { clearSignDraft, preloadGameSigns } from "./game_signs.js";
-import { liftMissionLayer, renderMission } from "./mission.js";
+import { finishTray, renderMission } from "./mission.js";
+import { prepareWorkbench, renderCaseTime, renderDamageBays, resetWorkbench, setCaseOutcome } from "./workbench.js";
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
@@ -25,7 +26,7 @@ import { renderInit } from "./init.js";
 let activeSeatKey = null;
 let activeScreen = "home";
 let lobbyCamera = true;
-const DETONATION_MS = 950;
+const DETONATION_MS = 1500;
 let detonationTimer = null;
 
 async function boot() {
@@ -64,7 +65,11 @@ async function boot() {
     if (event.persisted && store.state) onState(store.state);
   });
   setInterval(tickTimer, 200);
-  setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
+  setInterval(() => {
+    if (store.state?.phase !== "playing") return;
+    store.faceTick++;
+    updateFaces();
+  }, 1200);
   // Keep room seats in each tab so a fresh invite can be opened by another profile.
   const profile = currentProfile();
   if (q && profile) {
@@ -226,7 +231,7 @@ function onState(s) {
       stopVideo();
       lobbyCamera = false;
     }
-    $("#stage-effect").replaceChildren();
+    resetWorkbench();
     showScreen("lobby");
     renderLobby();
     placeDock($("#lobby-video"));
@@ -277,15 +282,23 @@ function setupGame() {
 
 function renderGame(previous) {
   const s = store.state;
-  $("#game").classList.toggle("mission-gate-active", !!s.mission && s.mission.stage !== "modules");
+  const playing = s.phase === "playing";
+  $("#game").classList.toggle("round-over", !playing);
+  $("#game").dataset.role = s.me.role;
+  prepareWorkbench(s, previous);
   $("#top-strikes").replaceChildren(...Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") })));
   $("#top-progress").textContent = s.progress ? `Defused ${s.progress.defused} / ${s.progress.total}` : "";
   $("#exit-game").classList.toggle("hidden", s.phase !== "playing");
-  liftMissionLayer(previous, s);
-  if (s.mission && s.mission.stage !== "modules") renderMission(s);
+  if (!playing) {
+    if (s.bomb) renderBomb();
+    else renderDamageBays();
+  } else if (s.me.role === "defuser" && s.mission.stage === "case_lock") {
+    $("#stage").replaceChildren();
+  } else if (s.mission.stage !== "modules") renderMission(s, previous);
   else if (s.me.role === "defuser") renderBomb();
   // Re-render the manual only when new messages arrive, so the page keeps its scroll.
   else if (store.local.chatSeen !== s.chat.length || !$("#stage .manual")) renderManual();
+  finishTray(previous, s);
   renderFeed();
   renderSignChips();
 }
@@ -294,19 +307,20 @@ function tickTimer() {
   const s = store.state;
   if (!s) { document.body.classList.remove("critical"); return; }
   const left = secondsLeft();
-  const game = $("#game");
+  const workbench = $("#workbench");
   const locked = !gameplayOpen();
-  if (locked && !game.inert && s.phase === "playing" && s.me.role === "defuser") {
+  if (locked && !workbench.inert && s.phase === "playing" && s.me.role === "defuser") {
     clearSignDraft();
     renderSignChips();
   }
-  game.inert = locked;
+  workbench.inert = locked;
+  $("#composer").inert = locked;
+  $(".topbar").inert = locked;
   // The alarm speeds up in the last 30 s of a running game only, so it never leaks into the lobby or end screen.
   document.body.classList.toggle("critical", s.phase === "playing" && left < 30);
   const t = fmt(Math.ceil(left));
   $("#top-timer").textContent = t;
-  const seg = $(".seg");
-  if (seg) seg.textContent = t;
+  renderCaseTime(t);
 }
 
 function renderOutcome(previous) {
@@ -318,23 +332,30 @@ function renderOutcome(previous) {
     detonationTimer = null;
     end.classList.add("hidden");
     detonation.classList.add("hidden");
+    setCaseOutcome("");
     return;
   }
   renderEnd();
-  if (s.timed_out && previous?.round_id === s.round_id && previous.phase === "playing") {
+  if (s.timed_out && previous?.round_id === s.round_id && previous.phase === "playing"
+      && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     end.classList.add("hidden");
-    detonation.style.setProperty("--detonation-duration", `${DETONATION_MS}ms`);
+    $("#workbench").style.setProperty("--blast-duration", `${DETONATION_MS}ms`);
+    setCaseOutcome("blast");
     detonation.classList.remove("hidden");
     // The report must open even if a background tab never paints the animation.
     detonationTimer = setTimeout(() => {
       detonationTimer = null;
       if (store.state?.round_id !== s.round_id || !store.state.timed_out) return;
+      setCaseOutcome("failure");
       detonation.classList.add("hidden");
       end.classList.remove("hidden");
       $("#again").focus();
     }, DETONATION_MS);
   } else if (detonation.classList.contains("hidden")) {
+    setCaseOutcome(s.phase === "escaped" ? "success" : "failure");
+    const wasHidden = end.classList.contains("hidden");
     end.classList.remove("hidden");
+    if (wasHidden) $("#again").focus();
   }
 }
 
@@ -342,7 +363,7 @@ function renderEnd() {
   const s = store.state;
   const win = s.phase === "escaped";
   $(".end-card").className = "card end-card " + (win ? "win" : "lose");
-  $("#end-title").textContent = win ? "DEVICE NEUTRALIZED" : "DETONATION";
+  $("#end-title").textContent = win ? "Defused" : "Detonation";
   $("#end-stats").textContent = `Defused ${s.progress.defused} of ${s.progress.total} · Strikes ${s.strikes} · Time left ${fmt(Math.ceil(s.remaining_s))}`;
 }
 

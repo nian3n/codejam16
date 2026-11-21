@@ -86,7 +86,7 @@ class HqBot:
         return "Read the three digits on the luggage tag. Sign them one at a time, left to right, and confirm each chip."
 
     def wire_tray_prompt(self, position: str) -> str:
-        return f"Find the {position} wire from the top. Sign and confirm its color, then select that wire."
+        return f"Find the {position} wire from the top. Sign and confirm its color to cut it."
 
     # -- questions -----------------------------------------------------------------
     def _question(self, key: str) -> str:

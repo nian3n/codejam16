@@ -134,6 +134,8 @@ def test_expert_never_sees_the_bomb():
     _, a, b, sa, sb = _start_game()
     assert "bomb" in sa and len(sa["bomb"]) == 4
     assert "bomb" not in sb
+    assert sorted(sa["case_tray"]["cuts"]) == list(range(4))
+    assert "case_tray" not in sb
     assert sb["progress"] == {"total": 4, "defused": 0}
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
@@ -164,6 +166,7 @@ def test_full_game_signs_reply_strike_and_escape():
     assert sa["chat"][-1]["text"] == "All modules defused. Device neutralized."
     sb = _drain(b, lambda s: s["phase"] == "escaped")
     assert "bomb" in sb  # debrief: both see the bomb at the end
+    assert sb["case_tray"] == sa["case_tray"]
     # Play again -> back to the lobby with the same roles.
     a.send_json({"type": "again"})
     sa = _drain(a, lambda s: s["phase"] == "lobby")

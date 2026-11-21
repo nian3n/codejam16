@@ -205,14 +205,11 @@ button.chip:hover { border-color: var(--warn); }
 .module.defused .led { background: var(--ok); box-shadow: 0 0 12px var(--ok); }
 .module.defused .mod-body { opacity: .55; pointer-events: none; }
 .mod-body { flex: 1; display: grid; place-items: center; min-height: 0; position: relative; }
-.module.timer-mod { justify-content: center; align-items: center; gap: 14px; }
 .seg {
   font-family: "Consolas", "Courier New", monospace; font-size: clamp(2rem, 4.5vw, 3.6rem); font-weight: 700;
   color: var(--warn); background: #140303; padding: 6px 16px; border-radius: 6px; border: 2px solid #000;
   text-shadow: 0 0 10px #ff2b1b; letter-spacing: .08em;
 }
-.serial { font-family: Consolas, monospace; font-size: .75rem; color: #aab; background: #ddd2; padding: 2px 8px; border-radius: 4px; }
-.empty-mod { opacity: .5; }
 
 /* wires */
 .wires-svg { width: 100%; height: 100%; }
@@ -224,19 +221,9 @@ button.chip:hover { border-color: var(--warn); }
   width: min(100%, 680px); margin-inline: auto; padding: clamp(16px, 4vw, 32px);
   border: 3px solid #0b0d12; border-radius: 10px; box-shadow: inset 0 1px 0 #d9e0ed36, 0 14px 28px #0009;
 }
-.mission-case, .mission-tray {
-  background: linear-gradient(145deg, var(--metal1), var(--metal3) 67%);
-}
 .mission-gate h2 { margin: 0 0 12px; }
-.mission-case h2, .mission-tray h2 {
-  font: 700 clamp(1rem, 3vw, 1.35rem) var(--mono); text-transform: uppercase; letter-spacing: .14em;
-}
-.case-lid, .tray-wires {
+.tray-wires {
   border: 2px solid #111318; border-radius: 7px; box-shadow: inset 0 3px 16px #0009;
-}
-.case-lid {
-  background: repeating-linear-gradient(90deg, #171b22 0 16px, #20252d 16px 20px);
-  padding: clamp(12px, 4vw, 24px); display: grid; gap: 16px; justify-items: center;
 }
 .case-tag {
   justify-self: start; position: relative; display: grid; gap: 4px; transform: rotate(-4deg);
@@ -280,20 +267,6 @@ button.chip:hover { border-color: var(--warn); }
 .mission-note + .mission-count { margin-top: 8px; }
 .mission-manual.page { padding-top: 64px; }
 .mission-manual li[aria-current="step"] { font-weight: 800; }
-@media (min-width: 1001px) {
-  .mission-gate-active .side { overflow-y: auto; }
-  .mission-gate-active .feed { min-height: 88px; }
-  .mission-gate-active .remote-wrap { max-height: min(28vh, 240px); }
-  .mission-gate-active :is(.remote-video, .solo .local-video) { object-fit: contain; }
-}
-.mission-lifting {
-  margin: 0; transform-origin: center top; animation: lift-layer .55s ease-in .06s both;
-}
-.mission-lifting .lock-latch { animation: open-latch .2s ease-out both; }
-@keyframes open-latch { to { transform: rotate(-70deg); } }
-@keyframes lift-layer { 20% { transform: translateY(-8px); } to { transform: translateY(-40%) rotateX(76deg); opacity: 0; } }
-.terminal { fill: #8b8f99; stroke: #222; }
-
 /* keypad */
 .keypad { width: 100%; display: grid; gap: 6px; }
 .lcd { background: #9fbf7a; color: #1f2d14; font-family: Consolas, monospace; font-weight: 700; font-size: 1.6rem; text-align: center; letter-spacing: .3em; border-radius: 6px; border: 3px solid #111; padding: 2px; }
@@ -353,7 +326,7 @@ button.chip:hover { border-color: var(--warn); }
 /* dial */
 .dial { position: relative; width: 92%; aspect-ratio: 1 / 1; border-radius: 50%; background: radial-gradient(circle, #3b4150, #1a1d24 70%); border: 3px solid #0b0d12; }
 .dial-opt {
-  position: absolute; width: 26%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%); border-radius: 50%;
+  position: absolute; width: 26%; aspect-ratio: 1 / 1; border-radius: 50%;
   background: linear-gradient(#e8e3d3, #bdb6a2); border: 2px solid #111; cursor: pointer; display: grid; place-items: center; align-content: center;
 }
 .dial-opt .emoji { font-size: clamp(1rem, 2.2vw, 1.7rem); line-height: 1; }
@@ -402,7 +375,6 @@ button.chip:hover { border-color: var(--warn); }
 .module .mod-title { font-size: clamp(.7rem, 3.4cqw, 1rem); }
 .module .led { width: clamp(14px, 4.4cqw, 20px); height: clamp(14px, 4.4cqw, 20px); }
 .seg { font-size: clamp(2rem, 16cqw, 5.4rem); }
-.serial { font-size: clamp(.75rem, 3.4cqw, 1rem); }
 .icon-btn .emoji { font-size: clamp(1.6rem, 18cqw, 5rem); }
 .icon-btn .cap { font-size: clamp(.65rem, 3.4cqw, 1rem); }
 .pick-n { font-size: clamp(.8rem, 4cqw, 1.2rem); }
@@ -460,29 +432,6 @@ button.chip:hover { border-color: var(--warn); }
 .end-card h1 { margin: 0; font-size: 2.1rem; font-family: var(--mono); letter-spacing: .12em; }
 .end-card.win h1 { color: var(--ok); }
 .end-card.lose h1 { color: var(--warn); }
-#detonation {
-  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
-  overflow: hidden; background: #160c0a; color: #fff0db;
-  font: 800 clamp(1.6rem, 6vw, 4rem) var(--mono); text-transform: uppercase;
-  animation: detonation var(--detonation-duration) ease-out both;
-}
-#detonation::before {
-  content: ""; position: absolute; inset: -50%; pointer-events: none;
-  background: radial-gradient(ellipse, #fff1ba 4%, #f4a140 15%, #b33c20 29%, #441c16 42%, transparent 64%);
-  animation: blast var(--detonation-duration) ease-out both;
-}
-#detonation span { position: relative; text-shadow: 0 2px 10px #170704, 0 2px 3px #170704; }
-@keyframes detonation { from { background: #481b10; } to { background: #160c0a; } }
-@keyframes blast {
-  from { opacity: .9; transform: scale(.15); }
-  45% { opacity: .8; }
-  to { opacity: 0; transform: scale(1.35); }
-}
-@media (prefers-reduced-motion: reduce) {
-  #detonation { animation-name: detonation-still; }
-  #detonation::before { display: none; }
-}
-@keyframes detonation-still { from, to { background: #2e1412; } }
 /* The wall is a background image now, so the flash is an overlay (body::after), not a background color. */
 body.flash::after { animation: flash .45s; }
 @keyframes flash { 0%, 100% { opacity: 0; } 30% { opacity: .45; } }
