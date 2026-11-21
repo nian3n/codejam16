@@ -21,7 +21,7 @@ export function renderLobby() {
   // Solo: no roles to pick and nobody to invite. The video dock stays: it shows only the
   // self-view (rtc.js), so the player can frame their hands before Start.
   for (const sel of [".roles", "#copy-link"]) $(sel).classList.toggle("hidden", !!s.solo);
-  $("#lobby-hint").textContent = s.solo ? "Solo game: you are the field agent. A bot plays HQ. Pick a level and start."
+  $("#lobby-hint").textContent = s.solo ? `Solo game: you are the field agent. ${s.bot_name}, a bot, is your handler. Pick a level and start.`
     : s.players.length < 2
     ? "Waiting for a second player. Send them the room code or the invite link."
     : !s.can_start ? "Each player picks one role." : "Ready. Either player can start.";

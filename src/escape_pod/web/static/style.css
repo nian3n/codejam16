@@ -260,6 +260,9 @@ button.chip:hover { border-color: var(--warn); }
 .init-step.wait .mark { animation: blink 1s steps(1) infinite; color: var(--acc); }
 .init-step.ok .mark { color: var(--ok); }
 .init-step.fail .mark { color: var(--warn); }
+.init-count { display: none; font-family: var(--mono); font-weight: 800; font-size: 5.5rem; line-height: 1; color: var(--acc); margin: 6px 0 14px; }
+#init.counting .init-count { display: block; animation: count-pop 1s ease-out infinite; }
+@keyframes count-pop { from { transform: scale(1.25); opacity: .6; } 30% { transform: scale(1); opacity: 1; } }
 
 /* ---------- the bomb fills the stage ----------
    The stage is a size container. The bomb has 2 rows of 3 square modules (the timer plus

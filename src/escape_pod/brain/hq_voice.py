@@ -12,6 +12,8 @@ from __future__ import annotations
 import random
 import re
 
+from escape_pod.brain.hq_bot import GREETING
+
 CALM, SHAKY, PANIC = 0, 1, 2
 
 # What kind of line the bot is saying, from its own wording (hq_bot.py).
@@ -64,7 +66,7 @@ def mood(strikes: int, left_s: float, total_s: float) -> int:
 
 
 def kind_of(text: str) -> str:
-    if text.startswith("HQ here"):
+    if text == GREETING:
         return "greeting"
     if text.startswith("That was a strike"):
         return "strike"

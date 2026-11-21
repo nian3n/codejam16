@@ -9,7 +9,7 @@
 // solo practice) cuts the recording into one clip per sign, and each clip goes to
 // /api/practice/guess with the words this bomb can show.
 //
-// Nothing goes to HQ until the agent presses "Send to HQ": that press is the
+// Nothing goes to the handler until the agent presses "Send to <handler>": that press is the
 // confirmation of every chip (spec rule 4). Each chip shows the top 3 guesses, so a
 // wrong top guess costs one click, never a strike.
 import { $, el, send, store, wordOf } from "./core.js";
@@ -66,7 +66,7 @@ export function signComposer() {
   const all = [...new Set(store.pages.flatMap((p) => p.glosses))].sort();
   return el("div", { class: "composer sign-composer" },
     el("div", { class: "label", text: store.state?.solo
-      ? "Answer HQ: sign to your camera, one sign at a time. YES and NO work too."
+      ? `Answer ${store.state.bot_name}: sign to your camera, one sign at a time. YES and NO work too.`
       : "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at." }),
     el("div", { class: "seq-banner hidden", id: "game-banner", "aria-live": "polite" }),
     el("div", { class: "sign-buttons" },
@@ -75,11 +75,17 @@ export function signComposer() {
     el("div", { class: "label sign-note", id: "sign-note" }),
     el("div", { class: "sign-frame hidden", id: "sign-frame" }),
     el("div", { class: "seq-chips", id: "sign-chips" }),
-    el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ (Enter)", onclick: sendSigns }),
+    el("button", { class: "btn primary", id: "send-signs", text: `Send to ${handlerName()} (Enter)`, onclick: sendSigns }),
     el("details", { class: "type-instead" },
       el("summary", { text: "No camera? Type the signs instead" }),
       typed,
       el("datalist", { id: "glosses" }, all.map((g) => el("option", { value: g })))));
+}
+
+/** Who reads the signs: the bot's name in a solo game, else the handler player's name. */
+function handlerName() {
+  const s = store.state;
+  return (s?.solo ? s.bot_name : s?.players?.find((p) => p.role === "expert")?.name) || "the handler";
 }
 
 function sendSigns() {

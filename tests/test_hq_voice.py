@@ -6,7 +6,7 @@ import pytest
 from escape_pod.brain.hq_voice import CALM, PANIC, SHAKY, mood, nervous
 
 LINES = [
-    "HQ here. Which module do you need help with? Tell me one thing you see on it.",
+    "Riley here. Which module do you need help with? Tell me one thing you see on it.",
     "That is the Animal panel. Do you see DOG?",
     "Press the cow.",
     "That was a strike. Let us check the Wire panel again. Tell me the color of the top wire.",

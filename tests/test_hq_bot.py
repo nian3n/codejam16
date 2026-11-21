@@ -181,7 +181,7 @@ def test_a_result_after_the_player_moved_on_keeps_the_new_page():
 
 
 def test_greeting():
-    assert HqBot().greeting() == "HQ here. Which module do you need help with? Tell me one thing you see on it."
+    assert HqBot().greeting() == "Riley here. Which module do you need help with? Tell me one thing you see on it."
 
 
 def test_alphabet_rules_ask_for_every_picture():

@@ -17,7 +17,7 @@
       <p class="tag">No words. Only hands. Keep moving.</p>
       <label>Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="off"></label>
       <button id="create" class="btn primary">Create a room</button>
-      <button id="create-solo" class="btn">Play solo (bot HQ)</button>
+      <button id="create-solo" class="btn">Play solo (with Riley, a bot handler)</button>
       <div class="or">or join a friend</div>
       <div class="row">
         <input id="code" maxlength="4" placeholder="CODE" autocomplete="off" class="code-input">
@@ -96,7 +96,7 @@
         </div>
         <div class="role" data-role="expert">
           <div class="role-icon">🎧</div>
-          <h2>HQ handler</h2>
+          <h2>Handler</h2>
           <p>You have the field manual. You never see the bomb. Tell the agent what to do.</p>
           <div class="role-who"></div>
           <button class="btn take">Take this role</button>
@@ -136,9 +136,10 @@
 
   <div id="init" class="overlay hidden" aria-live="polite">
     <div class="card init-card">
-      <h1>INITIALIZING</h1>
+      <h1 id="init-title">INITIALIZING</h1>
       <ul id="init-steps" class="init-steps"></ul>
-      <p class="hint">The timer starts when everything is ready.</p>
+      <div id="init-count" class="init-count" aria-live="assertive"></div>
+      <p id="init-hint" class="hint">The timer starts when everything is ready.</p>
     </div>
   </div>
 

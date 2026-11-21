@@ -83,9 +83,9 @@ export function onRoomState(s) {
     dropPeer();
     wanted = false;
   }
-  const label = { defuser: "agent", expert: "HQ" }[other?.role] || "";
+  const label = { defuser: "agent", expert: "handler" }[other?.role] || "";
   remoteName.textContent = other ? `${other.name}${label ? " · " + label : ""}` : "";
-  liveLabel.textContent = other?.role === "expert" ? "HQ LINK" : "AGENT CAM";
+  liveLabel.textContent = other?.role === "expert" ? "HANDLER LINK" : "AGENT CAM";
   showLive();
   if (!other) {
     setStatus("Waiting for the other player...");
