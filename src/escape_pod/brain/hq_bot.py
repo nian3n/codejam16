@@ -85,8 +85,12 @@ class HqBot:
     def case_lock_prompt(self) -> str:
         return "Read the three digits on the luggage tag. Sign them one at a time, left to right, and confirm each chip."
 
-    def wire_tray_prompt(self, position: str) -> str:
-        return f"Find the {position} wire from the top. Sign and confirm its color to cut it."
+    def wire_tray_prompt(self) -> str:
+        return "Now the wire tray. Sign the color of each wire to me, top to bottom."
+
+    def wire_order_prompt(self, colors: list[str]) -> str:
+        """The cut order from the manual's color ranking, once the agent signed all four."""
+        return "Got all four. Cut " + ", then ".join(f"the {c} wire" for c in colors) + "."
 
     # -- questions -----------------------------------------------------------------
     def _question(self, key: str) -> str:

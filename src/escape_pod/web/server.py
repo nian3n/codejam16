@@ -302,7 +302,7 @@ def start_game(room: Room):
     room.seed = random.randrange(1_000_000)
     rng = random.Random(room.seed)
     room.modules = draw(rng, level)
-    room.mission = Mission.draw(rng)
+    room.mission = Mission.draw(rng, wheels=not room.solo)
     room.round_id = uuid.uuid4().hex
     room.signed_modules.clear()
     room.replied_modules.clear()
@@ -434,13 +434,32 @@ def clean_glosses(raw) -> list[str]:
 
 
 def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
+    """One gate input from the agent: "signs", "wire_cut" or "lock". False: ignored."""
     revision = msg.get("mission_revision")
     if (not room.armed or msg.get("round_id") != room.round_id
             or type(revision) is not int or revision != mission.revision):
         return False
     stage = mission.stage
-    if msg["type"] == "signs":
+    kind = msg["type"]
+    if kind == "lock":
+        # Two players: the handler signed the code, the agent set it on the wheels.
+        if stage != "case_lock" or not mission.wheels:
+            return False
+        outcome = mission.try_code(msg.get("code"))
+        if outcome == "strike":
+            strike(room)
+        elif outcome == "open":
+            # The handler made the signs, so the handler gets the practice points.
+            for p in room.players.values():
+                if p.role == "expert":
+                    p.practice_credits.update(f"{room.round_id}:case_lock:{slot}" for slot in range(len(mission.code)))
+            room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
+        return True
+    if kind == "signs":
+        if stage == "case_lock" and mission.wheels:
+            return False
         previous_digits = mission.lock_confirmed
+        was_ready = mission.tray_ready
         glosses = mission.confirm(clean_glosses(msg.get("glosses")))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses, "mission_stage": stage})
@@ -450,30 +469,25 @@ def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
             if mission.stage == "wire_tray":
                 room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
                 if room.bot is not None:
-                    bot_say(room, room.bot.wire_tray_prompt(mission.position_order[0]))
-            return True
-        if not glosses:
-            return True
-        # Pass the next position to the existing cut check. It compares the
-        # confirmed color against that wire and applies the same strike rules.
-        index = mission.wire_order[len(mission.cuts)]
-    else:
-        index = msg.get("wire")
-        if (stage != "wire_tray" or type(index) is not int
-                or not 0 <= index < len(mission.colors) or index in mission.cuts):
-            return False
+                    bot_say(room, room.bot.wire_tray_prompt())
+        elif mission.tray_ready and not was_ready:
+            for index in range(len(mission.colors)):
+                me.practice_credits.add(f"{room.round_id}:wire_tray:{index}")
+            if room.bot is not None:
+                bot_say(room, room.bot.wire_order_prompt(mission.cut_colors))
+        return True
 
+    index = msg.get("wire")
+    if (stage != "wire_tray" or type(index) is not int
+            or not 0 <= index < len(mission.colors) or index in mission.cuts):
+        return False
     outcome = mission.cut(index)
     if outcome == "strike":
         strike(room)
-    elif outcome == "cut":
-        me.practice_credits.add(f"{room.round_id}:wire_tray:{index}")
-        if mission.stage == "modules":
-            room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
-            if room.bot is not None:
-                bot_say(room, room.bot.greeting())
-        elif room.bot is not None:
-            bot_say(room, room.bot.wire_tray_prompt(mission.position_order[len(mission.cuts)]))
+    elif outcome == "cut" and mission.stage == "modules":
+        room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
+        if room.bot is not None:
+            bot_say(room, room.bot.greeting())
     return True
 
 
@@ -503,7 +517,7 @@ async def handle(room: Room, me: Player, msg: dict):
             # Until the browser confirms storage, a reconnect can replay these credits.
             me.practice_credits.difference_update(credit for credit in credits if isinstance(credit, str))
         return
-    if kind in ("signs", "wire_cut", "act", "say", "exit") and expire_if_due(room):
+    if kind in ("signs", "wire_cut", "lock", "act", "say", "exit") and expire_if_due(room):
         await broadcast(room)
         return
     mission = room.mission
@@ -530,7 +544,7 @@ async def handle(room: Room, me: Player, msg: dict):
         room.level = "custom"
     elif kind == "start" and room.can_start():
         start_game(room)
-    elif (kind in ("signs", "wire_cut") and room.phase == "playing" and me.role == "defuser"
+    elif (kind in ("signs", "wire_cut", "lock") and room.phase == "playing" and me.role == "defuser"
           and mission is not None and mission.stage != "modules"):
         if not handle_gate(room, mission, me, msg):
             return
@@ -549,7 +563,9 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None:
                 bot = room.bot
                 bot_later(room, lambda: bot.reply(glosses))
-    elif kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo:
+    elif (kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo
+          # The case lock: the handler must sign the code. A typed "434" would skip the sign.
+          and not (mission is not None and mission.stage == "case_lock")):
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
             room.say({"kind": "say", "from": me.name, "text": text})

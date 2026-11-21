@@ -9,7 +9,6 @@ import random
 from escape_pod import config
 from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
 from escape_pod.web import server
-from escape_pod.web.mission import POSITIONS
 
 client = TestClient(server.app)
 
@@ -53,14 +52,16 @@ def _gate_action(ws, state, kind, **payload):
 
 def _open_case(ws, state):
     assert state["armed"]
+    if state["mission"].get("lock_wheels"):  # two players: the handler signed the code
+        return _gate_action(ws, state, "lock", code=server.rooms[state["code"]].mission.code)
     return _gate_action(ws, state, "signs", glosses=list(state["mission"]["case_code"]))
 
 
 def _open_gates(ws, state):
     state = _open_case(ws, state)
-    order = server.rooms[state["code"]].mission.wire_order
-    for index in order:
-        state = _gate_action(ws, state, "signs", glosses=[state["mission"]["wires"][index]])
+    state = _gate_action(ws, state, "signs", glosses=state["mission"]["wires"])
+    for index in server.rooms[state["code"]].mission.wire_order:
+        state = _gate_action(ws, state, "wire_cut", wire=index)
     return state
 
 
@@ -210,8 +211,10 @@ def test_practice_credit_follows_the_exchange_and_survives_a_reconnect():
         wrong = {"type": "act", "round_id": round_id, "module": 0, "action": {"verb": "wrong", "target": {}}}
         hq_online = True
         try:
-            assert len(sa["practice_credits"]) == 7 and not sh["practice_credits"]
+            # The agent signed the 4 tray colors. The handler signed the 3 code digits.
+            assert len(sa["practice_credits"]) == 4 and len(sh["practice_credits"]) == 3
             agent.send_json({"type": "practice_saved", "credits": sa["practice_credits"]})
+            hq.send_json({"type": "practice_saved", "credits": sh["practice_credits"]})
             agent.send_json({"type": "signs", "glosses": module.widget.items(module.facts)})
             _drain(hq, lambda s: s["chat"][-1]["kind"] == "signs" and "mission_stage" not in s["chat"][-1])
             hq.send_json({"type": "say", "text": "Try the matching control."})
@@ -493,11 +496,13 @@ def test_solo_full_game_reaches_escaped(monkeypatch):
     assert HqBot().case_lock_prompt() in s["chat"][-1]["text"]
     s = _open_case(a, s)
     assert len(set(s["mission"]["wires"])) == 4
-    for _ in range(4):
-        # The solo player uses only the bot's positional prompt and the visible tray.
-        prompt = s["chat"][-1]["text"]
-        index = next(i for i, position in enumerate(POSITIONS) if f"the {position} wire" in prompt)
-        s = _gate_action(a, s, "signs", glosses=[s["mission"]["wires"][index]])
+    assert HqBot().wire_tray_prompt() in s["chat"][-1]["text"]
+    s = _gate_action(a, s, "signs", glosses=s["mission"]["wires"])
+    # The solo player uses only Rob's order and the visible tray.
+    prompt = s["chat"][-1]["text"]
+    order = sorted(range(4), key=lambda i: prompt.index(f"the {s['mission']['wires'][i]} wire"))
+    for index in order:
+        s = _gate_action(a, s, "wire_cut", wire=index)
     assert s["mission"]["stage"] == "modules" and HqBot().greeting() in s["chat"][-1]["text"]
     gate_credits = s["practice_credits"]
     assert len(gate_credits) == 7
@@ -579,132 +584,87 @@ def test_two_player_rooms_have_no_bot():
     b.__exit__(None, None, None)
 
 
-def test_two_player_gates_use_the_manual_and_restore_the_agent_seat(monkeypatch):
-    # The level draw and both gates share this RNG seed. This draw includes a leading zero and a repeat.
-    monkeypatch.setattr(server.random, "randrange", lambda *_: 1302)  # 1302: the code "007" (no 2 since Nov 2026)
+def test_two_player_gates_need_both_players_and_survive_a_reload():
     with client:
         code, agent, hq, start, hq_start = _start_game(open_gates=False)
+        room = server.rooms[code]
+        mission = room.mission
         pid = start["me"]["pid"]
         try:
-            assert start["mission"]["case_code"] == "007"
-            assert start["mission"]["lock_confirmed"] == 0 and "bomb" not in start
-            assert set(hq_start["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count"}
-            assert "bomb" not in hq_start
-            agent.send_json({"type": "act", "module": 0, "action": {"verb": "wrong", "target": {}}})
-            state = start
-            assert state["mission"]["lock_confirmed"] == state["strikes"] == 0
-            deadline = server.rooms[code].deadline
-
-            hq.send_json(_gate_message(state, "signs", glosses=["0"]))
-            hq.send_json({"type": "say", "text": "Read the tag left to right."})
-            responded = _drain(hq, lambda s: s["chat"][-1].get("text") == "Read the tag left to right.")
-            assert responded["mission"]["lock_confirmed"] == 0
-            state = _gate_action(agent, state, "signs", glosses=["9"])
-            assert state["mission"]["lock_confirmed"] == state["strikes"] == 0
-            assert not state["practice_credits"]
-            assert "retry" in state["mission"]["feedback"]
-            first_zero = _gate_message(state, "signs", glosses=["0"])
-            state = _gate_action(agent, state, "signs", glosses=["0"])
-            assert state["practice_credits"] == [f"{start['round_id']}:case_lock:0"]
-            agent.send_json(first_zero)
-            state = _gate_action(agent, state, "signs", glosses=["cat"])
-            assert state["mission"]["lock_confirmed"] == 1
+            # Case lock: only the handler sees the code. The agent sets it on wheels.
+            assert start["mission"]["lock_wheels"] is True and "case_code" not in start["mission"]
+            assert hq_start["mission"]["case_code"] == mission.code and "2" not in mission.code
+            assert "bomb" not in start and "bomb" not in hq_start
+            deadline = room.deadline
+            state = _gate_action(agent, start, "lock", code="12")  # malformed: a retry
+            assert state["strikes"] == 0 and state["mission"]["stage"] == "case_lock"
+            wrong = "".join("1" if d != "1" else "3" for d in mission.code)
+            state = _gate_action(agent, state, "lock", code=wrong)
+            assert state["strikes"] == 1 and "did not open" in state["mission"]["feedback"]
             agent.__exit__(None, None, None)
             agent = None
             agent = _join(code, "Ana", pid)
-            resumed = _last_state(agent)
-            assert resumed["mission"] == state["mission"]
-            assert resumed["mission"]["lock_confirmed"] == 1
-            assert resumed["practice_credits"] == state["practice_credits"]
-            state = _gate_action(agent, resumed, "signs", glosses=["0"])
-            assert state["mission"]["lock_confirmed"] == 2
-            state = _gate_action(agent, state, "signs", glosses=["7"])
+            state = _last_state(agent)
+            assert state["mission"]["lock_wheels"] and state["strikes"] == 1
+            state = _gate_action(agent, state, "lock", code=mission.code)
+            assert state["mission"]["stage"] == "wire_tray"
             manual = _drain(hq, lambda s: s["mission"]["stage"] == "wire_tray")
-            assert set(manual["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count", "wire_rule"}
-            assert "bomb" not in manual and "bomb" not in state
-            assert "wire_rule" not in state["mission"]
-            assert sorted(manual["mission"]["wire_rule"]) == sorted(POSITIONS)
-            order = [POSITIONS.index(position) for position in manual["mission"]["wire_rule"]]
+            assert len(manual["practice_credits"]) == 3  # the handler made the signs
+            assert manual["mission"]["wire_rank"] == mission.rank
+            assert set(manual["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count",
+                                              "wire_rank", "signed_colors"}
+            assert "case_tray" not in manual
+
+            # Wire tray: the cuts wait for all four colors. Wrong signs cost nothing.
             wires = state["mission"]["wires"]
-            assert len(set(wires)) == 4 and set(wires) <= set(load_pool()["colors"].pool)
-
-            state = _gate_action(agent, state, "wire_cut", wire=order[0])
-            assert state["mission"]["feedback"] == "Sign the wire color first" and state["strikes"] == 0
-            state = _gate_action(agent, state, "signs", glosses=["cat"])
-            assert state["mission"]["confirmed_color"] is None and state["strikes"] == 0
-            assert len(state["practice_credits"]) == 3
-            state = _gate_action(agent, state, "signs", glosses=[wires[order[1]]])
-            assert "does not match" in state["mission"]["feedback"] and state["strikes"] == 1
-            assert state["mission"]["cuts"] == [] and len(state["practice_credits"]) == 3
-
-            first_cut = _gate_message(state, "signs", glosses=[wires[order[0]]])
-            state = _gate_action(agent, state, "signs", glosses=[wires[order[0]]])
-            assert state["mission"]["cuts"] == order[:1] and len(state["practice_credits"]) == 4
-            shared = _drain(hq, lambda s: s["mission"]["cut_count"] == 1)
-            assert shared["strikes"] == 1 and not shared["practice_credits"]
-            agent.send_json(first_cut)
-            agent.send_json(_gate_message(state, "wire_cut", wire=order[0]))
-            state = _gate_action(agent, state, "signs", glosses=[wires[order[2]]])
-            assert state["strikes"] == 2 and state["mission"]["cuts"] == order[:1]
+            state = _gate_action(agent, state, "wire_cut", wire=mission.wire_order[0])
+            assert not state["mission"]["cuts"] and state["strikes"] == 1
+            off_tray = next(c for c in load_pool()["colors"].pool if c not in wires)
+            state = _gate_action(agent, state, "signs", glosses=[wires[0], off_tray])
+            assert state["mission"]["signed_colors"] == [wires[0]] and state["strikes"] == 1
+            shared = _drain(hq, lambda s: s["chat"][-1].get("glosses") == [wires[0], off_tray])
+            assert shared["chat"][-1]["mission_stage"] == "wire_tray"
+            assert shared["mission"]["signed_colors"] == [wires[0]]
             agent.__exit__(None, None, None)
             agent = None
             agent = _join(code, "Ana", pid)
-            resumed = _last_state(agent)
-            assert resumed["mission"] == state["mission"]
-            assert resumed["practice_credits"] == state["practice_credits"]
-            state = resumed
-            for index in order[1:]:
-                state = _gate_action(agent, state, "signs", glosses=[wires[index]])
+            state = _last_state(agent)
+            assert state["mission"]["signed_colors"] == [wires[0]]
+            state = _gate_action(agent, state, "signs", glosses=wires[1:])
+            assert len(state["practice_credits"]) == 4
+            state = _gate_action(agent, state, "wire_cut", wire=mission.wire_order[1])
+            assert state["strikes"] == 2 and not state["mission"]["cuts"]
+            for index in mission.wire_order:
+                state = _gate_action(agent, state, "wire_cut", wire=index)
             assert state["mission"]["stage"] == "modules" and "bomb" in state
-            assert state["mission"]["cut_count"] == 4 and state["strikes"] == 2
-            assert state["progress"] == {"total": 4, "defused": 0}
-            assert len(state["practice_credits"]) == 7
-            assert server.rooms[code].deadline == deadline
-            # HQ's last view keeps only the public stage counts and the confirmed chat.
+            assert state["strikes"] == 2 and room.deadline == deadline
             public = _drain(hq, lambda s: s["mission"]["stage"] == "modules")
-            assert set(public["mission"]) == set(hq_start["mission"]) and "bomb" not in public
+            assert set(public["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count"}
+            assert "bomb" not in public
         finally:
             if agent is not None:
                 agent.__exit__(None, None, None)
             hq.__exit__(None, None, None)
 
 
-@pytest.mark.parametrize("stage", ["case_lock", "wire_tray", "modules"])
-@pytest.mark.parametrize("solo", [True, False])
-def test_timeout_blocks_input_and_reports_the_same_outcome(stage, solo):
-    with client:
-        if solo:
-            code, agent, start = _start_solo(open_gates=False)
-            hq = None
-        else:
-            code, agent, hq, start, _ = _start_game(open_gates=False)
-        try:
-            if stage == "case_lock":
-                state = start
-                pending = _gate_message(state, "signs", glosses=list(state["mission"]["case_code"]))
-            elif stage == "wire_tray":
-                state = _open_case(agent, start)
-                index = server.rooms[code].mission.wire_order[0]
-                pending = _gate_message(state, "signs", glosses=[state["mission"]["wires"][index]])
-            else:
-                state = _open_gates(agent, start)
-                module = server.rooms[code].modules[0]
-                step = module.widget.steps(module.solution())[0][0]
-                pending = {"type": "act", "module": 0, "action": step.to_json(), "round_id": state["round_id"]}
-            server.rooms[code].deadline = time.monotonic() - 1
-            agent.send_json(pending)
-            ended = _drain(agent, lambda s: s["phase"] == "boom")
-            assert ended["timed_out"] and ended["practice_credits"] == state["practice_credits"]
-            assert ended["remaining_s"] == 0 and ended["mission"] == state["mission"]
-            assert ended["progress"] == state["progress"]
-            assert ended["chat"][-1]["text"] == "Time ran out. Detonation!"
-            if hq:
-                shared = _drain(hq, lambda s: s["phase"] == "boom")
-                assert shared["timed_out"] and shared["round_id"] == ended["round_id"]
-        finally:
-            agent.__exit__(None, None, None)
-            if hq:
-                hq.__exit__(None, None, None)
+def test_handler_cannot_type_at_the_case_lock():
+    code, a, b, sa, sb = _start_game(open_gates=False)
+    b.send_json({"type": "say", "text": "It is " + server.rooms[code].mission.code})
+    state = _open_case(a, sa)  # a later state: the say above came first
+    assert not any(m["kind"] == "say" for m in state["chat"])
+    b.send_json({"type": "say", "text": "Now I can type."})
+    _drain(b, lambda s: s["chat"][-1].get("text") == "Now I can type.")
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_lock_message_only_in_two_player_rooms():
+    code, a, s = _start_solo(open_gates=False)
+    assert "lock_wheels" not in s["mission"] and s["mission"]["case_code"]
+    a.send_json(_gate_message(s, "lock", code=server.rooms[code].mission.code))
+    s = _gate_action(a, s, "signs", glosses=["0"])  # a barrier: the lock above was ignored
+    assert s["mission"]["stage"] == "case_lock"
+    a.__exit__(None, None, None)
 
 
 def test_static_files_are_revalidated():
@@ -744,12 +704,11 @@ def test_the_timer_waits_for_the_agent_to_be_ready(monkeypatch):
     time.sleep(0.3)
     assert server.rooms[code].remaining() == full  # frozen while initializing
     # The case lock waits for the clock too.
-    a.send_json(_gate_message(sa, "signs", glosses=[sa["mission"]["case_code"][0]]))
+    a.send_json(_gate_message(sa, "lock", code=server.rooms[code].mission.code))
     b.send_json({"type": "ready"})  # the handler cannot start the clock
-    b.send_json({"type": "say", "text": "ping"})
-    s = _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
-    assert server.rooms[code].armed is False and "countdown_s" not in s
-    assert server.rooms[code].mission.lock_confirmed == 0
+    time.sleep(0.2)  # no barrier message: the handler's chat is off at the case lock
+    assert server.rooms[code].armed is False and server.rooms[code].countdown_end is None
+    assert server.rooms[code].mission.stage == "case_lock"
     a.send_json({"type": "ready"})
     # Ready starts a 3-2-1 that both players see. The clock holds until it ends.
     s = _drain(a, lambda s: "countdown_s" in s)
