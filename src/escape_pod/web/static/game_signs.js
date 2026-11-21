@@ -1,6 +1,6 @@
 // Owner: Teammate 3 (Vision and retrieval)
 // The field agent's sign composer in the game: sign to the webcam, check the guesses,
-// send them to HQ.
+// send them to the handler.
 //
 // It reads frames from the camera the video call already opened (rtc.js
 // localCameraVideo), so there is one camera and one permission prompt. Frames go to
