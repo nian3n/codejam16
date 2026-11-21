@@ -4,8 +4,7 @@ services:
     name: escape-pod
     runtime: docker
     plan: free
-    # Deploy from the branch that has the game. Change this when it merges to main.
-    branch: two-player-web-app
+    branch: main
     healthCheckPath: /healthz
     # Rooms live in memory, so the service must stay one instance.
     numInstances: 1
