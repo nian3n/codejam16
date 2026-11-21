@@ -2,14 +2,8 @@
 import { $, el, wordOf } from "./core.js";
 import { cameraError, cameraUnavailable, openCamera, stopCamera } from "./camera.js";
 import { drawLandmarks } from "./landmark_overlay.js";
-import { startTracker, track, trackerLoaded } from "./tracker.js";
+import { packLandmarks as packedLandmarks, startTracker, track, trackerLoaded } from "./tracker.js";
 
-const FRAME_LAYOUT = [
-  ["faceLandmarks", 468],
-  ["leftHandLandmarks", 21],
-  ["poseLandmarks", 33],
-  ["rightHandLandmarks", 21],
-];
 const CAPTURE_MS = 2_500;
 const MAX_FRAMES = 75;
 const word = $("#practice-word");
@@ -161,23 +155,6 @@ export function leavePractice() {
   visit?.abort();
   visit = null;
   stopPracticeCamera();
-}
-
-function packedLandmarks(landmarks) {
-  // Missing points stay NaN, matching the Python extractor's input contract.
-  const buffer = new ArrayBuffer(543 * 3 * 4);
-  const view = new DataView(buffer);
-  let offset = 0;
-  for (const [key, count] of FRAME_LAYOUT) {
-    for (let i = 0; i < count; i++) {
-      const point = landmarks[key]?.[i];
-      for (const coordinate of [point?.x, point?.y, point?.z]) {
-        view.setFloat32(offset, coordinate ?? NaN, true);
-        offset += 4;
-      }
-    }
-  }
-  return buffer;
 }
 
 async function startPracticeCamera() {

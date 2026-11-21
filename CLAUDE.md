@@ -24,7 +24,7 @@ Each game **draws modules from a pool of 20 puzzles**. **Every puzzle teaches a 
 One exchange:
 
 1. The defuser **signs the items on one module**, one sign per capture (for example CAT, DOG, COW).
-2. The **sign recognizer** (§6) shows its best guesses. The defuser confirms each guess (sign YES or click) or retries (sign NO). Until §6 is done, the defuser types each sign.
+2. The **sign recognizer** (§6) shows its best guesses as chips. The defuser picks the right guess on each chip or deletes it. Typing a sign is the fallback.
 3. The confirmed signs (English glosses) go to the expert. The expert's manual highlights the pages that contain those words.
 4. The expert reads the rules on that page and types an instruction ("Press the cow.").
 5. The defuser **acts** by clicking. The **server checks the action with the rule engine**. A correct action defuses the module. A wrong one is a strike.
@@ -305,14 +305,11 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 ## 6. Sign recognition (Teammate 3)
 
-### 6.0 Open decision: where recognition runs
+### 6.0 Decision: where recognition runs
 
-The game is a web app now, so the webcam is in the defuser's browser. Pick one option before M2:
+**Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-- **In the browser (recommended):** MediaPipe Tasks for JavaScript, and the TFLite model run with TensorFlow.js or LiteRT for the web. The frames stay on the laptop, which keeps rule 8. The code goes in `src/escape_pod/web/static/vision/`. The recognizer pushes confirmed glosses into `store.local.signs` (see `feed.js`).
-- **On the Python server (as the old spec said):** the browser sends landmarks to the server, and `src/escape_pod/vision/` runs the model. This option breaks rule 8 if the server runs on another laptop, unless the browser sends only landmarks.
-
-Most of the rest of §6 applies to both options.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to HQ". That press confirms the signs (rule 4). A "Type the signs instead" fallback stays under the chips for a missing camera and for the digits, until the digit model is trained.
 
 ### 6.1 Pipeline
 
@@ -388,9 +385,9 @@ Check these on day one, and write the results in a `vision/README.md`:
 
 | Level | Allowed set |
 |---|---|
-| Beginner | the pool of the module being signed, plus core signs (yes, no, finish) |
+| Beginner | the pools of all modules on this bomb, plus core signs (yes, no, finish). Not one module's pool: the defuser never says which module they sign |
 | Intermediate | the pools of all modules on this bomb, plus core signs |
-| Advanced | all 250 glosses |
+| Advanced | all game words (the glossary words) |
 
 Choosing among 10 signs is much more reliable than among 250.
 
@@ -441,7 +438,7 @@ The expert's manual already highlights the pages that contain the signed words (
 |---|---|---|---|
 | Modules | 3, no hard ones | 4, no hard ones | 4, at most one hard one |
 | Timer | 10 min | 5 min | 3 min |
-| Recognizer choices | this module's words | this bomb's words | all 250 |
+| Recognizer choices | this bomb's words | this bomb's words | all game words |
 | Briefing before the bomb | yes, each topic's signs shown and practiced | yes, shown only | no |
 | Sign cards beside the camera | yes | no | no |
 
@@ -464,7 +461,7 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
-- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the typed signs not sent yet (until recognition is in), "Send to expert" and the message feed.
+- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to HQ", a typed fallback and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
 - **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.

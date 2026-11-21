@@ -447,3 +447,14 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
 .chip-x { border: 0; background: none; color: var(--dim); cursor: pointer; font-size: .9rem; }
 .chip-x:hover { color: var(--warn); }
 .gl-video.missing.pose { font-size: 4rem; font-style: normal; }
+
+/* In-game sign capture (game_signs.js): the practice banner and chips, in the side panel. */
+.sign-composer .seq-banner { position: static; border-radius: 4px; }
+.sign-composer .seq-banner b { font-size: 1rem; }
+.sign-buttons { display: flex; gap: 8px; align-items: center; }
+#sign-record.rec { background: var(--warn); color: #fff; }
+.sign-note:empty { display: none; }
+.sign-composer .seq-chips { flex-direction: column; align-items: stretch; }
+.type-instead summary { cursor: pointer; color: var(--dim); font-size: .8rem; }
+.type-instead[open] summary { margin-bottom: 6px; }
+.type-instead input { width: 100%; }

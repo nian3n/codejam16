@@ -1,7 +1,6 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 // The side panel: the shared message feed, the defuser's sign composer and the
-// expert's reply box. The webcam recognizer (Teammate 3) will replace the typed
-// input in defuserComposer() and push confirmed glosses into store.local.signs.
+// expert's reply box.
 import { $, el, send, store } from "./core.js";
 import { openPage, pagesFor } from "./manual_view.js";
 
@@ -25,40 +24,8 @@ export function renderFeed() {
   local.chatSeen = state.chat.length;
 }
 
-export function defuserComposer() {
-  const all = [...new Set(store.pages.flatMap((p) => p.glosses))].sort();
-  const input = el("input", { placeholder: "Type one sign, press Enter", list: "glosses", autocomplete: "off" });
-  input.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const g = input.value.trim().toLowerCase().replace(/\s+/g, "");
-    if (g && store.local.signs.length < 12) { store.local.signs.push(g); renderSignChips(); }
-    input.value = "";
-  });
-  const sendBtn = el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ", onclick: () => {
-    if (!store.local.signs.length) return;
-    send({ type: "signs", glosses: store.local.signs });
-    store.local.signs = [];
-    renderSignChips();
-    input.focus();
-  } });
-  return el("div", { class: "composer" },
-    el("div", { class: "label", text: "Sign what you see to the camera, one sign at a time. Dial: sign each picture clockwise from the top, then the one the needle points at." }),
-    el("div", { class: "label", text: "Until sign recognition is in, also type each sign here:" }),
-    input,
-    el("datalist", { id: "glosses" }, all.map((g) => el("option", { value: g }))),
-    el("div", { class: "chips", id: "sign-chips" }),
-    sendBtn);
-}
-
-export function renderSignChips() {
-  const box = $("#sign-chips");
-  if (!box) return;
-  const signs = store.local.signs;
-  box.replaceChildren(...signs.map((g, i) =>
-    el("button", { class: "chip", title: "Remove", text: g.toUpperCase() + " ✕", onclick: () => { signs.splice(i, 1); renderSignChips(); } })));
-  const b = $("#send-signs");
-  if (b) b.disabled = !signs.length || store.state.phase !== "playing";
-}
+// The field agent's composer (webcam signs, with a typed fallback) is in game_signs.js.
+export { signComposer as defuserComposer, renderSignChips } from "./game_signs.js";
 
 export function expertComposer() {
   const input = el("input", { placeholder: "Tell the agent what to do", maxlength: 300, autocomplete: "off" });

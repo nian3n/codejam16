@@ -5,6 +5,26 @@
 //                      call many times; call it early to preload.
 //   track(video)    -> Promise of landmarks for the current video frame
 //                      ({faceLandmarks, poseLandmarks, leftHandLandmarks, rightHandLandmarks}).
+// Kaggle row order (spec §6.3): face 468, left hand 21, pose 33, right hand 21.
+const FRAME_LAYOUT = [["faceLandmarks", 468], ["leftHandLandmarks", 21], ["poseLandmarks", 33], ["rightHandLandmarks", 21]];
+
+/** One frame of landmarks -> 543 x 3 little-endian float32, NaN for missing points. */
+export function packLandmarks(landmarks) {
+  const buffer = new ArrayBuffer(543 * 3 * 4);
+  const view = new DataView(buffer);
+  let offset = 0;
+  for (const [key, count] of FRAME_LAYOUT) {
+    for (let i = 0; i < count; i++) {
+      const point = landmarks[key]?.[i];
+      for (const coordinate of [point?.x, point?.y, point?.z]) {
+        view.setFloat32(offset, coordinate ?? NaN, true);
+        offset += 4;
+      }
+    }
+  }
+  return buffer;
+}
+
 let worker = null;
 let ready = null;
 let loaded = false;

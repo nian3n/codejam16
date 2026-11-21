@@ -49,6 +49,13 @@ const dock = el("div", { class: "video-dock" },
   el("div", { class: "remote-wrap" }, remoteVideo, status, remoteName, liveTag, localVideo),
   el("div", { class: "vbar" }, camBtn, retryBtn));
 
+/** The player's own camera <video>, or null while the camera is off or not open.
+ *  The sign recognizer (game_signs.js) reads frames from it: one camera, two uses. */
+export function localCameraVideo() {
+  const track = localStream?.getVideoTracks()[0];
+  return track && track.enabled && track.readyState === "live" ? localVideo : null;
+}
+
 /** Put the dock at the top of `parent` (the lobby card or the game side panel). */
 export function placeDock(parent) {
   if (!parent || dock.parentElement === parent) return;

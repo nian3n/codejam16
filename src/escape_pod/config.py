@@ -95,7 +95,9 @@ class Level:
 # Spec §9.1. Beginner uses 3 modules (spec: 2-3) and a 10 min timer (spec: off or 10 min);
 # the web lobby always runs a timer, so "off" is not offered yet.
 LEVELS = {
-    "beginner": Level("beginner", 3, False, 600, "module", True, True, True),
+    # "bomb", not "module": the defuser never says which module they sign (no selection
+    # step), so even at Beginner the recognizer chooses among the whole bomb's words.
+    "beginner": Level("beginner", 3, False, 600, "bomb", True, True, True),
     "intermediate": Level("intermediate", 4, False, 300, "bomb", True, False, True),
     "advanced": Level("advanced", 4, True, 180, "all", False, False, False),
 }

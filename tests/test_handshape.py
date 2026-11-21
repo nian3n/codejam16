@@ -155,8 +155,10 @@ def test_allowed_sets_by_level_use_only_game_words():
     assert not any(len(g) == 1 and g.isalpha() for g in words)  # no fingerspelled letters
 
     mods = draw(random.Random(7), config.LEVELS["intermediate"])
-    one = allowed_for(config.LEVELS["beginner"], module=mods[0], modules=mods)
-    assert one == (set(mods[0].spec.pool) | set(config.CORE_SIGNS)) & words
-    bomb = allowed_for(config.LEVELS["intermediate"], module=mods[0], modules=mods)
-    assert one <= bomb <= words
+    bomb_words = (set().union(*(m.spec.pool for m in mods)) | set(config.CORE_SIGNS)) & words
+    # Beginner and Intermediate both use the whole bomb's words: the defuser never says
+    # which module they sign, so the recognizer cannot narrow it to one module.
+    for level in ("beginner", "intermediate"):
+        assert allowed_for(config.LEVELS[level], modules=mods) == bomb_words
+        assert allowed_for(config.LEVELS[level], module=mods[0], modules=mods) == bomb_words
     assert allowed_for(config.LEVELS["advanced"], module=mods[0], modules=mods) == words

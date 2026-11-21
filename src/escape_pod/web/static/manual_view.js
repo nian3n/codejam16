@@ -39,7 +39,7 @@ function pageView(p) {
   const page = el("article", { class: "page" });
   if (!p) {
     page.append(el("h2", { text: "Defusal manual" }),
-      el("p", { class: "meta", text: `${pages.length} puzzles. Each page has its own topic.` }),
+      el("p", { class: "meta", text: `${store.pages.length} puzzles. Each page has its own topic.` }),
       el("p", { class: "blank", text: "Pick a page on the left. When the agent signs, the pages with those words light up." }));
     return page;
   }
