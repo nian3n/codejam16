@@ -22,6 +22,8 @@ import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
 import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
 import { renderInit } from "./init.js";
+import { playStrike, playSuccess, playVictory, unlockAudio } from "./sfx.js";
+import { launchConfetti } from "./confetti.js";
 
 let activeSeatKey = null;
 let activeScreen = "home";
@@ -30,6 +32,7 @@ const DETONATION_MS = 1500;
 let detonationTimer = null;
 
 async function boot() {
+  unlockAudio();
   const legacyProfile = bindProfiles();
   const [icons, pages] = await Promise.all([
     fetch("/api/icons").then((r) => r.json()),
@@ -252,8 +255,27 @@ function onState(s) {
   }
   renderOutcome(prev);
   if (prev && prev.phase === "playing" && s.strikes > prev.strikes) flashStrike();
+  playFeedback(prev, s);
   renderInit();
   tickTimer();
+}
+
+const MISSION_ORDER = ["case_lock", "wire_tray", "modules"];
+
+// Sounds and confetti come from the server's state change, never from a click, so both
+// players get them and a click the server rejects makes no sound (spec rule 1). One state
+// change plays at most one sound: the bomb defused beats a module defused.
+function playFeedback(prev, s) {
+  if (!prev || prev.round_id !== s.round_id || prev.phase !== "playing") return;
+  if (s.phase === "escaped") {
+    playVictory();
+    launchConfetti();
+  } else if (s.strikes > prev.strikes) {
+    playStrike();
+  } else if ((s.progress?.defused ?? 0) > (prev.progress?.defused ?? 0)
+      || MISSION_ORDER.indexOf(s.mission?.stage) > MISSION_ORDER.indexOf(prev.mission?.stage)) {
+    playSuccess();  // a module defused, or the case lock or the wire tray passed
+  }
 }
 
 function flashStrike() {

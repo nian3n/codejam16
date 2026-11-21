@@ -330,7 +330,16 @@ button.chip:hover { border-color: var(--warn); }
   background: linear-gradient(#e8e3d3, #bdb6a2); border: 2px solid #111; cursor: pointer; display: grid; place-items: center; align-content: center;
 }
 .dial-opt .emoji { font-size: clamp(1rem, 2.2vw, 1.7rem); line-height: 1; }
-.dial-opt .cap { font-size: .5rem; }
+/* The caption is a label plate across the knob's bottom edge, not text inside the circle:
+   the circle narrows toward the bottom, so a long word (LISTEN, HELICOPTER) was cut off
+   on small screens. The plate may be wider than the knob. */
+/* z-index: the knobs and their plates paint over the needle, which points at them. */
+.dial-opt { overflow: visible; z-index: 1; }
+.dial-opt .cap {
+  font-size: .5rem; position: absolute; left: 50%; top: 84%; transform: translateX(-50%);
+  white-space: nowrap; padding: 1px 5px; line-height: 1.3; border-radius: 3px;
+  background: #15181e; color: #e8e3d3; border: 1px solid #000; box-shadow: 0 1px 2px #0008;
+}
 .needle { position: absolute; left: 50%; top: 50%; width: 6px; height: 28%; background: var(--warn); transform-origin: 50% 100%; border-radius: 3px; box-shadow: 0 0 6px #f008; transition: transform .4s; }
 .hub { position: absolute; left: 50%; top: 50%; width: 18%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #bbb, #333); }
 
@@ -492,6 +501,9 @@ body.flash::after { animation: flash .45s; }
 /* Under 30 seconds (app.js tickTimer sets body.critical): faster, bigger, and a red edge. */
 body.critical .alarm { display: block; animation-duration: .6s; width: 520px; height: 520px; top: -200px; right: -200px; }
 body.critical::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(ellipse at 50% 40%, transparent 40%, #3a0603cc 100%); }
+
+/* Confetti (confetti.js) falls over everything, the end report too, and takes no clicks. */
+canvas.confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 20; pointer-events: none; }
 
 /* Players who ask for less motion get a still room. */
 @media (prefers-reduced-motion: reduce) {
