@@ -45,7 +45,8 @@ CREDIT = ("Sign videos: PopSign ASL v1.0 (Starner, Sridhar, So, Deshpande et al.
 
 def game_glosses() -> list[str]:
     pool = load_pool()
-    return sorted({g for s in pool.values() if s.id not in HANDSHAPE_PUZZLES for g in s.pool})
+    words = {g for s in pool.values() if s.id not in HANDSHAPE_PUZZLES for g in s.pool}
+    return sorted(words | set(config.CORE_SIGNS))  # YES/NO/FINISH run the sign capture (spec 6.2)
 
 
 def stream_candidates(sign: str, out: Path) -> tuple[list[Path], int]:

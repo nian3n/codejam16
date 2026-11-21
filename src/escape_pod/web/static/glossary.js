@@ -8,6 +8,8 @@
 import { $, el, icon, store, wordOf, WIRE_COLORS } from "./core.js";
 
 const HANDSHAPE_PAGES = new Set(["numbers"]);  // digits: not in PopSign (spec 6.4)
+// The signs that run the capture (spec 6.2). Not on any manual page, so listed here.
+const CONTROL_SIGNS = { yes: "👍", no: "👎", finish: "🏁" };
 let clips = null;        // {credit, clips: {gloss: {file, ...}}}, loaded on first open
 let entries = [];        // [{gloss, word, topic}], sorted A to Z
 let query = "";
@@ -18,7 +20,7 @@ const root = el("div", { id: "glossary", class: "glossary hidden", role: "dialog
 // Colors have no emoji: show a swatch of the wire color instead.
 function mark(g, cls) {
   if (WIRE_COLORS[g]) return el("span", { class: `${cls} swatch`, style: `background:${WIRE_COLORS[g]}` });
-  return el("span", { class: cls, text: icon(g).emoji });
+  return el("span", { class: cls, text: CONTROL_SIGNS[g] || icon(g).emoji });
 }
 
 export function bindGlossary() {
@@ -34,6 +36,7 @@ export async function openGlossary(gloss = null) {
   if (!entries.length) {
     entries = store.pages.filter((p) => !HANDSHAPE_PAGES.has(p.id))
       .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic })))
+      .concat(Object.keys(CONTROL_SIGNS).map((g) => ({ gloss: g, word: g, topic: "game controls" })))
       .sort((a, b) => a.word.localeCompare(b.word));
   }
   if (gloss) current = gloss;

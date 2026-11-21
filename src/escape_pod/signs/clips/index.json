@@ -329,6 +329,13 @@
    "seconds": 1.94,
    "source": "popsign_v1_0/game/test/finger.tar"
   },
+  "finish": {
+   "bytes": 49542,
+   "downloaded": 23255040,
+   "file": "finish.mp4",
+   "seconds": 2.21,
+   "source": "popsign_v1_0/game/test/finish.tar"
+  },
   "fireman": {
    "bytes": 43698,
    "downloaded": 21493760,
@@ -566,6 +573,13 @@
    "file": "night.mp4",
    "seconds": 2.0,
    "source": "popsign_v1_0/game/test/night.tar"
+  },
+  "no": {
+   "bytes": 40132,
+   "downloaded": 20797440,
+   "file": "no.mp4",
+   "seconds": 2.21,
+   "source": "popsign_v1_0/game/test/no.tar"
   },
   "nose": {
    "bytes": 28391,
@@ -895,6 +909,13 @@
    "file": "yellow.mp4",
    "seconds": 1.91,
    "source": "popsign_v1_0/game/test/yellow.tar"
+  },
+  "yes": {
+   "bytes": 26773,
+   "downloaded": 13127680,
+   "file": "yes.mp4",
+   "seconds": 2.24,
+   "source": "popsign_v1_0/game/test/yes.tar"
   },
   "yesterday": {
    "bytes": 23386,
