@@ -1,10 +1,11 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
-// Wires: click a wire to cut it. Cut wires stay cut in this browser only;
-// the server decides if the cut was right.
-import { store, svg, WIRE_COLORS } from "../core.js";
+// Wires: click a wire to cut it. The server checks each cut (Module.apply): a right cut
+// stays cut (m.done), a wrong one is a strike and the wire stays whole. Some answers are
+// several cuts in a row ("Cut the white wire, then the black wire").
+import { svg, WIRE_COLORS } from "../core.js";
 
-export function wires(m, i, { sendAct, rerender }) {
-  const cut = (store.local.cut[i] ||= new Set());
+export function wires(m, i, { sendAct }) {
+  const cut = new Set((m.done || []).filter((a) => a.verb === "cut").map((a) => a.target.color));
   const cols = m.facts.colors;
   const s = svg("svg", { viewBox: "0 0 200 160", class: "wires-svg" });
   s.append(svg("rect", { x: 4, y: 6, width: 16, height: 148, rx: 3, class: "terminal" }),
@@ -24,7 +25,7 @@ export function wires(m, i, { sendAct, rerender }) {
     const title = svg("title");
     title.textContent = c;
     g.append(title);
-    if (!cut.has(c)) g.addEventListener("click", () => { cut.add(c); sendAct(i, "cut", { color: c }); rerender(); });
+    if (!cut.has(c) && !m.defused) g.addEventListener("click", () => sendAct(i, "cut", { color: c }));
     s.append(g);
   });
   return s;

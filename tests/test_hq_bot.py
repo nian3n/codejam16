@@ -119,13 +119,16 @@ def test_dial_needle():
 
 
 def test_switches_state_and_count():
+    # The first rule of the page counts the switches that are on, so that comes first.
     bot = HqBot()
-    assert bot.reply(["lamp"]) == "That is the Home power board. Is the LAMP switch on?"
-    assert bot.reply(["yes"]) == "Tell me which switches are on. Tell me NO if none is on."
-    for msg in (["no"], ["no", "no"], ["yes", "no"][1:]):
+    assert bot.reply(["lamp"]) == "That is the Home power board. Tell me which switches are on. Tell me NO if none is on."
+    assert bot.reply(["lamp", "tv"]) == "Turn the TV switch off."  # LAMP is on: the TV rule
+    bot = HqBot()
+    bot.reply(["bed"])
+    assert bot.reply(["bed", "chair", "lamp", "tv"]) == "Turn every switch off."
+    for msg in (["no"], ["no", "no"]):
         b = HqBot()
         b.reply(["bed"])
-        b.reply(["no"])  # no lamp
         assert b.pending == "count_on"
         assert b.reply(msg) is not None and b.pending != "count_on"
 

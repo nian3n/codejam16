@@ -28,6 +28,8 @@ OPS = {
 
 ALPHA = ("alpha_first", "alpha_last")  # dial targets: the picture first or last in the alphabet
 ORDERS = {"alpha": False, "reverse": True}  # press_all orders -> sorted(reverse=...)
+WIRE_ORDERS = {"top_down": False, "bottom_up": True}  # cut every wire, in reading order or back
+SWITCH_ALL = ("on", "off", "flip")  # set {"all": ...}: every switch on, off, or flipped
 
 
 def _pick(items: list, which):
@@ -63,6 +65,15 @@ class Widget:
     def resolve(self, action: Action, facts: dict) -> Action:
         return action
 
+    def steps(self, solution: Action) -> tuple[list[Action], bool]:
+        """The clicks that make up a resolved solution, and whether their order matters.
+
+        Most answers are one click. A few are several ("cut the white wire, then the black
+        wire", "turn every switch off"): the server checks each click as it comes
+        (Module.apply), so the player gets a strike at the first wrong one.
+        """
+        return [solution], True
+
     def known_keys(self, spec: PuzzleSpec) -> set[str]:
         """Every key derive() can return for this puzzle (used by checks)."""
         return {"first", "last", "count"} | {f"has:{g}" for g in spec.pool}
@@ -82,7 +93,18 @@ class Wires(Widget):
         t = action.target
         if "wire" in t:
             return Action("cut", {"color": _pick(facts["colors"], t["wire"])})
+        if t.get("order") in WIRE_ORDERS:
+            # Keep "order" next to the list: phrase() says "every wire, from the bottom",
+            # which is what the manual says and what HQ can say without seeing the wires.
+            cols = list(facts["colors"])
+            return Action("cut", {"order": t["order"], "colors": cols[::-1] if WIRE_ORDERS[t["order"]] else cols})
         return action
+
+    def steps(self, solution):
+        t = solution.target
+        if "colors" in t:
+            return [Action("cut", {"color": c}) for c in t["colors"]], True
+        return [solution], True
 
 
 class Keypad(Widget):
@@ -99,6 +121,8 @@ class Keypad(Widget):
         d = super().derive(facts)
         disp = facts["display"]
         d.update(display=list(disp), reversed=list(reversed(disp)), sorted=sorted(disp))
+        if all(k.isdigit() for k in disp):
+            d["plus_one"] = [str((int(k) + 1) % 10) for k in disp]
         return d
 
     def resolve(self, action, facts):
@@ -108,7 +132,7 @@ class Keypad(Widget):
         return action
 
     def known_keys(self, spec):
-        return super().known_keys(spec) | {"display", "reversed", "sorted"}
+        return super().known_keys(spec) | {"display", "reversed", "sorted", "plus_one"}
 
 
 class Icons(Widget):
@@ -133,7 +157,14 @@ class Icons(Widget):
             if order in ORDERS:
                 return Action("press_all", {"icons": sorted(facts["icons"], reverse=ORDERS[order])})
             return action
+        if "icons" in action.target:  # press these pictures, in this order
+            return action
         return Action("press", {"icon": _pick(facts["icons"], action.target["icon"])})
+
+    def steps(self, solution):
+        if solution.verb == "press" and "icons" in solution.target:
+            return [Action("press", {"icon": g}) for g in solution.target["icons"]], True
+        return [solution], True
 
     def known_keys(self, spec):
         return super().known_keys(spec) | {f"position_of:{g}" for g in spec.pool}
@@ -183,6 +214,12 @@ class Switches(Widget):
         return d
 
     def resolve(self, action, facts):
+        if "all" in action.target:
+            # Only the switches that change are clicks; "all" stays for phrase().
+            how = action.target["all"]
+            now = {s["label"]: s["state"] for s in facts["switches"]}
+            want = {g: ("off" if st == "on" else "on") if how == "flip" else how for g, st in now.items()}
+            return Action("set", {"all": how, "flips": {g: st for g, st in want.items() if st != now[g]}})
         label = _pick(self.items(facts), action.target["switch"])
         state = action.target["state"]
         if state == "flip":
@@ -192,6 +229,11 @@ class Switches(Widget):
 
     def known_keys(self, spec):
         return super().known_keys(spec) | {"count_on"} | {f"state_of:{g}" for g in spec.pool}
+
+    def steps(self, solution):
+        if "flips" in solution.target:  # any order: the end state is what counts
+            return [Action("set", {"switch": g, "state": st}) for g, st in solution.target["flips"].items()], False
+        return [solution], True
 
 
 class BigButton(Widget):
@@ -245,6 +287,7 @@ class Module:
     spec: PuzzleSpec
     facts: dict
     defused: bool = False
+    done: list = field(default_factory=list)  # the right clicks so far (Module.apply)
     widget: Widget = field(init=False, repr=False)
 
     def __post_init__(self):
@@ -264,6 +307,24 @@ class Module:
 
     def check(self, action: Action) -> bool:
         return action == self.solution()
+
+    def apply(self, action: Action) -> str:
+        """One click from the player: "step" (right, more to do), "defused" or "strike".
+
+        A one-click answer is one step. A wrong click keeps the progress so far, like a
+        cut wire that stays cut.
+        """
+        steps, ordered = self.widget.steps(self.solution())
+        left = list(steps)
+        for a in self.done:
+            left.remove(a)
+        if not (action == left[0] if ordered else action in left):
+            return "strike"
+        self.done.append(action)
+        if len(left) == 1:
+            self.defused = True
+            return "defused"
+        return "step"
 
 
 _POOL: dict[str, PuzzleSpec] | None = None

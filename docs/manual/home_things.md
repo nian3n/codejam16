@@ -14,7 +14,9 @@ Switches are counted from left to right.
 
 Read the rules in order. Do the first rule that is true.
 
-1. **If** lamp is shown and the lamp switch is off: Flip the lamp switch.
-2. **If** 3 or more switches are on: Flip the first switch.
-3. **If** TV is shown: Flip the TV switch.
-4. **Otherwise:** Flip the last switch.
+1. **If** every switch is on: Turn every switch off.
+2. **If** lamp is shown and the lamp switch is off: Flip the lamp switch.
+3. **If** no switch is on: Turn every switch on.
+4. **If** 3 or more switches are on: Flip the first switch.
+5. **If** TV is shown: Flip the TV switch.
+6. **Otherwise:** Flip the last switch.

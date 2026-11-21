@@ -283,6 +283,8 @@ button.chip:hover { border-color: var(--warn); }
 .icon-btn .cap { font-size: clamp(.65rem, 3.4cqw, 1rem); }
 .pick-n { font-size: clamp(.8rem, 4cqw, 1.2rem); }
 .order-btn { font-size: clamp(.68rem, 3cqw, .9rem); }
+.icon-btn.done { outline: 3px solid var(--ok); }
+.icon-btn.done .pick-n { background: var(--ok); }
 .dial-opt .emoji { font-size: clamp(1rem, 10cqw, 3rem); }
 .dial-opt .cap { font-size: clamp(.5rem, 2.6cqw, .8rem); }
 .lcd { font-size: clamp(1.6rem, 9cqw, 2.8rem); }

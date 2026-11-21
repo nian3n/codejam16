@@ -58,6 +58,21 @@
       }
     },
     {
+      "if": [
+        [
+          "count_on",
+          ">=",
+          3
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "all": "off"
+        }
+      }
+    },
+    {
       "else": {
         "verb": "set",
         "target": {

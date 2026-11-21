@@ -43,6 +43,44 @@
     {
       "if": [
         [
+          "has:black",
+          "==",
+          true
+        ],
+        [
+          "has:white",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "cut",
+        "target": {
+          "colors": [
+            "white",
+            "black"
+          ]
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "green"
+        ]
+      ],
+      "then": {
+        "verb": "cut",
+        "target": {
+          "order": "bottom_up"
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "last",
           "==",
           "white"

@@ -33,6 +33,11 @@ def the(g: str, spec: PuzzleSpec | None = None) -> str:
     return f"the {word(g, spec)}"
 
 
+def _then(things: list[str], verb: str) -> str:
+    """'Cut the white wire, then the black wire' (no final period)."""
+    return f"{verb} {things[0]}" + "".join(f", then {x}" for x in things[1:])
+
+
 def _keys(keys: list[str]) -> str:
     return ", ".join(k.upper() for k in keys)
 
@@ -44,6 +49,11 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
     t = action.target
     v = action.verb
     if v == "cut":
+        if "order" in t:
+            return {"top_down": "Cut every wire, from the top to the bottom.",
+                    "bottom_up": "Cut every wire, from the bottom to the top."}[t["order"]]
+        if "colors" in t:
+            return f"{_then(['the ' + c + ' wire' for c in t['colors']], 'Cut')}."
         if "color" in t:
             return f"Cut the {t['color']} wire."
         return f"Cut the {t['wire']} wire."
@@ -56,8 +66,11 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
             "reversed": "Type the display in reverse order.",
             "sorted": "Type the display in alphabet order." if letters
             else "Type the display from smallest to largest.",
+            "plus_one": "Add 1 to each number on the display and type the result (9 becomes 0).",
         }[t["keys_from"]]
     if v == "press":
+        if "icons" in t:
+            return f"{_then([the(g, spec) for g in t['icons']], 'Press')}."
         g = t["icon"]
         return f"Press the {g} button." if g in POSITIONS else f"Press {the(g, spec)}."
     if v == "press_all":
@@ -71,6 +84,8 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
             return f"Turn the dial to the picture that comes {g[6:]} in the alphabet."
         return f"Turn the dial to the {g} picture." if g in POSITIONS else f"Turn the dial to {the(g, spec)}."
     if v == "set":
+        if "all" in t:
+            return "Flip every switch." if t["all"] == "flip" else f"Turn every switch {t['all']}."
         label, state = t["switch"], t["state"]
         if state == "flip":
             name = f"the {label} switch" if label in POSITIONS else f"the {word(label)} switch"
@@ -108,6 +123,10 @@ def condition(cond: list, spec: PuzzleSpec) -> str:
     if key == "count_on":
         if op == "==" and val == 0:
             return "no switch is on"
+        if op == "==" and val == spec.setup.get("shown"):
+            return "every switch is on"
+        if op == "==":
+            return f"exactly {val} switches are on"
         if op == ">=":
             return f"{val} or more switches are on"
         return f"the number of switches that are on is {op} {val}"

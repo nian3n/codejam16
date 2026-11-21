@@ -23,6 +23,21 @@
     {
       "if": [
         [
+          "count_on",
+          "==",
+          4
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "all": "off"
+        }
+      }
+    },
+    {
+      "if": [
+        [
           "has:lamp",
           "==",
           true
@@ -38,6 +53,21 @@
         "target": {
           "switch": "lamp",
           "state": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "count_on",
+          "==",
+          0
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "all": "on"
         }
       }
     },

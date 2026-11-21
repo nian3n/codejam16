@@ -55,23 +55,31 @@ def test_500_seeds_give_a_valid_target(pid):
         items = w.items(m.facts)
         # The resolved target is always something that is on the module.
         if sol.verb == "cut":
-            assert t["color"] in items
+            cut = t["colors"] if "colors" in t else [t["color"]]
+            assert cut and set(cut) <= set(items) and len(set(cut)) == len(cut)
         elif sol.verb == "type":
-            assert sorted(t["keys"]) == sorted(items)
+            assert len(t["keys"]) == len(items) and set(t["keys"]) <= set(spec.pool)
         elif sol.verb == "press":
-            assert t["icon"] in items
+            pressed = t["icons"] if "icons" in t else [t["icon"]]
+            assert pressed and set(pressed) <= set(items) and len(set(pressed)) == len(pressed)
         elif sol.verb == "press_all":
             assert sorted(t["icons"]) == sorted(items) and t["icons"] in (sorted(items), sorted(items, reverse=True))
         elif sol.verb == "turn":
             assert t["to"] in items
         elif sol.verb == "set":
-            assert t["switch"] in items and t["state"] in ("on", "off")
-            now = next(s["state"] for s in m.facts["switches"] if s["label"] == t["switch"])
-            assert t["state"] != now, "a switch action must change the switch"
+            flips = t["flips"] if "flips" in t else {t["switch"]: t["state"]}
+            assert flips, "a switch action must change at least one switch"
+            for label, state in flips.items():
+                now = next(s["state"] for s in m.facts["switches"] if s["label"] == label)
+                assert state in ("on", "off") and state != now, "a switch action must change the switch"
         elif sol.verb == "hold":
             assert t["release_on"] in items
         assert m.check(sol)
         assert phrase(sol, m).endswith(".")
+        # Played click by click, the steps of the solution defuse the module.
+        steps, _ = w.steps(sol)
+        results = [m.apply(a) for a in steps]
+        assert results == ["step"] * (len(steps) - 1) + ["defused"] and m.defused
 
 
 def test_every_rule_can_fire():
@@ -96,7 +104,7 @@ def test_known_answers():
     m = Module(nums, {"display": ["1", "4", "2"]})
     assert phrase(m.solution(), m) == "Type 1, 4, 2."
     wires = POOL["colors"]
-    m = Module(wires, {"colors": ["green", "black", "brown", "orange"]})
+    m = Module(wires, {"colors": ["brown", "black", "green", "orange"]})
     assert phrase(m.solution(), m) == "Cut the orange wire."  # no yellow -> last wire
 
 
@@ -166,3 +174,64 @@ def test_alphabet_order_of_glosses_matches_the_english_words():
     # The engine sorts glosses; players sort the English words. They must agree in every pool.
     for spec in POOL.values():
         assert sorted(spec.pool) == sorted(spec.pool, key=lambda g: word(g, spec).lower()), spec.id
+
+
+def _mod(pid, facts):
+    return Module(POOL[pid], facts)
+
+
+def test_wires_in_order_wrong_order_is_a_strike_and_keeps_progress():
+    m = _mod("colors", {"colors": ["green", "white", "black", "orange"]})
+    assert m.solution().target["colors"] == ["white", "black"]
+    assert phrase(m.solution(), m) == "Cut the white wire, then the black wire."
+    assert m.apply(Action("cut", {"color": "black"})) == "strike"
+    assert m.apply(Action("cut", {"color": "white"})) == "step" and not m.defused
+    assert m.apply(Action("cut", {"color": "white"})) == "strike"  # already cut
+    assert m.apply(Action("cut", {"color": "black"})) == "defused"
+
+
+def test_cut_every_wire_from_the_bottom():
+    m = _mod("colors", {"colors": ["green", "brown", "yellow", "orange"]})
+    assert m.solution().target["colors"] == ["orange", "yellow", "brown", "green"]
+    assert phrase(m.solution(), m) == "Cut every wire, from the bottom to the top."
+    assert phrase(m.spec.rules[m.fired_rule()].action(), spec=m.spec) == phrase(m.solution(), m)
+
+
+def test_icons_in_order():
+    m = _mod("wild_animals", {"icons": ["owl", "giraffe", "wolf", "elephant"]})
+    assert phrase(m.solution(), m) == "Press the elephant, then the giraffe."
+    assert m.apply(Action("press", {"icon": "elephant"})) == "step"
+    assert m.apply(Action("press", {"icon": "giraffe"})) == "defused"
+
+
+def test_switch_patterns_take_any_order():
+    sw = lambda *on: [{"label": g, "state": "on" if g in on else "off"} for g in ("bed", "chair", "lamp", "tv")]
+    m = _mod("home_things", {"switches": sw("bed", "chair", "lamp", "tv")})
+    assert phrase(m.solution(), m) == "Turn every switch off."
+    assert m.solution().target["flips"] == {"bed": "off", "chair": "off", "lamp": "off", "tv": "off"}
+    assert m.apply(Action("set", {"switch": "tv", "state": "off"})) == "step"
+    assert m.apply(Action("set", {"switch": "bed", "state": "on"})) == "strike"
+    for g in ("lamp", "chair"):
+        assert m.apply(Action("set", {"switch": g, "state": "off"})) == "step"
+    assert m.apply(Action("set", {"switch": "bed", "state": "off"})) == "defused"
+
+
+def test_opposites_flip_every_switch():
+    sw = [{"label": "wet", "state": "on"}, {"label": "dry", "state": "off"},
+          {"label": "loud", "state": "off"}, {"label": "open", "state": "on"}]
+    m = _mod("opposites", {"switches": sw})
+    assert phrase(m.solution(), m) == "Flip every switch."
+    assert m.solution().target["flips"] == {"wet": "off", "dry": "on", "loud": "on", "open": "off"}
+
+
+def test_keypad_plus_one():
+    m = _mod("numbers", {"display": ["5", "9", "2"]})
+    assert m.solution() == Action("type", {"keys": ["6", "0", "3"]})
+    assert phrase(m.spec.rules[m.fired_rule()].action(), spec=m.spec) == (
+        "Add 1 to each number on the display and type the result (9 becomes 0).")
+
+
+def test_a_one_click_answer_is_one_step():
+    m = _mod("pets_farm", {"icons": ["cat", "dog", "pig", "duck"]})
+    assert m.apply(Action("press", {"icon": "cow"})) == "strike" and not m.defused
+    assert m.apply(m.solution()) == "defused" and m.defused
