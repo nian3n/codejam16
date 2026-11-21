@@ -30,6 +30,8 @@ build-manual = "escape_pod.manual.build:main"
 answer-key = "escape_pod.manual.solve:main"
 download-models = "escape_pod.vision.download:main"
 sign-test = "escape_pod.vision.sign_test:main"
+record-digits = "escape_pod.vision.record_digits:main"
+train-digits = "escape_pod.vision.train_digits:main"
 
 [dependency-groups]
 dev = [

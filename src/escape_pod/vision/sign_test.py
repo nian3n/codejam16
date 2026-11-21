@@ -29,8 +29,9 @@ import numpy as np
 
 from escape_pod import config
 from escape_pod.puzzles.engine import load_pool
+from escape_pod.vision.handshape import DIGITS, HandshapeModel
 from escape_pod.vision.landmarks import Extractor, left_handed
-from escape_pod.vision.recognizer import Guess, rank
+from escape_pod.vision.recognizer import Guess, rank, rank_mixed
 from escape_pod.vision.segmenter import Segmenter
 from escape_pod.vision.word_model import WordModel
 
@@ -39,14 +40,17 @@ VIEW_H = 720
 GREEN, RED, AMBER, GREY, WHITE = (90, 220, 120), (70, 70, 240), (40, 190, 255), (150, 150, 150), (240, 240, 240)
 
 
-def allowed_sets(model_glosses: set[str]) -> list[tuple[str, set[str] | None]]:
+def allowed_sets(model_glosses: set[str], digits: bool = False) -> list[tuple[str, set[str] | None]]:
     """The choices the recognizer may pick from. A puzzle set = its pool + core signs,
-    like the Beginner level (spec §6.3)."""
+    like the Beginner level (spec §6.3). digits=True adds "numbers" (0-9 + core signs),
+    scored by the handshape model."""
     core = set(config.CORE_SIGNS)
     pools = {s.id: set(s.pool) for s in load_pool().values() if s.widget != "keypad"}
     game = set().union(*pools.values()) | core
     sets: list[tuple[str, set[str] | None]] = [("all 250", None), ("game words", game & model_glosses)]
     sets += [(pid, (pool | core) & model_glosses) for pid, pool in sorted(pools.items())]
+    if digits:
+        sets.append(("numbers", set(DIGITS) | (core & model_glosses)))
     return sets
 
 
@@ -59,7 +63,12 @@ class Bench:
         self.model = WordModel()
         print("Loading MediaPipe Holistic...")
         self.extractor = Extractor()
-        self.sets = allowed_sets(set(self.model.glosses))
+        try:
+            self.hand: HandshapeModel | None = HandshapeModel.load()
+        except FileNotFoundError:
+            self.hand = None
+            print("No digit model yet (uv run train-digits): the numbers set is off.")
+        self.sets = allowed_sets(set(self.model.glosses), digits=self.hand is not None)
         names = [n for n, _ in self.sets]
         self.set_i = names.index(args.set) if args.set in names else 0
         self.mirror_input = args.mirror or config.MIRROR_INPUT
@@ -98,9 +107,13 @@ class Bench:
 
         def job():
             logits = self.model.scores(clip)
+            if allowed and self.hand is not None and any(g in DIGITS for g in allowed):
+                guesses = rank_mixed(logits, self.hand.scores(clip), allowed, 5)
+            else:
+                guesses = rank(logits, allowed, 5)
             return {
                 "how": how, "frames": len(clip), "target": target, "set": set_name,
-                "guesses": rank(logits, allowed, 5),
+                "guesses": guesses,
                 "raw": rank(logits, None, 3),  # what it would say with all 250 allowed
                 "latency_ms": round((time.perf_counter() - ended) * 1000),
                 "mirror_input": self.mirror_input, "left_handed": self.left,
@@ -304,7 +317,7 @@ def main():
     ap = argparse.ArgumentParser(description="Sign to the webcam and see what the ASL model recognizes.")
     ap.add_argument("--camera", type=int, default=0)
     ap.add_argument("--target", action="store_true", help="start in target mode (scores you)")
-    ap.add_argument("--set", default="all 250", help='allowed set: "all 250", "game words" or a puzzle id like pets_farm')
+    ap.add_argument("--set", default="all 250", help='allowed set: "all 250", "game words", "numbers" or a puzzle id like pets_farm')
     ap.add_argument("--mirror", action="store_true", help="mirror the input before MediaPipe")
     ap.add_argument("--left-handed", action="store_true")
     a = ap.parse_args()

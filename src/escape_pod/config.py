@@ -18,6 +18,8 @@ ETC_DIR = ROOT / "etc"
 ENV_FILE = ETC_DIR / ".env"
 MODELS_DIR = ROOT / "models"             # git-ignored; uv run download-models fills it
 ISLR_DIR = MODELS_DIR / "islr"
+HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # digit model (uv run train-digits)
+HANDSHAPE_DATA_DIR = ROOT / "data" / "handshape"  # recorded digit samples, git-ignored (uv run record-digits)
 LOGS_DIR = ROOT / "logs"                 # git-ignored
 
 # Sign recognition (spec §6). Thresholds are first guesses; tune them with sign-test.
