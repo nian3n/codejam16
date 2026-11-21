@@ -1,0 +1,922 @@
+{
+ "clips": {
+  "airplane": {
+   "bytes": 25251,
+   "downloaded": 9052160,
+   "file": "airplane.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/airplane.tar"
+  },
+  "alligator": {
+   "bytes": 29227,
+   "downloaded": 14592000,
+   "file": "alligator.mp4",
+   "seconds": 2.0,
+   "source": "popsign_v1_0/game/test/alligator.tar"
+  },
+  "apple": {
+   "bytes": 23221,
+   "downloaded": 12636160,
+   "file": "apple.mp4",
+   "seconds": 2.43,
+   "source": "popsign_v1_0/game/test/apple.tar"
+  },
+  "arm": {
+   "bytes": 30243,
+   "downloaded": 6850560,
+   "file": "arm.mp4",
+   "seconds": 2.13,
+   "source": "popsign_v1_0/game/test/arm.tar"
+  },
+  "aunt": {
+   "bytes": 25154,
+   "downloaded": 10475520,
+   "file": "aunt.mp4",
+   "seconds": 1.88,
+   "source": "popsign_v1_0/game/test/aunt.tar"
+  },
+  "backyard": {
+   "bytes": 66243,
+   "downloaded": 21606400,
+   "file": "backyard.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/backyard.tar"
+  },
+  "balloon": {
+   "bytes": 31373,
+   "downloaded": 11397120,
+   "file": "balloon.mp4",
+   "seconds": 2.14,
+   "source": "popsign_v1_0/game/test/balloon.tar"
+  },
+  "bed": {
+   "bytes": 31849,
+   "downloaded": 21852160,
+   "file": "bed.mp4",
+   "seconds": 2.65,
+   "source": "popsign_v1_0/game/test/bed.tar"
+  },
+  "bedroom": {
+   "bytes": 54985,
+   "downloaded": 21329920,
+   "file": "bedroom.mp4",
+   "seconds": 2.35,
+   "source": "popsign_v1_0/game/test/bedroom.tar"
+  },
+  "black": {
+   "bytes": 48132,
+   "downloaded": 16568320,
+   "file": "black.mp4",
+   "seconds": 1.82,
+   "source": "popsign_v1_0/game/test/black.tar"
+  },
+  "blue": {
+   "bytes": 30765,
+   "downloaded": 11069440,
+   "file": "blue.mp4",
+   "seconds": 2.23,
+   "source": "popsign_v1_0/game/test/blue.tar"
+  },
+  "boat": {
+   "bytes": 29483,
+   "downloaded": 14080000,
+   "file": "boat.mp4",
+   "seconds": 2.5,
+   "source": "popsign_v1_0/game/test/boat.tar"
+  },
+  "book": {
+   "bytes": 21784,
+   "downloaded": 4034560,
+   "file": "book.mp4",
+   "seconds": 1.7,
+   "source": "popsign_v1_0/game/test/book.tar"
+  },
+  "boy": {
+   "bytes": 45568,
+   "downloaded": 6717440,
+   "file": "boy.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/boy.tar"
+  },
+  "brother": {
+   "bytes": 22753,
+   "downloaded": 7229440,
+   "file": "brother.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/brother.tar"
+  },
+  "brown": {
+   "bytes": 23797,
+   "downloaded": 6789120,
+   "file": "brown.mp4",
+   "seconds": 1.83,
+   "source": "popsign_v1_0/game/test/brown.tar"
+  },
+  "car": {
+   "bytes": 40084,
+   "downloaded": 9953280,
+   "file": "car.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/car.tar"
+  },
+  "carrot": {
+   "bytes": 21480,
+   "downloaded": 10659840,
+   "file": "carrot.mp4",
+   "seconds": 1.78,
+   "source": "popsign_v1_0/game/test/carrot.tar"
+  },
+  "cat": {
+   "bytes": 28441,
+   "downloaded": 10455040,
+   "file": "cat.mp4",
+   "seconds": 1.88,
+   "source": "popsign_v1_0/game/test/cat.tar"
+  },
+  "cereal": {
+   "bytes": 22544,
+   "downloaded": 4321280,
+   "file": "cereal.mp4",
+   "seconds": 2.03,
+   "source": "popsign_v1_0/game/test/cereal.tar"
+  },
+  "chair": {
+   "bytes": 63624,
+   "downloaded": 15134720,
+   "file": "chair.mp4",
+   "seconds": 2.0,
+   "source": "popsign_v1_0/game/test/chair.tar"
+  },
+  "child": {
+   "bytes": 32314,
+   "downloaded": 4065280,
+   "file": "child.mp4",
+   "seconds": 2.43,
+   "source": "popsign_v1_0/game/test/child.tar"
+  },
+  "chocolate": {
+   "bytes": 27438,
+   "downloaded": 10229760,
+   "file": "chocolate.mp4",
+   "seconds": 1.7,
+   "source": "popsign_v1_0/game/test/chocolate.tar"
+  },
+  "clean": {
+   "bytes": 44530,
+   "downloaded": 9871360,
+   "file": "clean.mp4",
+   "seconds": 1.78,
+   "source": "popsign_v1_0/game/test/clean.tar"
+  },
+  "close": {
+   "bytes": 32342,
+   "downloaded": 9881600,
+   "file": "close.mp4",
+   "seconds": 2.15,
+   "source": "popsign_v1_0/game/test/close.tar"
+  },
+  "closet": {
+   "bytes": 23211,
+   "downloaded": 9635840,
+   "file": "closet.mp4",
+   "seconds": 1.8,
+   "source": "popsign_v1_0/game/test/closet.tar"
+  },
+  "cloud": {
+   "bytes": 28750,
+   "downloaded": 15564800,
+   "file": "cloud.mp4",
+   "seconds": 2.21,
+   "source": "popsign_v1_0/game/test/cloud.tar"
+  },
+  "clown": {
+   "bytes": 24566,
+   "downloaded": 9717760,
+   "file": "clown.mp4",
+   "seconds": 1.6,
+   "source": "popsign_v1_0/game/test/clown.tar"
+  },
+  "cow": {
+   "bytes": 35870,
+   "downloaded": 15759360,
+   "file": "cow.mp4",
+   "seconds": 2.43,
+   "source": "popsign_v1_0/game/test/cow.tar"
+  },
+  "cowboy": {
+   "bytes": 48579,
+   "downloaded": 8847360,
+   "file": "cowboy.mp4",
+   "seconds": 2.1,
+   "source": "popsign_v1_0/game/test/cowboy.tar"
+  },
+  "cry": {
+   "bytes": 25090,
+   "downloaded": 5642240,
+   "file": "cry.mp4",
+   "seconds": 1.84,
+   "source": "popsign_v1_0/game/test/cry.tar"
+  },
+  "dad": {
+   "bytes": 34841,
+   "downloaded": 10598400,
+   "file": "dad.mp4",
+   "seconds": 1.78,
+   "source": "popsign_v1_0/game/test/dad.tar"
+  },
+  "dance": {
+   "bytes": 29919,
+   "downloaded": 5130240,
+   "file": "dance.mp4",
+   "seconds": 2.0,
+   "source": "popsign_v1_0/game/test/dance.tar"
+  },
+  "dirty": {
+   "bytes": 23263,
+   "downloaded": 15882240,
+   "file": "dirty.mp4",
+   "seconds": 1.8,
+   "source": "popsign_v1_0/game/test/dirty.tar"
+  },
+  "dog": {
+   "bytes": 20474,
+   "downloaded": 6144000,
+   "file": "dog.mp4",
+   "seconds": 1.83,
+   "source": "popsign_v1_0/game/test/dog.tar"
+  },
+  "doll": {
+   "bytes": 32815,
+   "downloaded": 10199040,
+   "file": "doll.mp4",
+   "seconds": 2.01,
+   "source": "popsign_v1_0/game/test/doll.tar"
+  },
+  "donkey": {
+   "bytes": 43577,
+   "downloaded": 12011520,
+   "file": "donkey.mp4",
+   "seconds": 2.13,
+   "source": "popsign_v1_0/game/test/donkey.tar"
+  },
+  "down": {
+   "bytes": 23870,
+   "downloaded": 10332160,
+   "file": "down.mp4",
+   "seconds": 1.97,
+   "source": "popsign_v1_0/game/test/down.tar"
+  },
+  "drawer": {
+   "bytes": 25163,
+   "downloaded": 5150720,
+   "file": "drawer.mp4",
+   "seconds": 1.9,
+   "source": "popsign_v1_0/game/test/drawer.tar"
+  },
+  "dry": {
+   "bytes": 55080,
+   "downloaded": 16998400,
+   "file": "dry.mp4",
+   "seconds": 2.72,
+   "source": "popsign_v1_0/game/test/dry.tar"
+  },
+  "duck": {
+   "bytes": 24372,
+   "downloaded": 5171200,
+   "file": "duck.mp4",
+   "seconds": 1.71,
+   "source": "popsign_v1_0/game/test/duck.tar"
+  },
+  "ear": {
+   "bytes": 26116,
+   "downloaded": 4505600,
+   "file": "ear.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/ear.tar"
+  },
+  "elephant": {
+   "bytes": 27484,
+   "downloaded": 5396480,
+   "file": "elephant.mp4",
+   "seconds": 1.78,
+   "source": "popsign_v1_0/game/test/elephant.tar"
+  },
+  "eye": {
+   "bytes": 18327,
+   "downloaded": 11950080,
+   "file": "eye.mp4",
+   "seconds": 1.77,
+   "source": "popsign_v1_0/game/test/eye.tar"
+  },
+  "farm": {
+   "bytes": 26875,
+   "downloaded": 4546560,
+   "file": "farm.mp4",
+   "seconds": 2.03,
+   "source": "popsign_v1_0/game/test/farm.tar"
+  },
+  "feet": {
+   "bytes": 54363,
+   "downloaded": 13127680,
+   "file": "feet.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/feet.tar"
+  },
+  "finger": {
+   "bytes": 22020,
+   "downloaded": 19445760,
+   "file": "finger.mp4",
+   "seconds": 1.94,
+   "source": "popsign_v1_0/game/test/finger.tar"
+  },
+  "fireman": {
+   "bytes": 43698,
+   "downloaded": 21493760,
+   "file": "fireman.mp4",
+   "seconds": 2.37,
+   "source": "popsign_v1_0/game/test/fireman.tar"
+  },
+  "flag": {
+   "bytes": 66449,
+   "downloaded": 11735040,
+   "file": "flag.mp4",
+   "seconds": 1.91,
+   "source": "popsign_v1_0/game/test/flag.tar"
+  },
+  "frenchfries": {
+   "bytes": 39560,
+   "downloaded": 11304960,
+   "file": "frenchfries.mp4",
+   "seconds": 2.36,
+   "source": "popsign_v1_0/game/test/frenchfries.tar"
+  },
+  "gift": {
+   "bytes": 29790,
+   "downloaded": 6236160,
+   "file": "gift.mp4",
+   "seconds": 1.67,
+   "source": "popsign_v1_0/game/test/gift.tar"
+  },
+  "giraffe": {
+   "bytes": 34901,
+   "downloaded": 24862720,
+   "file": "giraffe.mp4",
+   "seconds": 2.11,
+   "source": "popsign_v1_0/game/test/giraffe.tar"
+  },
+  "girl": {
+   "bytes": 55817,
+   "downloaded": 19128320,
+   "file": "girl.mp4",
+   "seconds": 1.84,
+   "source": "popsign_v1_0/game/test/girl.tar"
+  },
+  "grandma": {
+   "bytes": 47143,
+   "downloaded": 16230400,
+   "file": "grandma.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/grandma.tar"
+  },
+  "grandpa": {
+   "bytes": 31431,
+   "downloaded": 7249920,
+   "file": "grandpa.mp4",
+   "seconds": 2.27,
+   "source": "popsign_v1_0/game/test/grandpa.tar"
+  },
+  "green": {
+   "bytes": 39426,
+   "downloaded": 11888640,
+   "file": "green.mp4",
+   "seconds": 2.24,
+   "source": "popsign_v1_0/game/test/green.tar"
+  },
+  "hair": {
+   "bytes": 33156,
+   "downloaded": 16762880,
+   "file": "hair.mp4",
+   "seconds": 2.34,
+   "source": "popsign_v1_0/game/test/hair.tar"
+  },
+  "happy": {
+   "bytes": 42790,
+   "downloaded": 16250880,
+   "file": "happy.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/happy.tar"
+  },
+  "hat": {
+   "bytes": 28103,
+   "downloaded": 11264000,
+   "file": "hat.mp4",
+   "seconds": 1.83,
+   "source": "popsign_v1_0/game/test/hat.tar"
+  },
+  "helicopter": {
+   "bytes": 30063,
+   "downloaded": 11827200,
+   "file": "helicopter.mp4",
+   "seconds": 1.94,
+   "source": "popsign_v1_0/game/test/helicopter.tar"
+  },
+  "hen": {
+   "bytes": 21390,
+   "downloaded": 10373120,
+   "file": "hen.mp4",
+   "seconds": 1.82,
+   "source": "popsign_v1_0/game/test/hen.tar"
+  },
+  "hide": {
+   "bytes": 41702,
+   "downloaded": 22118400,
+   "file": "hide.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/hide.tar"
+  },
+  "horse": {
+   "bytes": 52806,
+   "downloaded": 11653120,
+   "file": "horse.mp4",
+   "seconds": 1.74,
+   "source": "popsign_v1_0/game/test/horse.tar"
+  },
+  "hungry": {
+   "bytes": 38799,
+   "downloaded": 11868160,
+   "file": "hungry.mp4",
+   "seconds": 2.47,
+   "source": "popsign_v1_0/game/test/hungry.tar"
+  },
+  "icecream": {
+   "bytes": 23429,
+   "downloaded": 4280320,
+   "file": "icecream.mp4",
+   "seconds": 1.64,
+   "source": "popsign_v1_0/game/test/icecream.tar"
+  },
+  "jacket": {
+   "bytes": 43783,
+   "downloaded": 11008000,
+   "file": "jacket.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/jacket.tar"
+  },
+  "jeans": {
+   "bytes": 26974,
+   "downloaded": 8591360,
+   "file": "jeans.mp4",
+   "seconds": 2.4,
+   "source": "popsign_v1_0/game/test/jeans.tar"
+  },
+  "jump": {
+   "bytes": 59196,
+   "downloaded": 19701760,
+   "file": "jump.mp4",
+   "seconds": 2.07,
+   "source": "popsign_v1_0/game/test/jump.tar"
+  },
+  "kiss": {
+   "bytes": 42972,
+   "downloaded": 20080640,
+   "file": "kiss.mp4",
+   "seconds": 2.54,
+   "source": "popsign_v1_0/game/test/kiss.tar"
+  },
+  "lamp": {
+   "bytes": 20957,
+   "downloaded": 5724160,
+   "file": "lamp.mp4",
+   "seconds": 1.75,
+   "source": "popsign_v1_0/game/test/lamp.tar"
+  },
+  "later": {
+   "bytes": 71738,
+   "downloaded": 12881920,
+   "file": "later.mp4",
+   "seconds": 1.87,
+   "source": "popsign_v1_0/game/test/later.tar"
+  },
+  "lion": {
+   "bytes": 53100,
+   "downloaded": 15339520,
+   "file": "lion.mp4",
+   "seconds": 1.74,
+   "source": "popsign_v1_0/game/test/lion.tar"
+  },
+  "loud": {
+   "bytes": 31148,
+   "downloaded": 4577280,
+   "file": "loud.mp4",
+   "seconds": 2.43,
+   "source": "popsign_v1_0/game/test/loud.tar"
+  },
+  "mad": {
+   "bytes": 30282,
+   "downloaded": 10741760,
+   "file": "mad.mp4",
+   "seconds": 1.8,
+   "source": "popsign_v1_0/game/test/mad.tar"
+  },
+  "man": {
+   "bytes": 31986,
+   "downloaded": 4505600,
+   "file": "man.mp4",
+   "seconds": 1.81,
+   "source": "popsign_v1_0/game/test/man.tar"
+  },
+  "mitten": {
+   "bytes": 51979,
+   "downloaded": 18104320,
+   "file": "mitten.mp4",
+   "seconds": 2.25,
+   "source": "popsign_v1_0/game/test/mitten.tar"
+  },
+  "mom": {
+   "bytes": 29282,
+   "downloaded": 13271040,
+   "file": "mom.mp4",
+   "seconds": 1.61,
+   "source": "popsign_v1_0/game/test/mom.tar"
+  },
+  "moon": {
+   "bytes": 74894,
+   "downloaded": 15861760,
+   "file": "moon.mp4",
+   "seconds": 2.07,
+   "source": "popsign_v1_0/game/test/moon.tar"
+  },
+  "morning": {
+   "bytes": 47741,
+   "downloaded": 20346880,
+   "file": "morning.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/morning.tar"
+  },
+  "mouth": {
+   "bytes": 34132,
+   "downloaded": 4659200,
+   "file": "mouth.mp4",
+   "seconds": 2.21,
+   "source": "popsign_v1_0/game/test/mouth.tar"
+  },
+  "night": {
+   "bytes": 24778,
+   "downloaded": 15482880,
+   "file": "night.mp4",
+   "seconds": 2.0,
+   "source": "popsign_v1_0/game/test/night.tar"
+  },
+  "nose": {
+   "bytes": 28391,
+   "downloaded": 13578240,
+   "file": "nose.mp4",
+   "seconds": 1.71,
+   "source": "popsign_v1_0/game/test/nose.tar"
+  },
+  "now": {
+   "bytes": 53922,
+   "downloaded": 4423680,
+   "file": "now.mp4",
+   "seconds": 2.23,
+   "source": "popsign_v1_0/game/test/now.tar"
+  },
+  "nuts": {
+   "bytes": 22610,
+   "downloaded": 9226240,
+   "file": "nuts.mp4",
+   "seconds": 1.64,
+   "source": "popsign_v1_0/game/test/nuts.tar"
+  },
+  "open": {
+   "bytes": 28030,
+   "downloaded": 11581440,
+   "file": "open.mp4",
+   "seconds": 1.93,
+   "source": "popsign_v1_0/game/test/open.tar"
+  },
+  "orange": {
+   "bytes": 29548,
+   "downloaded": 21760000,
+   "file": "orange.mp4",
+   "seconds": 2.52,
+   "source": "popsign_v1_0/game/test/orange.tar"
+  },
+  "outside": {
+   "bytes": 46296,
+   "downloaded": 15831040,
+   "file": "outside.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/outside.tar"
+  },
+  "owl": {
+   "bytes": 23336,
+   "downloaded": 7024640,
+   "file": "owl.mp4",
+   "seconds": 1.97,
+   "source": "popsign_v1_0/game/test/owl.tar"
+  },
+  "pajamas": {
+   "bytes": 22536,
+   "downloaded": 13168640,
+   "file": "pajamas.mp4",
+   "seconds": 1.98,
+   "source": "popsign_v1_0/game/test/pajamas.tar"
+  },
+  "pen": {
+   "bytes": 23772,
+   "downloaded": 4116480,
+   "file": "pen.mp4",
+   "seconds": 1.87,
+   "source": "popsign_v1_0/game/test/pen.tar"
+  },
+  "pencil": {
+   "bytes": 23517,
+   "downloaded": 7925760,
+   "file": "pencil.mp4",
+   "seconds": 1.73,
+   "source": "popsign_v1_0/game/test/pencil.tar"
+  },
+  "pig": {
+   "bytes": 23619,
+   "downloaded": 17295360,
+   "file": "pig.mp4",
+   "seconds": 1.77,
+   "source": "popsign_v1_0/game/test/pig.tar"
+  },
+  "pizza": {
+   "bytes": 66905,
+   "downloaded": 12093440,
+   "file": "pizza.mp4",
+   "seconds": 2.03,
+   "source": "popsign_v1_0/game/test/pizza.tar"
+  },
+  "police": {
+   "bytes": 33775,
+   "downloaded": 18442240,
+   "file": "police.mp4",
+   "seconds": 2.18,
+   "source": "popsign_v1_0/game/test/police.tar"
+  },
+  "pool": {
+   "bytes": 33052,
+   "downloaded": 12072960,
+   "file": "pool.mp4",
+   "seconds": 2.1,
+   "source": "popsign_v1_0/game/test/pool.tar"
+  },
+  "puzzle": {
+   "bytes": 36904,
+   "downloaded": 8560640,
+   "file": "puzzle.mp4",
+   "seconds": 1.91,
+   "source": "popsign_v1_0/game/test/puzzle.tar"
+  },
+  "quiet": {
+   "bytes": 19953,
+   "downloaded": 9461760,
+   "file": "quiet.mp4",
+   "seconds": 1.73,
+   "source": "popsign_v1_0/game/test/quiet.tar"
+  },
+  "radio": {
+   "bytes": 72658,
+   "downloaded": 10864640,
+   "file": "radio.mp4",
+   "seconds": 1.94,
+   "source": "popsign_v1_0/game/test/radio.tar"
+  },
+  "rain": {
+   "bytes": 43156,
+   "downloaded": 8284160,
+   "file": "rain.mp4",
+   "seconds": 1.71,
+   "source": "popsign_v1_0/game/test/rain.tar"
+  },
+  "read": {
+   "bytes": 33027,
+   "downloaded": 6563840,
+   "file": "read.mp4",
+   "seconds": 2.11,
+   "source": "popsign_v1_0/game/test/read.tar"
+  },
+  "red": {
+   "bytes": 26224,
+   "downloaded": 4956160,
+   "file": "red.mp4",
+   "seconds": 2.13,
+   "source": "popsign_v1_0/game/test/red.tar"
+  },
+  "refrigerator": {
+   "bytes": 67346,
+   "downloaded": 16117760,
+   "file": "refrigerator.mp4",
+   "seconds": 2.61,
+   "source": "popsign_v1_0/game/test/refrigerator.tar"
+  },
+  "ride": {
+   "bytes": 46690,
+   "downloaded": 12953600,
+   "file": "ride.mp4",
+   "seconds": 1.85,
+   "source": "popsign_v1_0/game/test/ride.tar"
+  },
+  "sad": {
+   "bytes": 26967,
+   "downloaded": 9328640,
+   "file": "sad.mp4",
+   "seconds": 1.9,
+   "source": "popsign_v1_0/game/test/sad.tar"
+  },
+  "scissors": {
+   "bytes": 37463,
+   "downloaded": 19281920,
+   "file": "scissors.mp4",
+   "seconds": 1.98,
+   "source": "popsign_v1_0/game/test/scissors.tar"
+  },
+  "shirt": {
+   "bytes": 23707,
+   "downloaded": 6809600,
+   "file": "shirt.mp4",
+   "seconds": 2.45,
+   "source": "popsign_v1_0/game/test/shirt.tar"
+  },
+  "shoe": {
+   "bytes": 32505,
+   "downloaded": 14520320,
+   "file": "shoe.mp4",
+   "seconds": 1.97,
+   "source": "popsign_v1_0/game/test/shoe.tar"
+  },
+  "sick": {
+   "bytes": 25054,
+   "downloaded": 9973760,
+   "file": "sick.mp4",
+   "seconds": 2.0,
+   "source": "popsign_v1_0/game/test/sick.tar"
+  },
+  "sleep": {
+   "bytes": 30949,
+   "downloaded": 14346240,
+   "file": "sleep.mp4",
+   "seconds": 2.36,
+   "source": "popsign_v1_0/game/test/sleep.tar"
+  },
+  "sleepy": {
+   "bytes": 26969,
+   "downloaded": 4331520,
+   "file": "sleepy.mp4",
+   "seconds": 1.93,
+   "source": "popsign_v1_0/game/test/sleepy.tar"
+  },
+  "snow": {
+   "bytes": 32671,
+   "downloaded": 6092800,
+   "file": "snow.mp4",
+   "seconds": 1.91,
+   "source": "popsign_v1_0/game/test/snow.tar"
+  },
+  "stairs": {
+   "bytes": 47496,
+   "downloaded": 16046080,
+   "file": "stairs.mp4",
+   "seconds": 2.31,
+   "source": "popsign_v1_0/game/test/stairs.tar"
+  },
+  "store": {
+   "bytes": 26904,
+   "downloaded": 16056320,
+   "file": "store.mp4",
+   "seconds": 1.87,
+   "source": "popsign_v1_0/game/test/store.tar"
+  },
+  "sun": {
+   "bytes": 40709,
+   "downloaded": 19036160,
+   "file": "sun.mp4",
+   "seconds": 1.71,
+   "source": "popsign_v1_0/game/test/sun.tar"
+  },
+  "table": {
+   "bytes": 49136,
+   "downloaded": 13004800,
+   "file": "table.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/table.tar"
+  },
+  "thirsty": {
+   "bytes": 22796,
+   "downloaded": 3809280,
+   "file": "thirsty.mp4",
+   "seconds": 1.67,
+   "source": "popsign_v1_0/game/test/thirsty.tar"
+  },
+  "tiger": {
+   "bytes": 40748,
+   "downloaded": 8540160,
+   "file": "tiger.mp4",
+   "seconds": 1.87,
+   "source": "popsign_v1_0/game/test/tiger.tar"
+  },
+  "tomorrow": {
+   "bytes": 46296,
+   "downloaded": 18001920,
+   "file": "tomorrow.mp4",
+   "seconds": 2.04,
+   "source": "popsign_v1_0/game/test/tomorrow.tar"
+  },
+  "tongue": {
+   "bytes": 31606,
+   "downloaded": 19752960,
+   "file": "tongue.mp4",
+   "seconds": 2.51,
+   "source": "popsign_v1_0/game/test/tongue.tar"
+  },
+  "tooth": {
+   "bytes": 24791,
+   "downloaded": 4341760,
+   "file": "tooth.mp4",
+   "seconds": 1.9,
+   "source": "popsign_v1_0/game/test/tooth.tar"
+  },
+  "toy": {
+   "bytes": 38265,
+   "downloaded": 10987520,
+   "file": "toy.mp4",
+   "seconds": 1.71,
+   "source": "popsign_v1_0/game/test/toy.tar"
+  },
+  "tv": {
+   "bytes": 23591,
+   "downloaded": 10885120,
+   "file": "tv.mp4",
+   "seconds": 2.17,
+   "source": "popsign_v1_0/game/test/TV.tar"
+  },
+  "uncle": {
+   "bytes": 47634,
+   "downloaded": 14182400,
+   "file": "uncle.mp4",
+   "seconds": 1.78,
+   "source": "popsign_v1_0/game/test/uncle.tar"
+  },
+  "up": {
+   "bytes": 35106,
+   "downloaded": 13619200,
+   "file": "up.mp4",
+   "seconds": 2.2,
+   "source": "popsign_v1_0/game/test/up.tar"
+  },
+  "wet": {
+   "bytes": 33843,
+   "downloaded": 17131520,
+   "file": "wet.mp4",
+   "seconds": 1.97,
+   "source": "popsign_v1_0/game/test/wet.tar"
+  },
+  "white": {
+   "bytes": 66162,
+   "downloaded": 16906240,
+   "file": "white.mp4",
+   "seconds": 2.01,
+   "source": "popsign_v1_0/game/test/white.tar"
+  },
+  "wolf": {
+   "bytes": 48866,
+   "downloaded": 22292480,
+   "file": "wolf.mp4",
+   "seconds": 1.91,
+   "source": "popsign_v1_0/game/test/wolf.tar"
+  },
+  "yellow": {
+   "bytes": 37996,
+   "downloaded": 6707200,
+   "file": "yellow.mp4",
+   "seconds": 1.91,
+   "source": "popsign_v1_0/game/test/yellow.tar"
+  },
+  "yesterday": {
+   "bytes": 23386,
+   "downloaded": 6840320,
+   "file": "yesterday.mp4",
+   "seconds": 2.23,
+   "source": "popsign_v1_0/game/test/yesterday.tar"
+  },
+  "zebra": {
+   "bytes": 66770,
+   "downloaded": 11120640,
+   "file": "zebra.mp4",
+   "seconds": 1.97,
+   "source": "popsign_v1_0/game/test/zebra.tar"
+  },
+  "zipper": {
+   "bytes": 26726,
+   "downloaded": 5570560,
+   "file": "zipper.mp4",
+   "seconds": 1.94,
+   "source": "popsign_v1_0/game/test/zipper.tar"
+  }
+ },
+ "credit": "Sign videos: PopSign ASL v1.0 (Starner, Sridhar, So, Deshpande et al., Georgia Tech and DPAN), CC BY 4.0, https://signdata.cc.gatech.edu"
+}

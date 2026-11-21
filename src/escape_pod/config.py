@@ -13,6 +13,7 @@ ROOT = PACKAGE_DIR.parent.parent
 PUZZLE_DIR = PACKAGE_DIR / "puzzles" / "data"
 ICONS_FILE = PACKAGE_DIR / "assets" / "icons.json"
 STATIC_DIR = PACKAGE_DIR / "web" / "static"
+SIGN_CLIPS_DIR = PACKAGE_DIR / "signs" / "clips"   # glossary clips from PopSign (signs/fetch_popsign.py)
 MANUAL_PAGES_DIR = ROOT / "docs" / "manual"
 ETC_DIR = ROOT / "etc"
 ENV_FILE = ETC_DIR / ".env"

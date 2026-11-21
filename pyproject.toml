@@ -15,6 +15,7 @@ dependencies = [
 escape-pod = "escape_pod.web.server:main"
 build-manual = "escape_pod.manual.build:main"
 answer-key = "escape_pod.manual.solve:main"
+fetch-signs = "escape_pod.signs.fetch_popsign:main"
 
 [dependency-groups]
 dev = [

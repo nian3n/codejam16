@@ -15,6 +15,7 @@ import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
+import { bindGlossary, closeGlossary } from "./glossary.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -41,6 +42,7 @@ async function boot() {
   $("#leave").onclick = leaveRoom;
   $("#exit-game").onclick = exitGame;
   bindLobby();
+  bindGlossary();
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
   // Reloading the page with ?room=CODE and a saved player id rejoins the same seat.
@@ -89,6 +91,7 @@ function leaveRoom() {
   $("#code").value = "";
   $("#home-error").textContent = "";
   stopVideo();
+  closeGlossary();
   showScreen("home");
 }
 
@@ -124,6 +127,7 @@ function onState(s) {
   store.deadlineAt = performance.now() + s.remaining_s * 1000;
   if (s.phase === "lobby") {
     if (exitArmed) disarmExit();
+    closeGlossary();  // the glossary is for games only
     showScreen("lobby");
     renderLobby();
     placeDock($("#lobby-video"));

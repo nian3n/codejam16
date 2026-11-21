@@ -435,7 +435,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 - **Briefing:** before the timer starts, show each drawn module's topic and its signs as looping animations.
 - **Sign cards:** at Beginner, the pool of the module being signed shows beside the camera. The cards show the whole pool, so they do not give away which items are on the module.
-- **Glossary:** every gloss, grouped by topic, with its sign animation and a "practice" button.
+- **Glossary (built):** the "📖 Glossary" button in the game top bar opens the Field Sign Dictionary, for both roles, at any time during a game. The timer keeps running. It lists every game word A to Z, never only this bomb's words (rule 3). A click plays a looping PopSign clip from `signs/clips/` (`uv run fetch-signs`). Numbers and letters have no clip yet. Later: our own signer's animations and a "practice" button.
 - **Retry is free:** a rejected guess or a NO costs nothing. Only wrong actions on the bomb cost strikes.
 - **Round report:** modules defused, strikes, time, topics practiced, every sign confirmed, and the signs that needed retries.
 - **Wording:** present the game as ASL vocabulary practice. Do not claim that it translates ASL. It recognizes single signs.
@@ -581,7 +581,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 Show these in the README and on an in-game credits screen.
 
 - **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license. It is the winning solution of Google's Kaggle "Isolated Sign Language Recognition" competition.
-- **Training data behind the model:** PopSign ASL v1.0, Georgia Tech, CC BY 4.0 (https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/). Required attribution: credit PopSign ASL v1.0 and its authors.
+- **Training data behind the model:** PopSign ASL v1.0, Georgia Tech, CC BY 4.0 (https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/). Required attribution: credit PopSign ASL v1.0 and its authors. The glossary shows PopSign clips, and `signs/fetch_popsign.py` holds the credit line that the glossary displays.
 - **MediaPipe:** Google, Apache 2.0.
 - **Embedding model:** `sentence-transformers/all-MiniLM-L6-v2`, Apache 2.0.
 - **Emoji:** the system emoji font of each player's device (placeholder only).

@@ -45,6 +45,8 @@ MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pru
 app = FastAPI(title="Keep Moving and Nobody Explodes")
 app.state.debug = False
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+# Glossary clips (signs/fetch_popsign.py). check_dir=False: a fresh clone without clips still starts.
+app.mount("/signs", StaticFiles(directory=config.SIGN_CLIPS_DIR, check_dir=False), name="signs")
 
 
 @dataclass

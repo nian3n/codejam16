@@ -81,3 +81,22 @@ To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then cli
 | `tests/` | pytest tests | everyone |
 
 Not built yet: `signs/` (Teammate 2), the recognizer (Teammate 3), `brain/` (Teammates 3 and 4), `tools/`. See `CLAUDE.md` §3 and §14.
+
+## Sign clips for the glossary
+
+During a game, click **📖 Glossary** to see how to sign each word. The clips are in `src/escape_pod/signs/clips/`, about 30 KB each, and git keeps them. To fetch a clip for a new word, install `ffmpeg` and run:
+
+```
+uv run fetch-signs            # every game word that has no clip yet
+uv run fetch-signs cat --force
+```
+
+The script reads only the start of each PopSign archive, so each word needs about 10 MB of download.
+
+## Credits
+
+- **Sign videos in the glossary, and the training data behind the sign model:** PopSign ASL v1.0, by Thad Starner, Rohit Sridhar, Matthew So, Gururaj Deshpande and others, Georgia Tech and the Deaf Professional Arts Network. CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Dataset: https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/. We cut and shrank the clips.
+- **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license.
+- **MediaPipe:** Google, Apache 2.0.
+- **Emoji:** the system emoji font of each player's device.
+
