@@ -7,7 +7,7 @@
 // Clips and the credit line come from /signs/index.json (signs/fetch_popsign.py).
 import { $, el, icon, store, wordOf, WIRE_COLORS } from "./core.js";
 
-const HANDSHAPE_PAGES = new Set(["numbers", "alphabet"]);  // not in PopSign (spec 6.4)
+const HANDSHAPE_PAGES = new Set(["numbers"]);  // digits: not in PopSign (spec 6.4)
 let clips = null;        // {credit, clips: {gloss: {file, ...}}}, loaded on first open
 let entries = [];        // [{gloss, word, topic}], sorted A to Z
 let query = "";
@@ -65,7 +65,7 @@ function render() {
       el("i", { text: e.topic })));
   }
   if (!shown.length) list.append(el("p", { class: "gl-none", text: `No word matches "${query}".` }));
-  list.append(el("p", { class: "gl-note", text: "Numbers and letters are hand shapes, not in this dictionary yet." }));
+  list.append(el("p", { class: "gl-note", text: "Numbers 0 to 9 are hand shapes, not in this dictionary yet." }));
 
   const search = el("input", { class: "gl-search", placeholder: "Look up a word", value: query, autocomplete: "off" });
   search.addEventListener("input", () => {

@@ -1,4 +1,4 @@
-# 5. Wire panel
+# 4. Wire panel
 
 **Topic:** colors · **Widget:** Wires
 

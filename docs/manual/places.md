@@ -1,4 +1,4 @@
-# 14. Room lights
+# 13. Room lights
 
 **Topic:** places · **Widget:** Switches
 

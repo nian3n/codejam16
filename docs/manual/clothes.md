@@ -1,4 +1,4 @@
-# 4. Wardrobe panel
+# 3. Wardrobe panel
 
 **Topic:** clothes · **Widget:** Picture buttons
 

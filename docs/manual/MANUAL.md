@@ -3,25 +3,24 @@
 Find the page whose words match what the field agent signs. Each page has one topic.
 
 1. [Action panel](actions.md): actions
-2. [Letter keypad](alphabet.md): fingerspelling
-3. [Body scanner](body.md): body parts
-4. [Wardrobe panel](clothes.md): clothes
-5. [Wire panel](colors.md): colors
-6. [Family photos](family.md): family
-7. [Mood button](feelings.md): feelings
-8. [Snack dial](food.md): food
-9. [Home power board](home_things.md): things at home
-10. [Number keypad](numbers.md): numbers
-11. [Opposite levers](opposites.md): opposites
-12. [Crew badges](people_jobs.md): people and jobs
-13. [Animal panel](pets_farm.md): pets and farm animals
-14. [Room lights](places.md): places
-15. [School supplies](school.md): school things
-16. [Time panel](time_words.md): time words
-17. [Toy box](toys.md): toys and play
-18. [Travel dial](transport.md): transport
-19. [Sky dial](weather_sky.md): weather and sky
-20. [Safari panel](wild_animals.md): wild animals
+2. [Body scanner](body.md): body parts
+3. [Wardrobe panel](clothes.md): clothes
+4. [Wire panel](colors.md): colors
+5. [Family photos](family.md): family
+6. [Mood button](feelings.md): feelings
+7. [Snack dial](food.md): food
+8. [Home power board](home_things.md): things at home
+9. [Number keypad](numbers.md): numbers
+10. [Opposite levers](opposites.md): opposites
+11. [Crew badges](people_jobs.md): people and jobs
+12. [Animal panel](pets_farm.md): pets and farm animals
+13. [Room lights](places.md): places
+14. [School supplies](school.md): school things
+15. [Time panel](time_words.md): time words
+16. [Toy box](toys.md): toys and play
+17. [Travel dial](transport.md): transport
+18. [Sky dial](weather_sky.md): weather and sky
+19. [Safari panel](wild_animals.md): wild animals
 
 ---
 
@@ -47,29 +46,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 2. Letter keypad
-
-**Topic:** fingerspelling · **Widget:** Keypad · **Hard**
-
-## How to recognize it
-
-A keypad with letters and a small display that shows three letters.
-
-Words you can see on it: A, B, C, D, E, F, G, H, I, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y.
-
-The display is read from left to right.
-
-## Rules
-
-Read the rules in order. Do the first rule that is true.
-
-1. **If** the first letter is one of A, E, I, O, U: Type the display in reverse order.
-2. **If** the display shows B: Type the display in alphabet order.
-3. **Otherwise:** Type the display as shown.
-
----
-
-# 3. Body scanner
+# 2. Body scanner
 
 **Topic:** body parts · **Widget:** Picture buttons
 
@@ -92,7 +69,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 4. Wardrobe panel
+# 3. Wardrobe panel
 
 **Topic:** clothes · **Widget:** Picture buttons
 
@@ -114,7 +91,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 5. Wire panel
+# 4. Wire panel
 
 **Topic:** colors · **Widget:** Wires
 
@@ -137,7 +114,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 6. Family photos
+# 5. Family photos
 
 **Topic:** family · **Widget:** Picture buttons
 
@@ -159,7 +136,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 7. Mood button
+# 6. Mood button
 
 **Topic:** feelings · **Widget:** Big button · **Hard**
 
@@ -182,7 +159,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 8. Snack dial
+# 7. Snack dial
 
 **Topic:** food · **Widget:** Dial
 
@@ -204,7 +181,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 9. Home power board
+# 8. Home power board
 
 **Topic:** things at home · **Widget:** Switches
 
@@ -227,7 +204,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 10. Number keypad
+# 9. Number keypad
 
 **Topic:** numbers · **Widget:** Keypad
 
@@ -249,7 +226,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 11. Opposite levers
+# 10. Opposite levers
 
 **Topic:** opposites · **Widget:** Switches
 
@@ -271,7 +248,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 12. Crew badges
+# 11. Crew badges
 
 **Topic:** people and jobs · **Widget:** Picture buttons
 
@@ -293,7 +270,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 13. Animal panel
+# 12. Animal panel
 
 **Topic:** pets and farm animals · **Widget:** Picture buttons
 
@@ -315,7 +292,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 14. Room lights
+# 13. Room lights
 
 **Topic:** places · **Widget:** Switches
 
@@ -337,7 +314,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 15. School supplies
+# 14. School supplies
 
 **Topic:** school things · **Widget:** Picture buttons
 
@@ -359,7 +336,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 16. Time panel
+# 15. Time panel
 
 **Topic:** time words · **Widget:** Picture buttons · **Hard**
 
@@ -381,7 +358,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 17. Toy box
+# 16. Toy box
 
 **Topic:** toys and play · **Widget:** Picture buttons
 
@@ -403,7 +380,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 18. Travel dial
+# 17. Travel dial
 
 **Topic:** transport · **Widget:** Dial
 
@@ -425,7 +402,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 19. Sky dial
+# 18. Sky dial
 
 **Topic:** weather and sky · **Widget:** Dial
 
@@ -448,7 +425,7 @@ Read the rules in order. Do the first rule that is true.
 
 ---
 
-# 20. Safari panel
+# 19. Safari panel
 
 **Topic:** wild animals · **Widget:** Picture buttons
 

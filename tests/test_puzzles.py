@@ -15,8 +15,8 @@ ICONS = json.loads(config.ICONS_FILE.read_text(encoding="utf-8"))
 
 
 def test_pool_has_20_unique_topics():
-    assert len(POOL) == 20
-    assert len({s.topic for s in POOL.values()}) == 20
+    assert len(POOL) == 19  # the alphabet puzzle was removed: the game uses digits, not letters
+    assert len({s.topic for s in POOL.values()}) == 19
 
 
 def test_no_gloss_in_two_pools():
@@ -115,7 +115,7 @@ def test_draw_is_seeded():
 
 def test_manual_pages_build():
     pages = all_pages()
-    assert len(pages) == 20
+    assert len(pages) == 19
     for p in pages:
         text = page_markdown(p)
         assert p["title"] in text and "Otherwise" in text

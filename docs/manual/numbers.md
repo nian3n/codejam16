@@ -1,4 +1,4 @@
-# 10. Number keypad
+# 9. Number keypad
 
 **Topic:** numbers · **Widget:** Keypad
 

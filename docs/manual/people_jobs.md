@@ -1,4 +1,4 @@
-# 12. Crew badges
+# 11. Crew badges
 
 **Topic:** people and jobs · **Widget:** Picture buttons
 

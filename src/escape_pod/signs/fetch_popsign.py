@@ -12,8 +12,8 @@ an atypical take with long empty stretches), and ffmpeg shrinks it to a small,
 silent, web-friendly MP4 in signs/clips/<gloss>.mp4.
 
 License: CC BY 4.0. CREDIT below must show wherever the clips show (glossary,
-README, credits screen). Numbers and letters are not in PopSign; they use our
-own handshape model (spec 6.4).
+README, credits screen). The digits 0-9 are not in PopSign; they use our own
+handshape model (spec 6.4).
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ SPLIT = "test"          # the smallest split (about 550 MB per sign); we read on
 CANDIDATES = 3
 # Our gloss -> PopSign's file name, where they differ (PopSign keeps the label map's "TV").
 POPSIGN_NAME = {"tv": "TV"}
-HANDSHAPE_PUZZLES = {"numbers", "alphabet"}
+HANDSHAPE_PUZZLES = {"numbers"}
 CREDIT = ("Sign videos: PopSign ASL v1.0 (Starner, Sridhar, So, Deshpande et al., "
           "Georgia Tech and DPAN), CC BY 4.0, https://signdata.cc.gatech.edu")
 

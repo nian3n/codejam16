@@ -1,4 +1,4 @@
-# 7. Mood button
+# 6. Mood button
 
 **Topic:** feelings · **Widget:** Big button · **Hard**
 

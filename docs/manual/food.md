@@ -1,4 +1,4 @@
-# 8. Snack dial
+# 7. Snack dial
 
 **Topic:** food · **Widget:** Dial
 

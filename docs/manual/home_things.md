@@ -1,4 +1,4 @@
-# 9. Home power board
+# 8. Home power board
 
 **Topic:** things at home · **Widget:** Switches
 

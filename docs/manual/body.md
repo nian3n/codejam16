@@ -1,4 +1,4 @@
-# 3. Body scanner
+# 2. Body scanner
 
 **Topic:** body parts · **Widget:** Picture buttons
 

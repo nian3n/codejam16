@@ -1,4 +1,4 @@
-# 6. Family photos
+# 5. Family photos
 
 **Topic:** family · **Widget:** Picture buttons
 
