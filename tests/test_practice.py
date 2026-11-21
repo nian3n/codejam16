@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from escape_pod.vision.handshape import DIGITS
 from escape_pod.vision.landmarks import LEFT, N_POINTS
 from escape_pod.web import practice, server
 
@@ -72,7 +73,7 @@ def test_guess_returns_the_top_three_game_words(monkeypatch):
 def test_warmup_loads_the_model_once(monkeypatch):
     loads = []
     monkeypatch.setattr(practice, "model", lambda: loads.append(1) or SimpleNamespace(glosses=["cat"]))
-    assert client.get("/api/practice/warmup").json() == {"ready": True}
+    assert client.get("/api/practice/warmup").json()["ready"] is True
     assert loads
 
 
@@ -82,3 +83,24 @@ def test_warmup_without_the_model_says_so(monkeypatch):
     monkeypatch.setattr(practice, "model", missing)
     body = client.get("/api/practice/warmup").json()
     assert body["ready"] is False and "download-models" in body["detail"]
+
+
+@pytest.mark.parametrize("trained", [False, True])
+def test_digit_captures_use_the_handshape_model_or_report_the_fallback(monkeypatch, trained):
+    def digits():
+        if not trained:
+            raise FileNotFoundError("models/handshape.npz")
+        return SimpleNamespace(classes=DIGITS, scores=lambda _: {digit: -float(digit) for digit in DIGITS})
+
+    monkeypatch.setattr(practice, "hand_model", digits)
+    monkeypatch.setattr(practice, "warm_model", lambda: {"ready": False})
+    assert client.get("/api/practice/warmup").json()["digits_ready"] is trained
+    clip = np.full((3, N_POINTS, 3), np.nan, dtype="<f4")
+    clip[:, LEFT] = 0.5
+    response = client.post("/api/practice/guess", params={"words": ",".join(DIGITS)},
+                           content=clip.tobytes(), headers={"Content-Type": "application/octet-stream"})
+    if trained:
+        assert response.status_code == 200
+        assert [guess["gloss"] for guess in response.json()["guesses"]] == ["0", "1", "2"]
+    else:
+        assert response.status_code == 503 and "Type the digits" in response.json()["detail"]

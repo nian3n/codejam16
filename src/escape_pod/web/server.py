@@ -36,6 +36,7 @@ from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
 from escape_pod.web.ice import ice_servers
+from escape_pod.web.mission import Mission
 from escape_pod.web.practice import router as practice_router, warm_model
 
 STATIC = config.STATIC_DIR
@@ -87,6 +88,7 @@ class Room:
     level: str = "intermediate"
     seed: int = 0
     round_id: str | None = None
+    mission: Mission | None = None
     signed_modules: set[int] = field(default_factory=set)
     replied_modules: set[int] = field(default_factory=set)
     modules: list[Module] = field(default_factory=list)
@@ -176,13 +178,16 @@ def view(room: Room, me: Player) -> dict:
         "debug": app.state.debug,
         "solo": room.solo,
     }
-    if room.bot is not None:
+    if room.mission is not None:
+        v["mission"] = room.mission.view(me.role)
+    if room.bot is not None and room.mission is not None and room.mission.stage == "modules":
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
         v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
-    if room.modules and (me.role == "defuser" or room.phase in ("escaped", "boom")):
+    if (room.modules and room.mission is not None and room.mission.stage == "modules"
+            and (me.role == "defuser" or room.phase in ("escaped", "boom"))):
         v["bomb"] = [{"id": m.spec.id, "title": m.spec.title, "widget": m.spec.widget,
                       "target_words": m.spec.target_words, "pool": m.spec.pool,
                       "facts": shown_facts(m), "defused": m.defused,
@@ -201,12 +206,14 @@ def shown_facts(m) -> dict:
 
 async def broadcast(room: Room):
     for p in list(room.players.values()):
-        if p.ws is None:
+        ws = p.ws
+        if ws is None:
             continue
         try:
-            await p.ws.send_json(view(room, p))
+            await ws.send_json(view(room, p))
         except Exception:
-            p.ws = None
+            if p.ws is ws:
+                p.ws = None
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +235,13 @@ def arm(room: Room) -> None:
     room.deadline = time.monotonic() + room.timer_s
 
 
+def expire_if_due(room: Room) -> bool:
+    if room.phase != "playing" or not room.armed or room.remaining() > 0:
+        return False
+    end_game(room, "boom", "Time ran out. Detonation!")
+    return True
+
+
 async def watch_timer(room: Room):
     waited = 0.0
     while room.phase == "playing" and not room.armed:
@@ -238,15 +252,16 @@ async def watch_timer(room: Room):
             await broadcast(room)
     while room.phase == "playing":
         await asyncio.sleep(0.25)
-        if room.phase == "playing" and room.remaining() <= 0:
-            end_game(room, "boom", "Time ran out. Detonation!")
+        if expire_if_due(room):
             await broadcast(room)
 
 
 def start_game(room: Room):
     level = config.LEVELS[room.level]
     room.seed = random.randrange(1_000_000)
-    room.modules = draw(random.Random(room.seed), level)
+    rng = random.Random(room.seed)
+    room.modules = draw(rng, level)
+    room.mission = Mission.draw(rng)
     room.round_id = uuid.uuid4().hex
     room.signed_modules.clear()
     room.replied_modules.clear()
@@ -255,10 +270,10 @@ def start_game(room: Room):
     room.phase = "playing"
     room.timer_s = float(level.timer_s or 600)
     room.armed = False  # the clock starts on {"type": "ready"} (see arm)
-    room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
+    room.say({"kind": "event", "text": "Mission started. Confirm the combination to open the case."})
     if room.solo:
         room.bot = HqBot()  # a fresh bot per game: no page from the last game
-        bot_say(room, room.bot.greeting())
+        bot_say(room, room.bot.case_lock_prompt())
     room.timer_task = asyncio.create_task(watch_timer(room))
 
 
@@ -269,6 +284,7 @@ def back_to_lobby(room: Room, why: str | None = None):
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
     room.round_id = None
+    room.mission = None
     stop_bot(room)
     room.bot = None
     if why:
@@ -329,6 +345,13 @@ def stop_bot(room: Room) -> None:
     room.bot_task = None
 
 
+def strike(room: Room) -> None:
+    room.strikes += 1
+    room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
+    if room.strikes >= config.MAX_STRIKES:
+        end_game(room, "boom", "Three strikes. Detonation!")
+
+
 def act(room: Room, index: int, action: Action) -> bool | None:
     """True: defused. False: a strike. None: nothing to judge yet (the module was already
     defused, or the click was a right step of a longer answer, see Module.apply)."""
@@ -351,10 +374,7 @@ def act(room: Room, index: int, action: Action) -> bool | None:
         if all(x.defused for x in room.modules):
             end_game(room, "escaped", "All modules defused. Device neutralized.")
     else:
-        room.strikes += 1
-        room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
-        if room.strikes >= config.MAX_STRIKES:
-            end_game(room, "boom", "Three strikes. Detonation!")
+        strike(room)
     return ok
 
 
@@ -363,6 +383,38 @@ def clean_glosses(raw) -> list[str]:
         return []
     out = [str(g).strip().lower()[:MAX_GLOSS_LEN] for g in raw[:MAX_SIGNS]]
     return [g for g in out if g]
+
+
+def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
+    revision = msg.get("mission_revision")
+    if (not room.armed or msg.get("round_id") != room.round_id
+            or type(revision) is not int or revision != mission.revision):
+        return False
+    stage = mission.stage
+    if msg["type"] == "signs":
+        glosses = mission.confirm(clean_glosses(msg.get("glosses")))
+        if glosses:
+            room.say({"kind": "signs", "from": me.name, "glosses": glosses, "mission_stage": stage})
+        if mission.stage != stage:
+            room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
+            if room.bot is not None:
+                bot_say(room, room.bot.wire_tray_prompt(mission.position_order[0]))
+        return True
+
+    index = msg.get("wire")
+    if (stage != "wire_tray" or type(index) is not int
+            or not 0 <= index < len(mission.colors) or index in mission.cuts):
+        return False
+    outcome = mission.cut(index)
+    if outcome == "strike":
+        strike(room)
+    elif outcome == "cut" and mission.stage == "modules":
+        room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
+        if room.bot is not None:
+            bot_say(room, room.bot.greeting())
+    elif outcome == "cut" and room.bot is not None:
+        bot_say(room, room.bot.wire_tray_prompt(mission.position_order[len(mission.cuts)]))
+    return True
 
 
 async def relay_rtc(room: Room, me: Player, data) -> None:
@@ -391,6 +443,10 @@ async def handle(room: Room, me: Player, msg: dict):
             # Until the browser confirms storage, a reconnect can replay these credits.
             me.practice_credits.difference_update(credit for credit in credits if isinstance(credit, str))
         return
+    if kind in ("signs", "wire_cut", "act") and expire_if_due(room):
+        await broadcast(room)
+        return
+    mission = room.mission
     if kind == "leave":
         leave(room, me)
     elif kind == "rtc":
@@ -404,7 +460,13 @@ async def handle(room: Room, me: Player, msg: dict):
         room.level = msg["level"]
     elif kind == "start" and room.can_start():
         start_game(room)
+    elif (kind in ("signs", "wire_cut") and room.phase == "playing" and me.role == "defuser"
+          and mission is not None and mission.stage != "modules"):
+        if not handle_gate(room, mission, me, msg):
+            return
     elif kind == "signs" and room.phase == "playing" and me.role == "defuser":
+        if "mission_revision" in msg or msg.get("round_id", room.round_id) != room.round_id:
+            return
         glosses = clean_glosses(msg.get("glosses"))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses})
@@ -424,6 +486,7 @@ async def handle(room: Room, me: Player, msg: dict):
             room.replied_modules.update(room.signed_modules)
             room.signed_modules.clear()
     elif (kind == "act" and room.phase == "playing" and me.role == "defuser"
+          and mission is not None and mission.stage == "modules"
           and msg.get("round_id", room.round_id) == room.round_id):
         i = msg.get("module")
         a = msg.get("action")
@@ -436,7 +499,8 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None and result is not None and room.phase == "playing":
                 bot = room.bot
                 bot_later(room, lambda: bot.on_result(result))
-    elif kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed:
+    elif (kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed
+          and msg.get("round_id", room.round_id) == room.round_id):
         arm(room)
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
@@ -542,6 +606,8 @@ async def ws_room(ws: WebSocket, code: str):
     try:
         while True:
             msg = await ws.receive_json()
+            if me.ws is not ws:
+                break
             if isinstance(msg, dict):
                 room.last_seen = time.monotonic()
                 await handle(room, me, msg)

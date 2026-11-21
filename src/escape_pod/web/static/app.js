@@ -13,6 +13,8 @@ import { bindLobby, renderLobby } from "./lobby.js";
 import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
+import { clearSignDraft } from "./game_signs.js";
+import { liftMissionLayer, renderMission } from "./mission.js";
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { renderInit } from "./init.js";
@@ -203,13 +205,16 @@ function onState(s) {
   if (s.phase === "lobby") {
     if (exitArmed) disarmExit();
     closeGlossary();  // the glossary is for games only
+    if (prev?.phase !== "lobby" && prev?.me.role === "defuser") clearSignDraft();
+    $("#stage-effect").replaceChildren();
     showScreen("lobby");
     renderLobby();
     placeDock($("#lobby-video"));
   } else {
     showScreen("game");
-    if (!prev || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
-    renderGame();
+    if (!prev || prev.phase === "lobby" || prev.round_id !== s.round_id || prev.me.role !== s.me.role) setupGame();
+    else if (s.me.role === "defuser" && prev.mission?.stage !== s.mission?.stage) clearSignDraft();
+    renderGame(prev);
     placeDock($(".side"));
   }
   onRoomState(s);
@@ -243,12 +248,15 @@ function setupGame() {
   if (s.debug) bar.append(el("a", { class: "btn small dbg", href: `/api/rooms/${s.code}/answer-key`, target: "_blank", text: "Answer key (debug)" }));
 }
 
-function renderGame() {
+function renderGame(previous) {
   const s = store.state;
+  $("#game").classList.toggle("mission-gate-active", !!s.mission && s.mission.stage !== "modules");
   $("#top-strikes").replaceChildren(...Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") })));
   $("#top-progress").textContent = s.progress ? `Defused ${s.progress.defused} / ${s.progress.total}` : "";
   $("#exit-game").classList.toggle("hidden", s.phase !== "playing");
-  if (s.me.role === "defuser") renderBomb();
+  liftMissionLayer(previous, s);
+  if (s.mission && s.mission.stage !== "modules") renderMission(s);
+  else if (s.me.role === "defuser") renderBomb();
   // Re-render the manual only when new messages arrive, so the page keeps its scroll.
   else if (store.local.chatSeen !== s.chat.length || !$("#stage .manual")) renderManual();
   renderFeed();

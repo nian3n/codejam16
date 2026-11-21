@@ -12,6 +12,14 @@ import { $, el, send, store } from "./core.js";
 import { startTracker } from "./tracker.js";
 
 const MARK = { wait: "…", ok: "✓", fail: "!" };
+let modelStatus;
+
+export function signModels() {
+  return modelStatus ??= fetch("/api/practice/warmup").then((response) => response.json()).catch(() => {
+    modelStatus = null;
+    return { ready: false, digits_ready: false };
+  });
+}
 
 function row(label, state, failText) {
   return el("li", { class: `init-step ${state}` }, el("span", { class: "mark", text: MARK[state] }),
@@ -33,14 +41,15 @@ function draw() {
 }
 
 async function run() {
+  const roundId = store.state.round_id;
   const st = (store.local.init = { tracker: "wait", model: "wait" });
   const done = (key) => (ok) => { st[key] = ok ? "ok" : "fail"; draw(); };
   await Promise.all([
     startTracker().then(() => true, () => false).then(done("tracker")),
-    fetch("/api/practice/warmup").then((r) => r.json()).then((b) => !!b.ready, () => false).then(done("model")),
+    signModels().then((status) => !!status.ready).then(done("model")),
   ]);
   await new Promise((r) => setTimeout(r, 400));  // long enough to see the ticks
-  if (store.local.init === st) send({ type: "ready" });
+  if (store.local.init === st) send({ type: "ready", round_id: roundId });
 }
 
 /** Show the screen while the game waits for the clock. app.js calls it after every state. */

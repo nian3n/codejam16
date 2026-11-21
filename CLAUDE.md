@@ -170,6 +170,8 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}` | anyone | lobby |
 | `{"type": "start"}` | anyone, when both roles are taken | lobby |
 | `{"type": "signs", "glosses": ["cat", "dog"]}` | defuser | playing |
+| `{"type": "signs", "glosses": ["0"], "round_id": ..., "mission_revision": ...}` | defuser | armed, case lock or wire tray |
+| `{"type": "wire_cut", "wire": 0, "round_id": ..., "mission_revision": ...}` | defuser | armed, wire tray. Wire indexes count from zero, top to bottom |
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
 | `{"type": "ready"}`: the agent's hand tracker and the word model are loaded. The clock starts (`armed` becomes true). Without it, the clock starts after 45 s | defuser | playing |
@@ -181,6 +183,8 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 The server forwards an `rtc` message to the other player as `{"type": "rtc", "data": ...}`, without a state broadcast. It drops messages over 64 KB. The state has `me.polite` (exactly one player is polite, for WebRTC "perfect negotiation") and `you: true` on the player's own entry in `players`.
 
 After each change, the server sends each player its own `{"type": "state", ...}`. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
+
+**Mission:** While a round exists, `state.mission` has `stage` (`case_lock`, `wire_tray`, or `modules`), `revision`, `lock_confirmed`, and `cut_count`. The defuser also gets `feedback` and the active gate's private fields (`case_code` at the lock, or `wires`, `cuts`, and `confirmed_color` at the tray). The expert gets the manual's `wire_rule` at the tray. Gate inputs use the round's `round_id` and the most recently acknowledged `mission.revision`. Gate sign chat entries also carry `mission_stage`. The module board becomes available after the tray. Both gates share the board's timer and strikes.
 
 **Solo rooms:** `POST /api/rooms` with the body `{"solo": true}` makes a room for one player. The player is the defuser at once, and a second player gets the error "This is a solo room." The scripted bot (`brain/hq_bot.py`) takes the HQ seat, but it is not in `players`. Its lines are chat entries `{"kind": "say", "from": "HQ bot", "text": ...}`. They follow each `signs` message and each action that defuses a module or costs a strike. In a solo room, the server ignores `role` and `say`. The state always has `solo` (true or false). In a solo game, it also has `bot_stage`: `"module"` (the bot waits for one item of a module) or `"details"` (the bot waits for the items of the open page).
 

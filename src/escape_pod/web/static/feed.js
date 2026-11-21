@@ -13,7 +13,7 @@ export function renderFeed() {
     if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (HQ)` }), m.text);
     const box = el("div", { class: "msg signs" }, el("span", { class: "who", text: `${m.from} signed` }),
       el("div", { class: "chips" }, m.glosses.map((g) => el("span", { class: "chip", text: g.toUpperCase() }))));
-    if (state.me.role === "expert") {
+    if (state.me.role === "expert" && !m.mission_stage) {
       const hits = pagesFor(m.glosses);
       box.append(el("div", { class: "page-links" }, hits.length ? "Pages with these words:" : "No page has these words.",
         hits.map((p) => el("button", { class: "btn small", text: p.title, onclick: () => openPage(p.id) }))));
