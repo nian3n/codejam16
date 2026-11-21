@@ -39,6 +39,12 @@ async function boot() {
     const r = await fetch("/api/rooms", { method: "POST" }).then((r) => r.json());
     connect(r.code);
   };
+  $("#create-solo").onclick = async () => {
+    if (!saveName()) return;
+    const r = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ solo: true }) }).then((r) => r.json());
+    connect(r.code);
+  };
   $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
   $("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#join").click(); });
   $("#again").onclick = () => send({ type: "again" });
@@ -168,7 +174,7 @@ function setupGame() {
   const s = store.state;
   $("#game-code").textContent = s.code;
   $("#game-role").textContent = s.me.role === "defuser" ? "🕵️ Field agent" : "🎧 HQ handler";
-  const by = (role) => s.players.find((p) => p.role === role)?.name || "?";
+  const by = (role) => s.players.find((p) => p.role === role)?.name || (s.solo && role === "expert" ? "bot" : "?");
   $("#op-line").textContent = `Operation KMNE-${s.code} · Agent ${by("defuser")} · HQ ${by("expert")}`;
   $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
   if (s.me.role === "defuser") preloadSignTracker();  // in a worker: never freezes the page

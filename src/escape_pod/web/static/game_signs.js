@@ -68,6 +68,7 @@ export function signComposer() {
       el("button", { class: "btn primary", id: "sign-record", text: "Start signing (Space)", onclick: toggleRecording }),
       el("button", { class: "btn small", id: "sign-clear", text: "Clear", onclick: () => { store.local.signChips = []; renderSignChips(); } })),
     el("div", { class: "label sign-note", id: "sign-note" }),
+    el("div", { class: "sign-frame hidden", id: "sign-frame" }),
     el("div", { class: "seq-chips", id: "sign-chips" }),
     el("button", { class: "btn primary", id: "send-signs", text: "Send to HQ", onclick: sendSigns }),
     el("details", { class: "type-instead" },
@@ -212,6 +213,11 @@ export function renderSignChips() {
   $("#send-signs").disabled = !playing || busy || !list.some((c) => c.state === "done");
   $("#sign-clear").disabled = !list.length;
   $("#sign-note").textContent = note;
+  // Solo: the bot's template around the chips. "module": one item names the module.
+  // "details": the items the bot asked for.
+  const frame = $("#sign-frame");
+  frame.classList.toggle("hidden", !store.state?.solo || !store.state.bot_stage);
+  frame.textContent = store.state?.bot_stage === "details" ? "Here is what I see:" : "I need help with:";
 }
 
 // Space starts and stops a recording, as in solo practice. Not while typing.

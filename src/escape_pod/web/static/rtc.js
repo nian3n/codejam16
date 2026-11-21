@@ -22,6 +22,7 @@ let ignoreOffer = false;
 let wanted = false;          // true once two players are in the room
 let cameraError = "";
 let otherOnline = false;     // from the server state: is the other player's tab connected?
+let solo = false;            // a solo room: the camera feeds the sign recognizer only, no peer
 // Resolves when the camera request has finished (granted or not). onRtc waits for it:
 // otherwise an offer from a player whose camera is already on makes us build the
 // connection before our camera is ready, and we would only receive, never send.
@@ -66,6 +67,14 @@ export function placeDock(parent) {
 
 // ---------------------------------------------------------------- state from the server
 export function onRoomState(s) {
+  solo = !!s.solo;
+  dock.classList.toggle("solo", solo);
+  if (solo) {
+    // The bot has no camera. Open ours once, for signing, and show it full size.
+    setStatus(cameraError);
+    if (!wanted) { wanted = true; startCamera(false); }
+    return;
+  }
   const other = s.players.find((p) => !p.you) || null;
   otherOnline = !!other?.online;
   if (!other && wanted) {
@@ -118,6 +127,7 @@ async function startCamera(retry) {
   camBtn.classList.toggle("hidden", !localStream);
   localVideo.classList.toggle("hidden", !localStream);
   if (cameraError) setStatus(cameraError);
+  if (solo) return;  // nobody to call: the self-view is the whole dock
   // Without a camera we still connect, to receive the other player's video.
   if (retry && pc) resetPc();
   else ensurePc();
