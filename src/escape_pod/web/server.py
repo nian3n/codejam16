@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import random
 import secrets
 import time
@@ -31,11 +32,15 @@ from escape_pod.manual.build import all_pages
 from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
+from escape_pod.web.ice import ice_servers
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
 ROLES = ("defuser", "expert")
 MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
+MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
+ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
+MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
 app = FastAPI(title="Escape Pod")
 app.state.debug = False
@@ -63,6 +68,7 @@ class Room:
     ended_left: float = 0.0
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
+    last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
 
     def remaining(self) -> float:
         if self.phase == "playing":
@@ -84,15 +90,35 @@ class Room:
 rooms: dict[str, Room] = {}
 
 
+def prune_rooms(now: float | None = None) -> None:
+    """Forget rooms nobody has been connected to for ROOM_IDLE_S.
+
+    On a public server the rooms dict would otherwise grow forever. A room with a
+    player online is never pruned, however old it is.
+    """
+    now = time.monotonic() if now is None else now
+    for code, room in list(rooms.items()):
+        online = any(p.ws is not None for p in room.players.values())
+        if not online and now - room.last_seen > ROOM_IDLE_S:
+            if room.timer_task:
+                room.timer_task.cancel()
+            del rooms[code]
+
+
 # ---------------------------------------------------------------------------
 # Views: what each player is allowed to see
 # ---------------------------------------------------------------------------
 def view(room: Room, me: Player) -> dict:
+    other = next((p for p in room.players.values() if p.pid != me.pid), None)
     v = {
         "type": "state",
         "code": room.code,
-        "me": {"pid": me.pid, "name": me.name, "role": me.role},
-        "players": [{"name": p.name, "role": p.role, "online": p.ws is not None} for p in room.players.values()],
+        # polite: WebRTC "perfect negotiation" needs exactly one polite peer. Comparing
+        # the two pids gives each browser a different answer without any extra message.
+        "me": {"pid": me.pid, "name": me.name, "role": me.role,
+               "polite": other is not None and me.pid > other.pid},
+        "players": [{"name": p.name, "role": p.role, "online": p.ws is not None, "you": p.pid == me.pid}
+                    for p in room.players.values()],
         "phase": room.phase,
         "level": room.level,
         "levels": {k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
@@ -179,8 +205,27 @@ def clean_glosses(raw) -> list[str]:
     return [g for g in out if g]
 
 
+async def relay_rtc(room: Room, me: Player, data) -> None:
+    """Pass WebRTC set-up messages (offer, answer, ICE candidates) to the other player.
+
+    Only these small text messages go through the server. The video itself flows
+    browser to browser, so the server never receives or stores a webcam frame.
+    """
+    if not isinstance(data, dict) or len(json.dumps(data)) > MAX_RTC_BYTES:
+        return
+    for p in room.players.values():
+        if p.pid != me.pid and p.ws is not None:
+            try:
+                await p.ws.send_json({"type": "rtc", "data": data})
+            except Exception:
+                p.ws = None
+
+
 async def handle(room: Room, me: Player, msg: dict):
     kind = msg.get("type")
+    if kind == "rtc":
+        await relay_rtc(room, me, msg.get("data"))
+        return  # no state change, so no broadcast
     if kind == "role" and room.phase == "lobby":
         role = msg.get("role")
         if role in ROLES and not room.role_taken(role, me.pid):
@@ -216,9 +261,22 @@ async def handle(room: Room, me: Player, msg: dict):
 # ---------------------------------------------------------------------------
 # HTTP + WebSocket routes
 # ---------------------------------------------------------------------------
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])  # Render probes the port with HEAD
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/healthz")
+def healthz():
+    """For the host's health check (render.yaml)."""
+    return {"ok": True, "rooms": len(rooms)}
+
+
+@app.get("/api/ice")
+async def ice():
+    """STUN/TURN servers for WebRTC. TURN logins come from Metered when etc/.env has
+    METERED_APP and METERED_API_KEY; the API key itself never reaches the browser."""
+    return await ice_servers()
 
 
 @app.get("/api/manual")
@@ -233,6 +291,9 @@ def icons():
 
 @app.post("/api/rooms")
 def create_room():
+    prune_rooms()
+    if len(rooms) >= MAX_ROOMS:
+        raise HTTPException(503, "The server is full. Try again later.")
     while True:
         code = "".join(secrets.choice(CODE_CHARS) for _ in range(4))
         if code not in rooms:
@@ -280,18 +341,21 @@ async def ws_room(ws: WebSocket, code: str):
         except Exception:
             pass
     me.ws = ws
+    room.last_seen = time.monotonic()
     await ws.send_json({"type": "welcome", "pid": me.pid})
     await broadcast(room)
     try:
         while True:
             msg = await ws.receive_json()
             if isinstance(msg, dict):
+                room.last_seen = time.monotonic()
                 await handle(room, me, msg)
     except (WebSocketDisconnect, ValueError, RuntimeError):
         pass
     finally:
         # Rooms stay in memory after everyone leaves, so a page reload can rejoin.
-        # Fine for a hackathon; a long-running server would expire idle rooms.
+        # prune_rooms() forgets them ROOM_IDLE_S later.
+        room.last_seen = time.monotonic()
         if me.ws is ws:
             me.ws = None
             await broadcast(room)
@@ -301,12 +365,31 @@ def main():
     import uvicorn
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 so other laptops on the Wi-Fi can join")
-    ap.add_argument("--port", type=int, default=8000)
+    # HOST / PORT env vars: cloud hosts (Render, Fly) tell the app which port to use this way.
+    ap.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"),
+                    help="use 0.0.0.0 so other laptops on the Wi-Fi can join")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     ap.add_argument("--debug", action="store_true", help="enable the answer key at /api/rooms/<code>/answer-key")
+    ap.add_argument("--https", action="store_true",
+                    help="serve HTTPS with a self-signed certificate (browsers allow the camera only on "
+                         "localhost or HTTPS, so a second laptop needs this)")
     a = ap.parse_args()
     app.state.debug = a.debug
-    uvicorn.run(app, host=a.host, port=a.port)
+    ssl = {}
+    if a.https:
+        from escape_pod.web.tls import ensure_cert
+
+        cert, key = ensure_cert()
+        ssl = {"ssl_certfile": str(cert), "ssl_keyfile": str(key)}
+    scheme = "https" if a.https else "http"
+    if a.host == "0.0.0.0":
+        from escape_pod.web.tls import lan_ips
+
+        for ip in lan_ips():
+            print(f"Other players on this Wi-Fi: {scheme}://{ip}:{a.port}", flush=True)
+        if not a.https:
+            print("Note: browsers block the camera on http://<ip>. Add --https for video between laptops.", flush=True)
+    uvicorn.run(app, host=a.host, port=a.port, **ssl)
 
 
 if __name__ == "__main__":

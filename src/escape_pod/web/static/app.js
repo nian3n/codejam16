@@ -14,6 +14,7 @@ import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { updateFaces } from "./widgets/big_button.js";
+import { onRoomState, onRtc, placeDock } from "./rtc.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -69,6 +70,7 @@ function connect(c) {
       showScreen("home");
       $("#home-error").textContent = m.text;
     } else if (m.type === "state") onState(m);
+    else if (m.type === "rtc") onRtc(m.data);
   };
   ws.onclose = () => { if (!closedOnPurpose && store.state) setTimeout(() => connect(code), 1500); };
 }
@@ -84,11 +86,14 @@ function onState(s) {
   if (s.phase === "lobby") {
     showScreen("lobby");
     renderLobby();
+    placeDock($("#lobby-video"));
   } else {
     showScreen("game");
     if (!prev || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
     renderGame();
+    placeDock($(".side"));
   }
+  onRoomState(s);
   const over = s.phase === "escaped" || s.phase === "boom";
   $("#end").classList.toggle("hidden", !over);
   if (over) renderEnd();

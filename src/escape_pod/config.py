@@ -16,6 +16,27 @@ STATIC_DIR = PACKAGE_DIR / "web" / "static"
 MANUAL_PAGES_DIR = ROOT / "docs" / "manual"
 ETC_DIR = ROOT / "etc"
 ENV_FILE = ETC_DIR / ".env"
+TLS_DIR = ETC_DIR / "tls"                # self-signed cert for --https (git-ignored with etc/)
+
+# WebRTC video between the two players. On one Wi-Fi the browsers find each other
+# without help. A public STUN server lets them connect across different networks; it
+# sees only the players' public IP addresses, never the video. Set ICE_SERVERS = []
+# to stay fully local.
+ICE_SERVERS = [{"urls": "stun:stun.l.google.com:19302"}]
+# TURN relay (web/ice.py): Metered Open Relay. Set both in etc/.env or the host's env.
+METERED_APP_ENV = "METERED_APP"
+METERED_API_KEY_ENV = "METERED_API_KEY"
+# Or a fixed TURN login (Metered dashboard > TURN credentials). TURN_URLS is optional,
+# comma-separated; the default is Metered's global relay.
+TURN_USERNAME_ENV = "TURN_USERNAME"
+TURN_CREDENTIAL_ENV = "TURN_CREDENTIAL"
+TURN_URLS_ENV = "TURN_URLS"
+METERED_TURN_URLS = [
+    "turn:global.relay.metered.ca:80",
+    "turn:global.relay.metered.ca:80?transport=tcp",
+    "turn:global.relay.metered.ca:443",
+    "turns:global.relay.metered.ca:443?transport=tcp",
+]
 
 # Secrets: put them in etc/.env (git-ignored; copy etc/.env.example). Never in code.
 # The provider is not chosen yet, so the variable name is generic.

@@ -42,7 +42,7 @@ Each puzzle has its own topic, so the signs alone identify the manual page. Sign
 5. **Learner-friendly failure.** An unclear description gets a question, never a wrong instruction.
 6. **Nothing blocks the server's event loop.** Run recognition, retrieval and LLM calls in a worker, and send the results when they are ready.
 7. **One topic per puzzle**, and every puzzle word must be recognizable (§13).
-8. **Webcam frames never leave the player's laptop.** No part of the game saves them, unless the player opts in to evaluation recordings.
+8. **Webcam video goes only to the other player, peer to peer (WebRTC).** The game server never receives, relays or stores a frame. It passes only the small set-up messages. No part of the game saves video, unless the player opts in to evaluation recordings.
 
 ---
 
@@ -54,6 +54,10 @@ Each puzzle has its own topic, so the signs alone identify the manual page. Sign
 | Packages | `uv` (`pyproject.toml` and `uv.lock`) |
 | Server | `fastapi` with WebSockets, run by `uvicorn` |
 | Client | plain HTML, CSS and JavaScript ES modules. No build step, no framework |
+| Video | WebRTC between the two browsers (`web/static/rtc.js`). Set-up messages go over the game WebSocket |
+| Video relay | TURN from Metered Open Relay (free tier), through `/api/ice` (`web/ice.py`). Without Metered keys: STUN only (`config.ICE_SERVERS`) |
+| Hosting | Render (free web service) from `render.yaml` and the `Dockerfile`. One instance only, because rooms live in memory |
+| HTTPS | the host adds HTTPS. For LAN play, `--https` makes a self-signed certificate (`cryptography`) in `etc/tls/`. Browsers allow the camera only on HTTPS or `localhost` |
 | Puzzle models | `pydantic` v2 |
 | Icons | emoji placeholders in `assets/icons.json`. Replace them with CC0 PNGs (Kenney) later |
 | Landmarks | MediaPipe Holistic (543 landmarks per frame: face, both hands, pose). Where it runs is open (§6.0) |
@@ -168,10 +172,13 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
 | `{"type": "again"}` | anyone | escaped or boom |
+| `{"type": "rtc", "data": {"sid": ..., "description" \| "candidate": ...}}` | anyone | any |
+
+The server forwards an `rtc` message to the other player as `{"type": "rtc", "data": ...}`, without a state broadcast. It drops messages over 64 KB. The state has `me.polite` (exactly one player is polite, for WebRTC "perfect negotiation") and `you: true` on the player's own entry in `players`.
 
 After each change, the server sends each player its own `{"type": "state", ...}`. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
 
-HTTP: `GET /api/manual`, `GET /api/icons`, `POST /api/rooms` → `{"code"}`. Also `GET /api/rooms/<CODE>/answer-key`, which works only with `--debug`.
+HTTP: `GET /api/manual`, `GET /api/icons`, `POST /api/rooms` → `{"code"}`, `GET /api/ice` (STUN/TURN servers) and `GET /healthz`. Also `GET /api/rooms/<CODE>/answer-key`, which works only with `--debug`. The server forgets a room 2 hours after its last player leaves.
 
 ### 4.3 Shared models
 
@@ -439,8 +446,9 @@ The expert's manual already highlights the pages that contain the signed words (
 
 - **Home:** the player types a name, then creates a room or types a 4-letter code to join one. An invite link `/?room=CODE` fills in the code.
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role.
-- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the webcam (typed signs for now), the signs not sent yet, "Send to expert" and the message feed.
-- **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
+- **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
+- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the typed signs not sent yet (until recognition is in), "Send to expert" and the message feed.
+- **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red.
 - **End:** "POD LAUNCHED!" or "BOOM", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
@@ -473,7 +481,14 @@ The expert's manual already highlights the pages that contain the signed words (
 
 `src/escape_pod/config.py` holds the paths, `LEVELS`, `MAX_STRIKES` and `LLM_API_KEY_ENV`. Later fields: `HELP_COSTS_S`, `SIGN_BONUS_S`, segmenter thresholds, `MIRROR_INPUT`, `LEFT_HANDED`, `RETRIEVAL_MIN_SCORE`, `RETRIEVAL_MARGIN`, `EMBED_MODEL`, `LLM_MODEL`.
 
-**Secrets:** copy `etc/.env.example` to `etc/.env` and fill it in. `config.py` loads `etc/.env` at import. A real environment variable wins over the file. Git ignores everything in `etc/` except `.env.example`.
+**Secrets:** copy `etc/.env.example` to `etc/.env` and fill it in. `config.py` loads `etc/.env` at import. A real environment variable wins over the file. Git ignores everything in `etc/` except `.env.example`. On Render, set the same variables in the service's Environment tab.
+
+| Variable | Used for |
+|---|---|
+| `TURN_USERNAME`, `TURN_CREDENTIAL`, `TURN_URLS` | a fixed TURN login for the video (`web/ice.py`). The browser receives it |
+| `METERED_APP`, `METERED_API_KEY` | short-lived TURN logins from Metered, instead of a fixed login. The key stays on the server |
+| `LLM_API_KEY` | the LLM alien (phase 2) |
+| `HOST`, `PORT` | where the server listens. Cloud hosts set `PORT` |
 
 ```
 uv sync                                   # install everything (first time, and after a pull)
@@ -483,7 +498,7 @@ uv run answer-key --seed 7 --level intermediate
 uv run pytest
 ```
 
-- `--host 0.0.0.0` lets a second laptop on the same Wi-Fi join.
+- `--host 0.0.0.0` lets a second laptop on the same Wi-Fi join. Add `--https` for video: browsers block the camera on `http://<ip>`.
 - `--debug` turns on the answer key for each room. Later it also shows landmarks, raw scores and latencies.
 - Session logs go to `logs/session-<timestamp>.jsonl`: guesses, confirmed glosses, actions and latencies. **No images or landmarks** unless the player passes `--record-eval`.
 
@@ -549,7 +564,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 - Do not send a recognized sign without the player's confirmation.
 - Do not use `eval` or Python expressions in puzzle data.
 - Do not block the server's event loop with recognition, retrieval or LLM calls.
-- Do not store or upload webcam frames by default.
+- Do not send webcam video through the server, and do not store it by default. Video goes peer to peer only.
 - Do not put a gloss the recognizer does not know into a puzzle pool.
 - Do not put API keys in code or in git. Use `etc/.env`.
 - Do not use `pip` or `requirements.txt`. Use `uv`.

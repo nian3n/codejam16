@@ -1,0 +1,23 @@
+# Render blueprint: New > Blueprint > pick this repo. See README "Deploy online".
+services:
+  - type: web
+    name: escape-pod
+    runtime: docker
+    plan: free
+    # Deploy from the branch that has the game. Change this when it merges to main.
+    branch: two-player-web-app
+    healthCheckPath: /healthz
+    # Rooms live in memory, so the service must stay one instance.
+    numInstances: 1
+    envVars:
+      # TURN relay for the video. Render asks for the values when you create the
+      # blueprint; they stay out of git. Fill in the TURN_* pair (a Metered TURN
+      # credential) or the METERED_* pair (app name + API key); leave the rest empty.
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
+      - key: METERED_APP
+        sync: false
+      - key: METERED_API_KEY
+        sync: false

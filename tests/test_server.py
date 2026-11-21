@@ -154,3 +154,98 @@ def test_answer_key_needs_debug():
         server.app.state.debug = False
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def _next_of(ws, kind):
+    for _ in range(20):
+        m = ws.receive_json()
+        if m["type"] == kind:
+            return m
+    raise AssertionError(f"no {kind} message")
+
+
+def test_rtc_relay_goes_only_to_the_other_player():
+    code = client.post("/api/rooms").json()["code"]
+    a, b = _join(code, "A"), _join(code, "B")
+    sa = _drain(a, lambda s: len(s["players"]) == 2)
+    sb = _drain(b, lambda s: len(s["players"]) == 2)
+    # Exactly one polite peer, and each player knows which entry is them.
+    assert sa["me"]["polite"] != sb["me"]["polite"]
+    assert [p["you"] for p in sa["players"]].count(True) == 1
+    assert "ice_servers" not in sa  # served by /api/ice now
+    offer = {"sid": "s1", "description": {"type": "offer", "sdp": "v=0..."}}
+    a.send_json({"type": "rtc", "data": offer})
+    assert _next_of(b, "rtc")["data"] == offer
+    # Too large or not an object: dropped. A's next message proves nothing came back to A.
+    a.send_json({"type": "rtc", "data": {"sid": "s1", "junk": "x" * 70_000}})
+    a.send_json({"type": "rtc", "data": "not a dict"})
+    b.send_json({"type": "rtc", "data": {"sid": "s2", "candidate": {"candidate": "c"}}})
+    assert _next_of(a, "rtc")["data"]["sid"] == "s2"
+    a.send_json({"type": "level", "level": "advanced"})
+    m = b.receive_json()
+    assert m["type"] == "state", "the oversized rtc message must not reach B"
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_healthz():
+    assert client.get("/healthz").json()["ok"] is True
+
+
+def test_ice_without_metered_is_stun_only(monkeypatch):
+    monkeypatch.delenv("METERED_APP", raising=False)
+    monkeypatch.delenv("METERED_API_KEY", raising=False)
+    assert client.get("/api/ice").json() == server.config.ICE_SERVERS
+
+
+def test_ice_with_metered_hides_the_key(monkeypatch):
+    from escape_pod.web import ice
+
+    turn = [{"urls": "stun:stun.relay.metered.ca:80"},
+            {"urls": "turn:global.relay.metered.ca:80", "username": "u", "credential": "c"}]
+    calls = []
+    monkeypatch.setenv("METERED_APP", "myapp")
+    monkeypatch.setenv("METERED_API_KEY", "secret-key")
+    monkeypatch.setattr(ice, "_cache", None)
+    monkeypatch.setattr(ice, "_fetch_metered", lambda app, key: calls.append((app, key)) or turn)
+    r = client.get("/api/ice")
+    assert r.json() == turn and "secret-key" not in r.text
+    client.get("/api/ice")
+    assert calls == [("myapp", "secret-key")]  # cached: Metered is asked once
+
+
+def test_ice_falls_back_when_metered_fails(monkeypatch):
+    from escape_pod.web import ice
+
+    def boom(app, key):
+        raise OSError("network down")
+
+    monkeypatch.setenv("METERED_APP", "myapp")
+    monkeypatch.setenv("METERED_API_KEY", "k")
+    monkeypatch.setattr(ice, "_cache", None)
+    monkeypatch.setattr(ice, "_fetch_metered", boom)
+    assert client.get("/api/ice").json() == server.config.ICE_SERVERS
+
+
+def test_idle_rooms_are_pruned_but_live_ones_stay():
+    old = client.post("/api/rooms").json()["code"]
+    live = client.post("/api/rooms").json()["code"]
+    ws = _join(live, "A")
+    later = server.time.monotonic() + server.ROOM_IDLE_S + 1
+    server.prune_rooms(now=later)
+    assert old not in server.rooms and live in server.rooms
+    ws.__exit__(None, None, None)
+
+
+def test_ice_with_a_fixed_turn_login(monkeypatch):
+    for k in ("METERED_APP", "METERED_API_KEY", "TURN_URLS"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("TURN_USERNAME", "user1")
+    monkeypatch.setenv("TURN_CREDENTIAL", "pass1")
+    servers = client.get("/api/ice").json()
+    turn = servers[-1]
+    assert servers[:-1] == server.config.ICE_SERVERS
+    assert turn["username"] == "user1" and turn["credential"] == "pass1"
+    assert turn["urls"] == server.config.METERED_TURN_URLS
+    monkeypatch.setenv("TURN_URLS", "turn:a.example:3478, turns:a.example:5349")
+    assert client.get("/api/ice").json()[-1]["urls"] == ["turn:a.example:3478", "turns:a.example:5349"]
