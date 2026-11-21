@@ -339,6 +339,7 @@ body.critical::before { background: radial-gradient(ellipse at 50% 40%, transpar
 
 /* Players who ask for less motion get a still room. */
 @media (prefers-reduced-motion: reduce) {
-  .alarm, .live-dot, body.flash::after, .shake { animation: none !important; }
+  /* The strike flash stays: it is a color change, not motion, and it is the only screen cue for a strike. */
+  .alarm, .live-dot, .shake { animation: none !important; }
   .alarm { opacity: .6; }
 }

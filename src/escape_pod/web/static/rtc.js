@@ -21,6 +21,7 @@ let makingOffer = false;
 let ignoreOffer = false;
 let wanted = false;          // true once two players are in the room
 let cameraError = "";
+let otherOnline = false;     // from the server state: is the other player's tab connected?
 // Resolves when the camera request has finished (granted or not). onRtc waits for it:
 // otherwise an offer from a player whose camera is already on makes us build the
 // connection before our camera is ready, and we would only receive, never send.
@@ -59,6 +60,7 @@ export function placeDock(parent) {
 // ---------------------------------------------------------------- state from the server
 export function onRoomState(s) {
   const other = s.players.find((p) => !p.you) || null;
+  otherOnline = !!other?.online;
   if (!other && wanted) {
     // The other player left the room. Drop the old connection; when someone new joins,
     // the block below starts a fresh one.
@@ -82,9 +84,13 @@ export function onRoomState(s) {
   }
 }
 
+// LIVE only when frames can really arrive: a track, a connected peer connection and the other
+// player online. srcObject alone stays set after a drop, and ontrack fires before ICE connects.
 function showLive() {
-  liveTag.classList.toggle("hidden", !remoteVideo.srcObject);
+  const live = !!remoteVideo.srcObject && otherOnline && pc?.connectionState === "connected";
+  liveTag.classList.toggle("hidden", !live);
 }
+remoteVideo.addEventListener("playing", showLive);
 
 function setStatus(text) {
   status.textContent = text;
@@ -172,6 +178,7 @@ function ensurePc() {
     if (st === "failed") { setStatus("Video connection failed. Retrying..."); pc.restartIce(); }
     else if (st === "disconnected") setStatus("Video connection lost. Waiting...");
     else if (st === "connected" && remoteVideo.srcObject) setStatus("");
+    showLive();
   };
   return pc;
 }
