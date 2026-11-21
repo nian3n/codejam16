@@ -465,7 +465,6 @@
 #game[data-role="defuser"] .side .live-tag { z-index: 2; }
 #signing-progress { order: 1; }
 #signing-progress .practice-progress { margin: 0; }
-#signing-progress #practice-progress-description { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #game #composer { order: 2; }
 #game .composer { gap: 7px; padding: 10px; background: #1b2527; }
 #game .composer .label { line-height: 1.4; color: #c6ceca; }
