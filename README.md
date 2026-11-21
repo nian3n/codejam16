@@ -92,6 +92,8 @@ Not built yet: `signs/` (Teammate 2), the recognizer (Teammate 3), `brain/` (Tea
 
 On the home screen, **Practice signs solo** opens "Field training". Pick a word, watch its glossary clip, turn on the camera and click **Capture sign**. The browser runs MediaPipe and sends only the hand and body landmarks to the server, never the video. The server scores the clip with the word model and approves it at 75% confidence or more. The list has every game word, so each word has a clip.
 
+**Sequence** mode records many signs in one go. Press Space, wait 1 second, then sign a word. Lower your hands, or hold both palms up for half a second, to end it. Sign the next word. Press Space again to stop. Each sign becomes a chip with the top 3 guesses. Click **Check** to compare them with the 3 target words.
+
 The server needs the model for this: run `uv sync --extra model` and `uv run download-models` once. Without the model, practice shows a setup message, and the rest of the game still works.
 
 ## Sign clips for the glossary

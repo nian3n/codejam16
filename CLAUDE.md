@@ -327,9 +327,21 @@ webcam (30 fps)
 
 Show the camera mirrored with the hand skeleton drawn on it, so players see what the model sees.
 
-### 6.2 Capturing one sign
+### 6.2 Capturing signs
 
-The player needs both hands to sign, so **do not use hold-to-sign**. Instead:
+The player needs both hands to sign, so **do not use hold-to-sign**.
+
+**Sequence capture (built, `static/sequence.js`, practice "Sequence" mode):** one recording holds many signs.
+
+1. Space starts a recording. For 1 s, a banner says "GET YOUR HANDS READY". Then recording starts.
+2. The player signs a word, then makes a **separator**. The separator ends the clip and adds no word:
+   - **Hands down:** both hands leave the frame or drop below the waist line for 0.15 s.
+   - **The "next" pose:** both hands open, fingers up, held still for 0.5 s. It is our own signal, not an ASL word. A rule on the landmarks detects it, so the model never sees it. No game word looks like it: FINISH shakes two open hands, and the digit 5 is one hand. The glossary lists it under "game controls".
+3. The code cuts the separator frames off each clip. It drops clips under 0.3 s and marks clips over 3 s as "unclear". Hands that fall fast never start a clip.
+4. Each clip goes to `POST /api/practice/guess` at once, while the player signs the next word. It becomes a chip with the top 3 guesses. The player picks a guess or deletes the chip.
+5. Space stops the recording. `tests/test_sequence.py` runs the logic in Node with synthetic hands.
+
+The older notes:
 
 - **Auto mode (default):** a sign starts when at least one hand is detected and moving above the waist. It ends when the hands drop or stay still for 0.4 s. Ignore clips under 0.3 s or over 3 s.
 - **Manual fallback:** press Space (or click) to start a 2.5 s capture window with a visible 3-2-1 countdown.

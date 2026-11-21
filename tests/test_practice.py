@@ -52,3 +52,18 @@ def test_practice_lists_only_game_words(monkeypatch):
         content=clip.tobytes(), headers={"Content-Type": "application/octet-stream"},
     )
     assert result.status_code == 400
+
+
+def test_guess_returns_the_top_three_game_words(monkeypatch):
+    logits = {"cat": 3.0, "dog": 2.0, "cow": 1.0, "pig": 0.5, "callonphone": 9.0}
+    monkeypatch.setattr(practice, "model", lambda: SimpleNamespace(glosses=list(logits), scores=lambda _: logits))
+    clip = np.full((4, N_POINTS, 3), np.nan, dtype="<f4")
+    clip[:, LEFT] = 0.5
+    body = clip.tobytes()
+    headers = {"Content-Type": "application/octet-stream"}
+    got = client.post("/api/practice/guess", content=body, headers=headers).json()["guesses"]
+    assert [g["gloss"] for g in got] == ["cat", "dog", "cow"]  # callonphone is no game word
+    assert got[0]["score"] > got[1]["score"] > got[2]["score"]
+    got = client.post("/api/practice/guess", params={"words": "pig,cow"}, content=body, headers=headers).json()
+    assert [g["gloss"] for g in got["guesses"]] == ["cow", "pig"]
+    assert client.post("/api/practice/guess", params={"words": "zzz"}, content=body, headers=headers).status_code == 400

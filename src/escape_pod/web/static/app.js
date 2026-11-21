@@ -17,6 +17,7 @@ import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice } from "./practice.js";
+import { bindSequence } from "./practice_sequence.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -44,6 +45,7 @@ async function boot() {
   $("#exit-game").onclick = exitGame;
   bindLobby();
   bindGlossary();
+  bindSequence();
   $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
   $("#close-practice").onclick = () => showScreen("home");
   setInterval(tickTimer, 200);

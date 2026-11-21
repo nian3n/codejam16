@@ -37,7 +37,8 @@ def practice_options():
     return {"words": sorted(words), "threshold": APPROVAL_THRESHOLD}
 
 
-def score_clip(data: bytearray, target: str):
+def parse_clip(data: bytearray) -> np.ndarray:
+    """Little-endian float32 frames -> (T, 543, 3), trimmed to the frames with a hand."""
     if not data or len(data) % FRAME_BYTES:
         raise HTTPException(400, "Send a clip of complete landmark frames.")
     clip = np.frombuffer(data, dtype="<f4").reshape(-1, N_POINTS, 3)
@@ -48,14 +49,26 @@ def score_clip(data: bytearray, target: str):
     frames = np.flatnonzero(left | right)
     if len(frames) < MIN_HAND_FRAMES:
         raise HTTPException(422, "Keep your hands in view and try again.")
+    return clip[frames[0]:frames[-1] + 1]
 
+
+def logits_for(clip: np.ndarray) -> tuple[dict[str, float], list[str]]:
     with model_lock:
         classifier = practice_model()
-        if target not in classifier.glosses or target not in game_words(set(classifier.glosses)):
-            raise HTTPException(400, "Choose a word from the practice list.")
-        logits = classifier.scores(clip[frames[0]:frames[-1] + 1])
+        logits = classifier.scores(clip)
+        glosses = list(classifier.glosses)
     if not np.isfinite(list(logits.values())).all():
         raise HTTPException(422, "The model could not score that clip. Try again with your upper body in view.")
+    return logits, glosses
+
+
+def score_clip(data: bytearray, target: str):
+    clip = parse_clip(data)
+    with model_lock:
+        known = set(practice_model().glosses)
+    if target not in known or target not in game_words(known):
+        raise HTTPException(400, "Choose a word from the practice list.")
+    logits, _ = logits_for(clip)
     # Rank against the full vocabulary so choosing a target does not inflate its score.
     guesses = rank(logits, None, k=len(logits))
     confidence = next(guess.score for guess in guesses if guess.gloss == target)
@@ -66,8 +79,19 @@ def score_clip(data: bytearray, target: str):
     }
 
 
-@router.post("/score")
-async def practice_score(request: Request, target: str):
+def guess_clip(data: bytearray, words: str | None):
+    """Top 3 guesses for one clip of a sequence, among the game words (or a subset)."""
+    clip = parse_clip(data)
+    logits, glosses = logits_for(clip)
+    allowed = game_words(set(glosses))
+    if words:
+        allowed &= {w.strip() for w in words.split(",")}
+        if not allowed:
+            raise HTTPException(400, "None of those words is a game word.")
+    return {"guesses": [{"gloss": g.gloss, "score": g.score} for g in rank(logits, allowed, k=3)]}
+
+
+async def read_clip(request: Request) -> bytearray:
     if request.headers.get("content-type") != "application/octet-stream":
         raise HTTPException(415, "Expected a binary landmark clip.")
     data = bytearray()
@@ -75,4 +99,15 @@ async def practice_score(request: Request, target: str):
         if len(data) + len(chunk) > MAX_FRAMES * FRAME_BYTES:
             raise HTTPException(413, "This practice clip is too long.")
         data.extend(chunk)
-    return await run_in_threadpool(score_clip, data, target)
+    return data
+
+
+@router.post("/guess")
+async def practice_guess(request: Request, words: str | None = None):
+    """words: optional comma-separated subset (the game will pass a module's pool)."""
+    return await run_in_threadpool(guess_clip, await read_clip(request), words)
+
+
+@router.post("/score")
+async def practice_score(request: Request, target: str):
+    return await run_in_threadpool(score_clip, await read_clip(request), target)

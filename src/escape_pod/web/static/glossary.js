@@ -9,7 +9,13 @@ import { $, el, icon, store, wordOf, WIRE_COLORS } from "./core.js";
 
 const HANDSHAPE_PAGES = new Set(["numbers"]);  // digits: not in PopSign (spec 6.4)
 // The signs that run the capture (spec 6.2). Not on any manual page, so listed here.
-const CONTROL_SIGNS = { yes: "👍", no: "👎", finish: "🏁" };
+const CONTROL_SIGNS = { yes: "👍", no: "👎", finish: "🏁", next: "✋" };
+// "next" is our own separator pose (sequence.js), not an ASL word: no clip, a description instead.
+const NOTES = {
+  next: "Not an ASL word: a game signal. Raise both hands, open, fingers up, palms toward the camera. "
+    + "Hold them still for half a second. It ends the sign you just made and adds no word. "
+    + "Lowering both hands does the same.",
+};
 let clips = null;        // {credit, clips: {gloss: {file, ...}}}, loaded on first open
 let entries = [];        // [{gloss, word, topic}], sorted A to Z
 let query = "";
@@ -36,7 +42,7 @@ export async function openGlossary(gloss = null) {
   if (!entries.length) {
     entries = store.pages.filter((p) => !HANDSHAPE_PAGES.has(p.id))
       .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic })))
-      .concat(Object.keys(CONTROL_SIGNS).map((g) => ({ gloss: g, word: g, topic: "game controls" })))
+      .concat(Object.keys(CONTROL_SIGNS).map((g) => ({ gloss: g, word: g === "next" ? "next (both palms)" : g, topic: "game controls" })))
       .sort((a, b) => a.word.localeCompare(b.word));
   }
   if (gloss) current = gloss;
@@ -102,12 +108,13 @@ function entryPage() {
   const clip = clips?.clips?.[e.gloss];
   const media = clip
     ? el("video", { class: "gl-video", src: `/signs/${clip.file}`, autoplay: "", loop: "", muted: "", playsinline: "", preload: "auto" })
-    : el("div", { class: "gl-video missing", text: "No clip yet for this word." });
+    : el("div", { class: "gl-video missing" + (NOTES[e.gloss] ? " pose" : ""),
+      text: NOTES[e.gloss] ? "✋ ✋" : "No clip yet for this word." });
   if (clip) media.muted = true;  // the attribute alone does not satisfy autoplay rules everywhere
   return el("article", { class: "gl-entry" },
     el("div", { class: "gl-word" }, mark(e.gloss, "gl-mark"), el("h3", { text: e.word })),
     el("p", { class: "gl-pos", text: `topic: ${e.topic}` }),
     media,
-    el("p", { class: "gl-how", text: "Watch the clip. It repeats. Sign it the same way, facing the camera." }),
+    el("p", { class: "gl-how", text: NOTES[e.gloss] || "Watch the clip. It repeats. Sign it the same way, facing the camera." }),
     el("p", { class: "gl-credit", text: clips?.credit || "" }));
 }

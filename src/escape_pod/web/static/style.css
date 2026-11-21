@@ -413,3 +413,37 @@ body.critical::before { content: ""; position: fixed; inset: 0; pointer-events: 
 .practice-actions { flex-wrap: wrap; }
 .practice-result { display: block; border-left: 3px solid var(--amber); padding-left: 10px; font-family: var(--mono); }
 .practice-result.approved { border-color: var(--ok); }
+
+/* ---------- practice: sequence mode ---------- */
+.practice-modes { display: flex; gap: 6px; }
+.practice-modes .btn.on { background: var(--acc); color: #141204; border-color: #000; }
+.seq-targets { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink) !important; }
+.seq-targets b { font-family: var(--mono); color: var(--acc); letter-spacing: .08em; font-size: 1.1rem; }
+.seq-help { margin: 0; padding-left: 20px; color: var(--dim); font-size: .9rem; display: grid; gap: 2px; }
+kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: #0c0d0e; color: var(--ink); }
+.practice-stage { position: relative; }
+/* The banner sits over the camera but outside the mirrored preview, so its text reads normally. */
+.seq-banner { position: absolute; left: 0; right: 0; top: 0; display: grid; gap: 2px; padding: 10px 14px; text-align: center;
+  background: #000000c7; border-bottom: 3px solid var(--acc); border-radius: 4px 4px 0 0; pointer-events: none; }
+.seq-banner b { font-family: var(--mono); letter-spacing: .14em; font-size: 1.25rem; color: var(--acc); }
+.seq-banner span { font-size: .9rem; }
+.seq-banner[data-phase="arming"] { border-color: var(--amber); }
+.seq-banner[data-phase="arming"] b { color: var(--amber); }
+.seq-banner[data-phase="signing"] { border-color: var(--warn); }
+.seq-banner[data-phase="signing"] b { color: var(--warn); }
+.seq-banner[data-phase="next"] { border-color: var(--ok); }
+.seq-banner[data-phase="next"] b { color: var(--ok); }
+#seq-record.rec { background: var(--warn); color: #fff; }
+.seq-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; }
+.seq-empty { color: var(--dim); font-size: .85rem; margin: 0; }
+.chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg2); }
+.chip.pending { opacity: .7; }
+.chip.bad { border-color: var(--warn); }
+.chip-n { font-family: var(--mono); color: var(--dim); font-size: .8rem; }
+.chip-main { font-family: var(--mono); }
+.chip-opts { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip-opt { font-family: var(--mono); font-size: .75rem; padding: 3px 6px; border: 1px solid var(--line); border-radius: 3px; background: #0c0d0e; color: var(--dim); cursor: pointer; }
+.chip-opt.on { border-color: var(--acc); color: var(--acc); font-size: .9rem; }
+.chip-x { border: 0; background: none; color: var(--dim); cursor: pointer; font-size: .9rem; }
+.chip-x:hover { color: var(--warn); }
+.gl-video.missing.pose { font-size: 4rem; font-style: normal; }
