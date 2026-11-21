@@ -180,6 +180,8 @@ The server forwards an `rtc` message to the other player as `{"type": "rtc", "da
 
 After each change, the server sends each player its own `{"type": "state", ...}`. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
 
+**Solo rooms:** `POST /api/rooms` with the body `{"solo": true}` makes a room for one player. The player is the defuser at once, and a second player gets the error "This is a solo room." The scripted bot (`brain/hq_bot.py`) takes the HQ seat, but it is not in `players`. Its lines are chat entries `{"kind": "say", "from": "HQ bot", "text": ...}`. They follow each `signs` message and each action that defuses a module or costs a strike. In a solo room, the server ignores `role` and `say`. The state always has `solo` (true or false). In a solo game, it also has `bot_stage`: `"module"` (the bot waits for one item of a module) or `"details"` (the bot waits for the items of the open page).
+
 HTTP: `GET /api/manual`, `GET /api/icons`, `POST /api/rooms` → `{"code"}`, `GET /api/ice` (STUN/TURN servers) and `GET /healthz`. Also `GET /api/rooms/<CODE>/answer-key`, which works only with `--debug`. The server forgets a room 2 hours after its last player leaves.
 
 ### 4.3 Shared models

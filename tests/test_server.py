@@ -303,3 +303,110 @@ def test_leave_during_a_game_ends_it_and_last_one_out_deletes_the_room():
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
     assert code not in server.rooms
+
+
+# ---------------------------------------------------------------------------
+# Solo rooms: one field agent, the scripted bot in the HQ seat
+# ---------------------------------------------------------------------------
+from escape_pod.brain.hq_bot import BOT_NAME, HqBot  # noqa: E402
+from test_hq_bot import signs_for  # noqa: E402
+
+
+def _start_solo(level="beginner"):
+    code = client.post("/api/rooms", json={"solo": True}).json()["code"]
+    a = _join(code, "Ana")
+    _drain(a, lambda s: s["solo"] and s["me"]["role"] == "defuser" and s["can_start"])
+    a.send_json({"type": "level", "level": level})
+    a.send_json({"type": "start"})
+    return code, a, _drain(a, lambda s: s["phase"] == "playing")
+
+
+def _bot_said(ws, n_before):
+    return _drain(ws, lambda s: len(s["chat"]) > n_before and s["chat"][-1].get("from") == BOT_NAME)
+
+
+def test_solo_room_starts_with_one_player_and_greets():
+    _, a, s = _start_solo()
+    last = s["chat"][-1]
+    assert (last["kind"], last["from"], last["text"]) == ("say", BOT_NAME, HqBot().greeting())
+    assert s["bot_stage"] == "module" and len(s["players"]) == 1
+    a.__exit__(None, None, None)
+
+
+def test_solo_bot_answers_signs():
+    _, a, s = _start_solo()
+    first = s["bomb"][0]
+    item = server.rooms[s["code"]].modules[0].widget.items(first["facts"])[0]
+    a.send_json({"type": "signs", "glosses": [item]})
+    s2 = _bot_said(a, len(s["chat"]))
+    assert s2["chat"][-2]["kind"] == "signs"
+    assert s2["chat"][-1]["text"].startswith(f"That is the {first['title']}.")
+    assert s2["bot_stage"] == "details"
+    a.__exit__(None, None, None)
+
+
+def test_solo_full_game_reaches_escaped():
+    code, a, s = _start_solo()
+    for i, m in enumerate(server.rooms[code].modules):
+        for msg in [[m.widget.items(m.facts)[0]], *signs_for(m)]:
+            n = len(s["chat"])
+            a.send_json({"type": "signs", "glosses": msg})
+            s = _bot_said(a, n)
+        a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
+        s = _drain(a, lambda s, i=i: s["progress"]["defused"] == i + 1)
+    assert s["phase"] == "escaped"
+    a.__exit__(None, None, None)
+
+
+def test_solo_strike_gets_a_bot_reply():
+    code, a, s = _start_solo()
+    m = server.rooms[code].modules[0]
+    for msg in [[m.widget.items(m.facts)[0]], *signs_for(m)]:
+        n = len(s["chat"])
+        a.send_json({"type": "signs", "glosses": msg})
+        s = _bot_said(a, n)
+    a.send_json({"type": "act", "module": 0, "action": {"verb": "nope", "target": {}}})
+    s = _drain(a, lambda s: s["strikes"] == 1 and s["chat"][-1].get("from") == BOT_NAME)
+    assert s["chat"][-1]["text"].startswith(f"That was a strike. Check the {m.spec.title} again.")
+    assert s["bot_stage"] == "details"
+    a.__exit__(None, None, None)
+
+
+def test_solo_room_refuses_a_second_player():
+    code, a, _ = _start_solo()
+    with client.websocket_connect(f"/ws/{code}") as ws:
+        ws.send_json({"type": "hello", "name": "Ben"})
+        assert ws.receive_json() == {"type": "error", "text": "This is a solo room."}
+    a.__exit__(None, None, None)
+
+
+def test_solo_ignores_role_and_say():
+    code, a, s = _start_solo()
+    a.send_json({"type": "say", "text": "Press the dog."})
+    a.send_json({"type": "role", "role": "expert"})
+    a.send_json({"type": "signs", "glosses": ["hello"]})
+    s = _bot_said(a, len(s["chat"]))
+    assert not any(m.get("text") == "Press the dog." for m in s["chat"])
+    assert s["me"]["role"] == "defuser"
+    a.__exit__(None, None, None)
+
+
+def test_solo_again_starts_a_fresh_bot():
+    code, a, s = _start_solo()
+    m = server.rooms[code].modules[0]
+    a.send_json({"type": "signs", "glosses": [m.widget.items(m.facts)[0]]})
+    _drain(a, lambda s: s.get("bot_stage") == "details")
+    a.send_json({"type": "exit"})
+    s = _drain(a, lambda s: s["phase"] == "lobby")
+    assert "bot_stage" not in s and s["can_start"]
+    a.send_json({"type": "start"})
+    s = _drain(a, lambda s: s["phase"] == "playing")
+    assert s["bot_stage"] == "module" and s["chat"][-1]["text"] == HqBot().greeting()
+    a.__exit__(None, None, None)
+
+
+def test_two_player_rooms_are_unchanged():
+    _, a, b, sa, sb = _start_game()
+    assert sa["solo"] is False and "bot_stage" not in sa and "bot_stage" not in sb
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)

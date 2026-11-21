@@ -23,11 +23,12 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from escape_pod import config
+from escape_pod.brain.hq_bot import BOT_NAME, HqBot
 from escape_pod.manual.build import all_pages
 from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
@@ -73,6 +74,10 @@ class Room:
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
     last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
+    # Solo: one human (the defuser) and the scripted bot in the HQ seat. The bot is not
+    # in `players`, so the video code never waits for a second person.
+    solo: bool = False
+    bot: HqBot | None = None
 
     def remaining(self) -> float:
         if self.phase == "playing":
@@ -83,6 +88,8 @@ class Room:
         return any(p.role == role and p.pid != by_other_than for p in self.players.values())
 
     def can_start(self) -> bool:
+        if self.solo:
+            return self.phase == "lobby" and self.role_taken("defuser", "")
         return self.phase == "lobby" and all(self.role_taken(r, "") for r in ROLES)
 
     def say(self, entry: dict):
@@ -133,7 +140,10 @@ def view(room: Room, me: Player) -> dict:
         "max_strikes": config.MAX_STRIKES,
         "chat": room.chat,
         "debug": app.state.debug,
+        "solo": room.solo,
     }
+    if room.bot is not None:
+        v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
@@ -183,6 +193,9 @@ def start_game(room: Room):
     room.phase = "playing"
     room.deadline = time.monotonic() + (level.timer_s or 600)
     room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
+    if room.solo:
+        room.bot = HqBot()  # a fresh bot per game: no page from the last game
+        bot_say(room, room.bot.greeting())
     room.timer_task = asyncio.create_task(watch_timer(room))
 
 
@@ -192,6 +205,7 @@ def back_to_lobby(room: Room, why: str | None = None):
         room.timer_task.cancel()
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+    room.bot = None
     if why:
         room.say({"kind": "event", "text": why})
 
@@ -211,11 +225,17 @@ def leave(room: Room, me: Player):
         rooms.pop(room.code, None)
 
 
-def act(room: Room, index: int, action: Action):
+def bot_say(room: Room, text: str) -> None:
+    room.say({"kind": "say", "from": BOT_NAME, "text": text})
+
+
+def act(room: Room, index: int, action: Action) -> bool | None:
+    """True: defused. False: a strike. None: ignored (the module was already defused)."""
     m = room.modules[index]
     if m.defused:
-        return
-    if m.check(action):
+        return None
+    ok = m.check(action)
+    if ok:
         m.defused = True
         room.say({"kind": "event", "text": f"Module {index + 1} defused!"})
         if all(x.defused for x in room.modules):
@@ -225,6 +245,7 @@ def act(room: Room, index: int, action: Action):
         room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
         if room.strikes >= config.MAX_STRIKES:
             end_game(room, "boom", "Three strikes. Detonation!")
+    return ok
 
 
 def clean_glosses(raw) -> list[str]:
@@ -259,7 +280,7 @@ async def handle(room: Room, me: Player, msg: dict):
     elif kind == "rtc":
         await relay_rtc(room, me, msg.get("data"))
         return  # no state change, so no broadcast
-    elif kind == "role" and room.phase == "lobby":
+    elif kind == "role" and room.phase == "lobby" and not room.solo:
         role = msg.get("role")
         if role in ROLES and not room.role_taken(role, me.pid):
             me.role = role
@@ -271,7 +292,9 @@ async def handle(room: Room, me: Player, msg: dict):
         glosses = clean_glosses(msg.get("glosses"))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses})
-    elif kind == "say" and room.phase == "playing" and me.role == "expert":
+            if room.bot is not None:
+                bot_say(room, room.bot.reply(glosses))
+    elif kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo:
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
             room.say({"kind": "say", "from": me.name, "text": text})
@@ -283,7 +306,11 @@ async def handle(room: Room, me: Player, msg: dict):
                 action = Action.from_json(a)
             except (KeyError, TypeError, ValueError):
                 return
-            act(room, i, action)
+            result = act(room, i, action)
+            if room.bot is not None and result is not None and room.phase == "playing":
+                text = room.bot.on_result(result)
+                if text:
+                    bot_say(room, text)
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":
@@ -325,7 +352,7 @@ def icons():
 
 
 @app.post("/api/rooms")
-def create_room():
+def create_room(body: dict | None = Body(None)):
     prune_rooms()
     if len(rooms) >= MAX_ROOMS:
         raise HTTPException(503, "The server is full. Try again later.")
@@ -333,7 +360,7 @@ def create_room():
         code = "".join(secrets.choice(CODE_CHARS) for _ in range(4))
         if code not in rooms:
             break
-    rooms[code] = Room(code)
+    rooms[code] = Room(code, solo=bool(isinstance(body, dict) and body.get("solo")))
     return {"code": code}
 
 
@@ -364,13 +391,17 @@ async def ws_room(ws: WebSocket, code: str):
     name = str(hello.get("name") or "").strip()[:20] or "Player"
     me = room.players.get(pid)
     if me is None:
+        if room.solo and room.players:
+            await ws.send_json({"type": "error", "text": "This is a solo room."})
+            await ws.close()
+            return
         if len(room.players) >= 2:
             await ws.send_json({"type": "error", "text": "This room already has two players."})
             await ws.close()
             return
         if room.players:  # replaces an old "... left the room." note in the lobby
             room.say({"kind": "event", "text": f"{name} joined."})
-        me = Player(uuid.uuid4().hex, name)
+        me = Player(uuid.uuid4().hex, name, role="defuser" if room.solo else None)
         room.players[me.pid] = me
     elif me.ws is not None:
         try:  # same player opened a second tab: the newest tab wins
