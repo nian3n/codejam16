@@ -4,8 +4,8 @@ import { $, el, send } from "./core.js";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const PNG_HANDSHAPES = "PQRSUVWYZ";
 const COLORS = {
-  blue: "#6aa9ff", teal: "#56dccc", amber: "#f7af55",
-  red: "#ff686b", green: "#78d795", yellow: "#f9d664",
+  blue: "#255786", teal: "#176459", amber: "#915d16",
+  red: "#943f35", green: "#3b6b3e", yellow: "#826614",
 };
 let layoutKey = null;
 let endDemo = null;
@@ -21,6 +21,8 @@ export function resetGuided() {
   endDemo = null;
   layoutKey = null;
   panel = null;
+  $("#guided-reference").classList.add("hidden");
+  $("#guided-reference").replaceChildren();
 }
 
 function titleCase(text) {
@@ -94,6 +96,7 @@ function demo(spelling, autoplay = false) {
 function alphabet() {
   return el("details", { class: "alphabet-reference" },
     el("summary", { text: "ASL alphabet reference" }),
+    el("p", { class: "guided-note reference-intro", text: "Match the handshape you see to a letter." }),
     el("div", { class: "alphabet-grid" }, [...ALPHABET].map((letter) =>
       el("figure", {}, handshape(letter), el("figcaption", { text: letter })))),
     el("p", { class: "guided-note", text: "Follow the movement arrows for J and Z." }));
@@ -121,7 +124,8 @@ function buildPanel(controls, turn) {
       onclick: () => choose(index),
     }, controlArtwork(control));
     button.addEventListener("keydown", (event) => {
-      const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3 }[event.key];
+      const columns = Number(getComputedStyle(button.parentElement).getPropertyValue("--columns"));
+      const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns }[event.key];
       if (offset) {
         event.preventDefault();
         const destination = (index + offset + controls.length) % controls.length;
@@ -157,13 +161,13 @@ function buildPanel(controls, turn) {
 
 function signerClue(clue, practice) {
   return [
-    el("p", { class: "guided-note", text: practice
-      ? "In this story, you’ve been kidnapped. You wake up in a dim room beside a fictional bomb. Your partner can unlock the room using the clues you sign."
-      : "Sign this private clue to your partner." }),
     el("div", { class: "private-clue" },
-      el("h2", { text: clue.text }), controlArtwork(clue.picture)),
+      el("div", {}, el("p", { class: "section-label", text: "Your private clue" }), el("h2", { text: clue.text })),
+      controlArtwork(clue.picture)),
     el("p", { id: "repeat-cue", class: "repeat-cue hidden", role: "status" }),
     demo(clue.spelling),
+    practice ? el("p", { class: "guided-note scenario-note",
+      text: "In the story, you wake up after being kidnapped. A fictional bomb guards the exit. Sign your clue so your partner can unlock the room." }) : null,
   ];
 }
 
@@ -209,15 +213,21 @@ function buildLayout(state) {
     ];
   }
   if (state.me.role === "defuser") return signerClue(game.clue, game.step === "practice");
-  return [buildPanel(game.controls, game.turn), alphabet()];
+  return [buildPanel(game.controls, game.turn)];
 }
 
 export function renderGuided(state) {
   const game = state.guided;
   const isSigner = state.me.role === "defuser";
+  const reference = $("#guided-reference");
+  const showReference = !isSigner && state.phase === "playing";
+  reference.classList.toggle("hidden", !showReference);
+  if (showReference && !reference.firstChild) reference.append(alphabet());
   const key = JSON.stringify([state.code, state.me.role, game.step, isSigner ? game.turn : null]);
   if (layoutKey !== key) {
-    resetGuided();
+    endDemo?.();
+    endDemo = null;
+    panel = null;
     layoutKey = key;
     $("#stage").replaceChildren(el("div", { class: "guided-content" },
       el("div", { class: "guided-feedback", role: "status" }), ...buildLayout(state)));
@@ -226,7 +236,7 @@ export function renderGuided(state) {
   }
   const feedback = $(".guided-feedback");
   feedback.textContent = game.feedback === "try_again" ? "That control didn’t match. Try again."
-    : game.feedback === "correct" && game.step !== "unlocked" ? "Correct! ✦" : "";
+    : game.feedback === "correct" && game.step !== "unlocked" ? "Correct!" : "";
   feedback.dataset.result = game.feedback;
 
   const repeat = $("#repeat-cue");

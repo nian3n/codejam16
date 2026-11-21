@@ -18,27 +18,36 @@ import { enterPractice, leavePractice } from "./practice.js";
 import { receiveVideo, syncVideo } from "./room_video.js";
 import { updateFaces } from "./widgets/big_button.js";
 
-let code = null;
-let closedOnPurpose = false;
+const roomButtons = ["#create-guided", "#create", "#join"].map($);
+let roomToolsReady = false;
 
 async function boot() {
   $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
   $("#close-practice").onclick = () => showScreen("home");
-  const [icons, pages] = await Promise.all([
-    fetch("/api/icons").then((r) => r.json()),
-    fetch("/api/manual").then((r) => r.json()),
-  ]);
+  $("#leave-lobby").onclick = leaveLobby;
+  const q = new URLSearchParams(location.search).get("room");
+  $("#name").value = localStorage.getItem("ep:name") || "";
+  setInvite(q);
+  for (const field of [$("#name"), $("#code")]) {
+    field.oninput = () => {
+      if (field.hasAttribute("aria-invalid")) {
+        field.removeAttribute("aria-invalid");
+        $("#home-error").textContent = "";
+      }
+    };
+  }
+  let icons, pages;
+  try {
+    [icons, pages] = await Promise.all([loadJSON("/api/icons"), loadJSON("/api/manual")]);
+  } catch {
+    roomError("Room tools couldn’t load. Reload the page to try again.");
+    return;
+  }
   store.icons = icons;
   store.pages = pages;
   store.pageById = Object.fromEntries(pages.map((p) => [p.id, p]));
-  $("#name").value = localStorage.getItem("ep:name") || "";
-  const q = new URLSearchParams(location.search).get("room");
-  if (q) $("#code").value = q.toUpperCase();
-  async function createRoom(mode) {
-    if (!saveName()) return;
-    const r = await fetch(`/api/rooms?mode=${mode}`, { method: "POST" }).then((r) => r.json());
-    connect(r.code);
-  }
+  roomToolsReady = true;
+  roomStatus("");
   $("#create").onclick = () => createRoom("classic");
   $("#create-guided").onclick = () => createRoom("guided");
   $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
@@ -60,20 +69,89 @@ async function boot() {
   }
 }
 
+async function loadJSON(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(`Couldn’t load ${url}`);
+  return response.json();
+}
+
+function roomStatus(message) {
+  for (const button of roomButtons) button.disabled = !roomToolsReady || !!message;
+  $("#home-status").textContent = message;
+  if (message) $("#home-error").textContent = "";
+}
+
+function roomError(message, input) {
+  roomStatus("");
+  $("#home-error").textContent = message;
+  if (input) {
+    input.setAttribute("aria-invalid", "true");
+    input.focus();
+  }
+}
+
+function setInvite(code) {
+  const join = $(".room-join");
+  const create = $(".room-create");
+  if (code) create.before(join);
+  else join.before(create);
+  $(".room-form").classList.toggle("has-invite", !!code);
+  $("#room-form-title").textContent = code ? "Join your partner" : "Play together";
+  $("#join").classList.toggle("primary", !!code);
+  $("#create-guided").classList.toggle("primary", !code);
+  $("#code").value = code?.toUpperCase() || "";
+}
+
 function saveName() {
   const n = $("#name").value.trim();
-  if (!n) { $("#home-error").textContent = "Type your name first."; return false; }
+  if (!n) { roomError("Enter your name before you continue.", $("#name")); return false; }
   localStorage.setItem("ep:name", n);
   return true;
 }
 
+async function createRoom(mode) {
+  if (!saveName()) return;
+  roomStatus("Creating your room…");
+  try {
+    const room = await loadJSON(`/api/rooms?mode=${mode}`, { method: "POST" });
+    connect(room.code);
+  } catch {
+    roomError("Couldn’t create a room. Try again.");
+  }
+}
+
+function leaveLobby() {
+  const ws = store.ws;
+  store.ws = null;
+  store.state = null;
+  ws?.close();
+  syncVideo(null);
+  history.replaceState(null, "", "/");
+  setInvite(null);
+  roomStatus("");
+  showScreen("home");
+}
+
+function connectionStatus(message) {
+  const banner = $("#connection-status");
+  banner.textContent = message;
+  banner.classList.toggle("hidden", !message);
+  $("#stage").inert = !!message;
+  if (message && store.state?.phase === "lobby") {
+    $("#lobby-hint").textContent = message;
+    $("#start").disabled = true;
+    for (const button of document.querySelectorAll(".role .take, #levels button")) button.disabled = true;
+  }
+}
+
 function connect(c) {
-  if (!/^[A-Z]{4}$/.test(c)) { $("#home-error").textContent = "A room code has 4 letters."; return; }
-  code = c;
-  closedOnPurpose = false;
+  if (!/^[A-Z]{4}$/.test(c)) { roomError("Enter a four-letter room code.", $("#code")); return; }
+  if (store.state?.code !== c) roomStatus("Connecting to your room…");
+  let rejected = false;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/${c}`);
   store.ws = ws;
+  const timeout = setTimeout(() => ws.close(), 12_000);
   const key = `ep:pid:${c}`;
   const name = $("#name").value.trim();
   ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: sessionStorage.getItem(key), name }));
@@ -84,32 +162,53 @@ function connect(c) {
       sessionStorage.setItem(key, m.pid);
       history.replaceState(null, "", `/?room=${c}`);
     } else if (m.type === "error") {
-      closedOnPurpose = true;
+      rejected = true;
+      clearTimeout(timeout);
+      store.state = null;
       syncVideo(null);
       showScreen("home");
-      $("#home-error").textContent = m.text;
-    } else if (m.type === "state") onState(m);
+      roomError(m.text);
+    } else if (m.type === "state") {
+      clearTimeout(timeout);
+      roomStatus("");
+      connectionStatus("");
+      onState(m);
+    }
     else if (m.type === "video") void receiveVideo(m);
   };
   ws.onclose = (event) => {
+    clearTimeout(timeout);
     if (store.ws !== ws) return;
-    syncVideo(null);
+    const reconnect = !rejected && event.code !== 4000 && store.state?.code === c;
+    syncVideo(reconnect ? { ...store.state, players: [] } : null);
     if (event.code === 4000) {
+      store.state = null;
       showScreen("home");
-      $("#home-error").textContent = "This seat is open in another tab.";
-    } else if (!closedOnPurpose && store.state) {
-      setTimeout(() => { if (store.ws === ws) connect(code); }, 1500);
+      roomError("This seat is open in another tab.");
+    } else if (reconnect) {
+      connectionStatus("Room connection lost. Reconnecting…");
+      setTimeout(() => { if (store.ws === ws) connect(c); }, 1500);
+    } else if (!rejected) {
+      roomError("Couldn’t reach the room. Check your connection and try again.");
     }
   };
 }
 
 function showScreen(id) {
+  const entering = $("#" + id).classList.contains("hidden");
   if (id !== "practice" && !$("#practice").classList.contains("hidden")) leavePractice();
   if (id !== "game") {
     $("#end").classList.add("hidden");
     resetGuided();
+    $("#connection-status").classList.add("hidden");
   }
   for (const s of ["home", "lobby", "game", "practice"]) $("#" + s).classList.toggle("hidden", s !== id);
+  if (entering) {
+    window.scrollTo(0, 0);
+    const heading = id === "game" ? $("#game-role") : $(`#${id} h1`);
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
 }
 
 function onState(s) {
@@ -121,8 +220,8 @@ function onState(s) {
     showScreen("lobby");
     renderLobby();
   } else {
-    showScreen("game");
     if (!prev || prev.code !== s.code || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
+    showScreen("game");
     renderGame();
   }
   const over = !s.guided && (s.phase === "escaped" || s.phase === "boom");
@@ -147,7 +246,8 @@ function setupGame() {
   $("#game-code").textContent = s.code;
   $("#game").classList.toggle("guided-mode", !!s.guided);
   $("#game").classList.toggle("guided-decoder", !!s.guided && s.me.role === "expert");
-  $("#game-role").textContent = s.guided ? roleName(s.me.role, s.guided.swapped) : s.me.role === "defuser" ? "💣 Defuser" : "📖 Expert";
+  $("#game").classList.toggle("studio", !!s.guided);
+  $("#game-role").textContent = s.guided ? roleName(s.me.role, s.guided.swapped) : s.me.role === "defuser" ? "Defuser" : "Expert";
   $("#top-strikes").classList.toggle("hidden", !!s.guided);
   $("#composer").replaceChildren();
   const bar = $(".topbar");

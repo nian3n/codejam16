@@ -6,84 +6,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Escape Pod</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/studio.css">
   <link rel="stylesheet" href="/static/guided.css">
 </head>
 <body>
   <!-- HOME: create or join a room -->
-  <section id="home" class="screen">
-    <div class="card home-card">
-      <h1 class="logo">ESCAPE<span>POD</span></h1>
-      <p class="tag">Two players. One bomb. Sign to survive.</p>
-      <label>Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="off"></label>
-      <button id="create-guided" class="btn primary">Create a guided room</button>
-      <button id="create" class="btn">Create a classic room</button>
-      <div class="or">or join a friend</div>
-      <div class="row">
-        <input id="code" maxlength="4" placeholder="CODE" autocomplete="off" class="code-input">
-        <button id="join" class="btn">Join</button>
-      </div>
-      <button id="open-practice" class="btn">Practice signs solo</button>
-      <p id="home-error" class="error"></p>
-    </div>
+  <section id="home" class="screen studio">
+    <header class="studio-header">
+      <span class="wordmark">Escape Pod</span>
+      <button id="open-practice" class="text-button" type="button">Practice signs solo</button>
+    </header>
+    <main class="home-layout">
+      <section class="home-intro" aria-labelledby="home-title">
+        <p class="section-label">American Sign Language</p>
+        <h1 id="home-title">Sign together.<br>Find your way out.</h1>
+        <p class="home-lede">One of you sees the clues. The other works the controls. Use ASL to solve the puzzle together.</p>
+      </section>
+      <section class="room-form" aria-labelledby="room-form-title">
+        <h2 id="room-form-title">Play together</h2>
+        <label for="name">Your name</label>
+        <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="nickname">
+        <div class="room-create">
+          <button id="create-guided" class="btn primary" type="button" disabled>Create a guided room</button>
+          <p>Start with an untimed signing exchange.</p>
+          <button id="create" class="text-button" type="button" disabled>Create a classic room</button>
+        </div>
+        <div class="room-join">
+          <h3>Join a room</h3>
+          <label for="code">Four-letter room code</label>
+          <div class="row">
+            <input id="code" maxlength="4" placeholder="e.g. MKTW" autocomplete="off" autocapitalize="characters" spellcheck="false" class="code-input">
+            <button id="join" class="btn" type="button" disabled>Join room</button>
+          </div>
+        </div>
+        <p id="home-status" class="form-status" role="status">Loading room tools…</p>
+        <p id="home-error" class="error" role="alert"></p>
+      </section>
+      <figure class="home-handshapes">
+        <div class="handshape-sequence">
+          <div><img src="/static/asl/P.png" alt="ASL handshape for P"><span aria-hidden="true">P</span></div>
+          <div><img src="/static/asl/O.svg" alt="ASL handshape for O"><span aria-hidden="true">O</span></div>
+          <div><img src="/static/asl/D.svg" alt="ASL handshape for D"><span aria-hidden="true">D</span></div>
+        </div>
+        <figcaption>Try fingerspelling <strong>POD</strong></figcaption>
+      </figure>
+    </main>
   </section>
 
   <!-- LOBBY: pick roles and level, then start -->
-  <section id="lobby" class="screen hidden">
-    <div class="card lobby-card">
-      <div class="room-code">Room <b id="lobby-code"></b>
-        <button id="copy-link" class="btn small">Copy invite link</button></div>
+  <section id="lobby" class="screen studio hidden">
+    <header class="studio-header">
+      <span class="wordmark">Escape Pod</span>
+      <button id="leave-lobby" class="text-button" type="button">Back to home</button>
+    </header>
+    <main class="lobby-layout">
+      <header class="lobby-heading">
+        <div>
+          <p id="lobby-mode" class="section-label">Guided room</p>
+          <h1>Choose your role</h1>
+        </div>
+        <div class="lobby-invite">
+          <div class="room-code">Room code <b id="lobby-code"></b></div>
+          <button id="copy-link" class="text-button" type="button">Copy invite link</button>
+        </div>
+      </header>
+      <label id="invite-fallback" for="invite-address" class="hidden">Copy this invite link
+        <input id="invite-address" type="url" readonly>
+      </label>
+      <p id="invite-status" class="form-status" role="status"></p>
       <div class="roles">
         <div class="role" data-role="defuser">
-          <div class="role-icon">💣</div>
-          <h2>Defuser</h2>
-          <p>You see the bomb. You sign what you see. You cut, press and turn.</p>
+          <div class="role-description">
+            <h2>Defuser</h2>
+            <p>See the puzzle and sign the clues.</p>
+          </div>
           <div class="role-who"></div>
           <button class="btn take">Take this role</button>
         </div>
         <div class="role" data-role="expert">
-          <div class="role-icon">📖</div>
-          <h2>Expert</h2>
-          <p>You read the manual. You never see the bomb. You tell the defuser what to do.</p>
+          <div class="role-description">
+            <h2>Expert</h2>
+            <p>Read the manual and guide your partner.</p>
+          </div>
           <div class="role-who"></div>
           <button class="btn take">Take this role</button>
         </div>
       </div>
       <div class="levels" id="levels"></div>
-      <button id="start" class="btn primary big" disabled>Start the game</button>
-      <p id="lobby-hint" class="hint"></p>
-    </div>
+      <div class="lobby-actions">
+        <p id="lobby-hint" class="hint" role="status"></p>
+        <button id="start" class="btn primary" disabled>Start the game</button>
+      </div>
+    </main>
   </section>
 
-  <main id="practice" class="screen hidden">
-    <section class="card practice-card" aria-labelledby="practice-title">
-      <button id="close-practice" class="btn small" type="button">Back to home</button>
-      <h1 id="practice-title">Solo ASL practice</h1>
-      <p id="practice-instructions">Choose one word and sign it after the countdown.</p>
-      <label for="practice-word">Word to sign
+  <section id="practice" class="screen studio hidden">
+    <header class="studio-header">
+      <span class="wordmark">Escape Pod</span>
+      <button id="close-practice" class="text-button" type="button">Back to home</button>
+    </header>
+    <main class="solo-layout" aria-labelledby="practice-title">
+      <header class="solo-heading">
+        <h1 id="practice-title">Solo ASL practice</h1>
+        <p>Face the camera and keep both hands in view.</p>
+      </header>
+      <div class="solo-camera">
+        <div class="solo-camera-empty">
+          <span>Camera preview</span>
+          <p>Your video and landmark outline appear here.</p>
+        </div>
+        <div id="practice-preview" class="practice-preview hidden">
+          <video id="practice-camera" class="camera-video" autoplay muted playsinline aria-label="Your practice camera"></video>
+          <canvas id="practice-landmarks" aria-hidden="true"></canvas>
+        </div>
+      </div>
+      <div class="solo-tools">
+        <label for="practice-word">Word to sign</label>
         <select id="practice-word" disabled></select>
-      </label>
-      <div id="practice-preview" class="practice-preview hidden">
-        <video id="practice-camera" class="camera-video" autoplay muted playsinline aria-label="Your practice camera"></video>
-        <canvas id="practice-landmarks" aria-hidden="true"></canvas>
+        <p id="practice-instructions">Choose one word and sign it after the countdown.</p>
+        <div class="row practice-actions">
+          <button id="practice-camera-toggle" class="btn primary" type="button" disabled>Turn on camera</button>
+          <button id="capture-sign" class="btn" type="button" disabled>Capture sign</button>
+        </div>
+        <p id="practice-status" class="camera-status" role="status"></p>
+        <output id="practice-result" class="practice-result hidden" aria-live="polite"></output>
+        <button id="retry-practice" class="text-button hidden" type="button">Retry loading words</button>
+        <button id="reset-practice" class="text-button hidden" type="button">Practice all words again</button>
       </div>
-      <div class="row practice-actions">
-        <button id="practice-camera-toggle" class="btn" type="button" disabled>Turn on camera</button>
-        <button id="capture-sign" class="btn primary" type="button" disabled>Capture sign</button>
-      </div>
-      <p id="practice-status" class="camera-status" role="status"></p>
-      <output id="practice-result" class="practice-result hidden" aria-live="polite"></output>
-      <button id="reset-practice" class="btn small hidden" type="button">Practice all words again</button>
-    </section>
-  </main>
+    </main>
+  </section>
 
   <!-- GAME -->
   <section id="game" class="screen hidden">
     <header class="topbar">
-      <div>Room <b id="game-code"></b> · <span id="game-role"></span></div>
+      <div class="game-identity"><span id="game-role"></span><span class="game-room">Room <b id="game-code"></b></span></div>
       <div class="top-timer" id="top-timer">0:00</div>
       <div id="top-strikes" class="strikes"></div>
       <div id="top-progress"></div>
     </header>
+    <p id="connection-status" class="connection-status hidden" role="status"></p>
     <main class="game-main">
       <div id="stage"></div>
       <aside class="side">
@@ -109,6 +170,7 @@
         <div id="feed" class="feed"></div>
         <div id="composer"></div>
       </aside>
+      <aside id="guided-reference" class="hidden" aria-label="ASL reference"></aside>
     </main>
   </section>
 

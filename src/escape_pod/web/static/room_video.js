@@ -14,6 +14,7 @@ const supported = typeof RTCPeerConnection === "function";
 let available = false;
 let unavailableReason = "";
 let guided = false;
+let peerRole = "";
 
 function showVideo(direction, stream) {
   direction.video.srcObject = stream;
@@ -25,8 +26,8 @@ function signal(session, kind, sdp) {
 }
 
 function defaultStatus(direction) {
-  if (direction === outgoing) return unavailableReason || "Camera off";
-  return available ? "Waiting for the other player to share" : unavailableReason;
+  if (direction === outgoing) return unavailableReason || (guided ? "Your camera is off." : "Camera off");
+  return available ? `Waiting for ${peerRole || "the other player"} to share` : unavailableReason;
 }
 
 function end(direction, message, notify = false) {
@@ -173,11 +174,15 @@ export async function receiveVideo(message) {
 export function syncVideo(state) {
   const playing = state?.phase === "playing";
   guided = !!state?.guided;
+  peerRole = guided ? state.me.role === "expert" ? "the signer" : "the decoder" : "";
+  const heading = guided ? state.me.role === "expert" ? "Signer camera" : "Camera check" : "Live video";
+  $("#camera-title").textContent = heading;
   $("#room-video").classList.toggle("hidden", !playing);
   const peerOnline = playing && state.players.some((player) => player.role && player.role !== state.me.role && player.online);
   const wasAvailable = available;
   available = !!peerOnline && supported;
-  unavailableReason = supported ? "Waiting for the other player to connect" : "Live video is unavailable in this browser.";
+  unavailableReason = !supported ? "Live video is unavailable in this browser."
+    : peerOnline ? "" : "Waiting for your partner to connect.";
   if (!available || !wasAvailable) {
     end(outgoing, available ? cameraUnavailable() : "");
     end(incoming);

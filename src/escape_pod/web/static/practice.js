@@ -21,6 +21,7 @@ const captureButton = $("#capture-sign");
 const status = $("#practice-status");
 const result = $("#practice-result");
 const reset = $("#reset-practice");
+const retry = $("#retry-practice");
 const progressKey = "ep:approved-words";
 let visit = null;
 let camera = null;
@@ -84,6 +85,7 @@ export async function enterPractice() {
   word.disabled = cameraButton.disabled = captureButton.disabled = true;
   word.replaceChildren();
   reset.classList.add("hidden");
+  retry.classList.add("hidden");
   result.classList.add("hidden");
   status.textContent = "Loading practice words…";
   try {
@@ -98,7 +100,10 @@ export async function enterPractice() {
     status.textContent = remaining ? error || "Turn on your camera when you’re ready." : "You approved every word.";
     cameraButton.disabled = !remaining || !!error;
   } catch (error) {
-    if (visit === controller) status.textContent = error.message;
+    if (visit === controller) {
+      status.textContent = error.message;
+      retry.classList.remove("hidden");
+    }
   }
 }
 
@@ -114,6 +119,8 @@ function stopPracticeCamera(message = "Camera off.") {
   preview.classList.add("hidden");
   overlay.width = 0;
   cameraButton.textContent = "Turn on camera";
+  cameraButton.classList.add("primary");
+  captureButton.classList.remove("primary");
   captureButton.disabled = true;
   word.disabled = !word.options.length;
   cameraButton.disabled = !word.options.length;
@@ -178,6 +185,8 @@ async function startPracticeCamera() {
     await session.processing;
     if (camera !== session) return;
     captureButton.disabled = false;
+    captureButton.classList.add("primary");
+    cameraButton.classList.remove("primary");
     status.textContent = "Keep your hands and upper body in view.";
     void trackPreview(session);
   } catch (error) {
@@ -235,7 +244,10 @@ async function captureSign() {
     if (camera !== session) return;
     const label = score.approved ? "Approved" : "Try again";
     const percentage = (Math.floor(score.confidence * 1000) / 10).toFixed(1);
-    result.textContent = `${label} · ${wordOf(target).toUpperCase()} confidence ${percentage}% · Top guess: ${wordOf(score.best_guess).toUpperCase()}`;
+    result.replaceChildren(
+      el("strong", { text: label }),
+      el("span", { text: `${wordOf(target).toUpperCase()} confidence ${percentage}% · Top guess ${wordOf(score.best_guess).toUpperCase()}` }),
+    );
     result.classList.toggle("approved", score.approved);
     result.classList.remove("hidden");
     if (score.approved) {
@@ -263,6 +275,7 @@ cameraButton.onclick = () => {
 };
 captureButton.onclick = () => void captureSign();
 word.onchange = () => result.classList.add("hidden");
+retry.onclick = () => void enterPractice();
 reset.onclick = () => {
   approved.clear();
   saveProgress();

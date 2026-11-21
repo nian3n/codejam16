@@ -13,7 +13,7 @@
   --metal1: #5b6170;
   --metal2: #3a3f4b;
   --metal3: #252932;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
   color: var(--ink);
 }
 * { box-sizing: border-box; }
@@ -24,7 +24,6 @@ body {
 }
 .hidden { display: none !important; }
 .screen { min-height: 100vh; }
-#home, #lobby, #practice { display: grid; place-items: center; padding: 16px; }
 
 /* ---------- cards, buttons, inputs ---------- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
@@ -46,31 +45,6 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .row { display: flex; gap: 8px; }
 .error { color: var(--warn); min-height: 1.2em; margin: 0; }
 .hint { color: var(--dim); text-align: center; margin: 0; }
-
-/* ---------- home ---------- */
-.home-card { width: min(420px, 100%); display: grid; gap: 16px; }
-.logo { margin: 0; font-size: 3rem; letter-spacing: .12em; text-align: center; }
-.logo span { color: var(--warn); margin-left: .3em; }
-.tag { margin: -8px 0 8px; text-align: center; color: var(--dim); }
-.or { text-align: center; color: var(--dim); font-size: .85rem; }
-.code-input { text-transform: uppercase; letter-spacing: .3em; text-align: center; font-weight: 700; }
-
-/* ---------- lobby ---------- */
-.lobby-card { width: min(760px, 100%); display: grid; gap: 22px; }
-.room-code { display: flex; align-items: center; gap: 14px; justify-content: center; font-size: 1.2rem; }
-.room-code b { font-size: 2rem; letter-spacing: .3em; color: var(--acc); }
-.roles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 640px) { .roles { grid-template-columns: 1fr; } }
-.role { border: 2px solid var(--line); border-radius: 14px; padding: 18px; text-align: center; display: grid; gap: 8px; }
-.role.mine { border-color: var(--acc); background: #16302e; }
-.role h2 { margin: 0; }
-.role p { margin: 0; color: var(--dim); font-size: .9rem; }
-.role-icon { font-size: 2.6rem; }
-.role-who { min-height: 1.4em; font-weight: 600; color: var(--amber); }
-.levels { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.level { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; cursor: pointer; text-align: center; min-width: 140px; }
-.level.on { border-color: var(--acc); background: #16302e; }
-.level small { display: block; color: var(--dim); }
 
 /* ---------- game layout ---------- */
 .topbar {
@@ -114,16 +88,6 @@ button.chip:hover { border-color: var(--warn); }
 .camera-video { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: var(--bg); }
 .mirror { transform: scaleX(-1); }
 .camera-status { color: var(--dim); font-size: .85rem; margin: 6px 0 0; }
-.practice-card { display: grid; gap: 14px; width: min(540px, 100%); }
-.practice-card h1, .practice-card p { margin: 0; }
-.practice-card > button { justify-self: start; }
-.practice-card > p { color: var(--dim); }
-.practice-preview { position: relative; transform: scaleX(-1); }
-.practice-preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.practice-actions { flex-wrap: wrap; }
-.practice-result { display: block; border-left: 3px solid var(--amber); padding-left: 10px; }
-.practice-result.approved { border-color: var(--ok); }
-
 /* ---------- the bomb ---------- */
 .bomb {
   position: relative; margin: 0 auto; max-width: 980px; padding: 28px;
