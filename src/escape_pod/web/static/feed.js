@@ -10,7 +10,7 @@ export function renderFeed() {
   const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
   feed.replaceChildren(...state.chat.map((m) => {
     if (m.kind === "event") return el("div", { class: "msg event" + (m.strike ? " strike" : ""), text: m.text });
-    if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (HQ)` }), m.text);
+    if (m.kind === "say") return el("div", { class: "msg say" }, el("span", { class: "who", text: `${m.from} (handler)` }), m.text);
     const box = el("div", { class: "msg signs" }, el("span", { class: "who", text: `${m.from} signed` }),
       el("div", { class: "chips" }, m.glosses.map((g) => el("span", { class: "chip", text: g.toUpperCase() }))));
     if (state.me.role === "expert" && !m.mission_stage) {
@@ -22,8 +22,8 @@ export function renderFeed() {
   }));
   // Solo: the bot "thinks" for a second before each reply (server BOT_DELAY_S).
   if (state.bot_typing) {
-    feed.append(el("div", { class: "msg say typing", "aria-label": "HQ bot is typing" },
-      el("span", { class: "who", text: "HQ bot (HQ)" }),
+    feed.append(el("div", { class: "msg say typing", "aria-label": `${state.bot_name} is typing` },
+      el("span", { class: "who", text: `${state.bot_name} (handler)` }),
       el("span", { class: "dots" }, el("i"), el("i"), el("i"))));
   }
   const seen = state.chat.length + (state.bot_typing ? 0.5 : 0);
@@ -31,7 +31,7 @@ export function renderFeed() {
   local.chatSeen = seen;
 }
 
-// The field agent's composer (webcam signs, with a typed fallback) is in game_signs.js.
+// The field agent's composer (webcam signs) is in game_signs.js.
 export { signComposer as defuserComposer, renderSignChips } from "./game_signs.js";
 
 export function expertComposer() {

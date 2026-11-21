@@ -46,6 +46,7 @@ MAX_SIGNS, MAX_GLOSS_LEN, MAX_TEXT_LEN, MAX_CHAT = 12, 24, 300, 200
 MAX_RTC_BYTES = 64_000  # an SDP offer is a few KB; this only stops abuse
 ROOM_IDLE_S = 2 * 3600  # forget a room 2 h after its last player left
 ARM_TIMEOUT_S = 45.0    # the timer starts even if the agent's browser never says "ready"
+COUNTDOWN_S = 3.0       # "ready" starts a 3-2-1 that both players see, then the clock
 BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
@@ -86,6 +87,8 @@ class Room:
     players: dict[str, Player] = field(default_factory=dict)
     phase: Literal["lobby", "playing", "escaped", "boom"] = "lobby"
     level: str = "intermediate"
+    custom_modules: int = 3     # the "custom" level (config.custom_level)
+    custom_timer_s: int = 600
     seed: int = 0
     round_id: str | None = None
     mission: Mission | None = None
@@ -100,6 +103,7 @@ class Room:
     # "Initializing": the clock waits until the agent's browser has loaded the hand tracker
     # and the server has loaded the word model ({"type": "ready"}), or ARM_TIMEOUT_S.
     armed: bool = False
+    countdown_end: float | None = None  # monotonic time the 3-2-1 ends; None before "ready"
     voice_rng: random.Random = field(default_factory=random.Random)  # the solo bot's nervous words
     timer_s: float = 0.0
     last_seen: float = field(default_factory=time.monotonic)  # for pruning idle rooms
@@ -167,22 +171,31 @@ def view(room: Room, me: Player) -> dict:
         "round_id": room.round_id,
         "practice_credits": sorted(me.practice_credits),
         "level": room.level,
-        "levels": {k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
-                   for k, l in config.LEVELS.items()},
+        "levels": {**{k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
+                      for k, l in config.LEVELS.items()},
+                   "custom": {"modules": room.custom_modules, "timer_s": room.custom_timer_s, "hard": False,
+                              "range": {"modules": config.CUSTOM_MODULES, "timer_s": config.CUSTOM_TIMER_S}}},
         "can_start": room.can_start(),
         "remaining_s": round(room.remaining(), 2),
         "armed": room.armed,
+        **({"countdown_s": round(max(0.0, room.countdown_end - time.monotonic()), 2)}
+           if room.phase == "playing" and not room.armed and room.countdown_end is not None else {}),
         "strikes": room.strikes,
         "max_strikes": config.MAX_STRIKES,
         "chat": room.chat,
         "debug": app.state.debug,
         "solo": room.solo,
+        "bot_name": BOT_NAME,  # the solo handler's name, for the page text
     }
     if room.mission is not None:
         v["mission"] = room.mission.view(me.role)
     if room.bot is not None and room.mission is not None and room.mission.stage == "modules":
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
         v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply
+        if room.bot.page is not None and room.bot.page.widget == "keypad":
+            # Every keypad question is answered with digits, YES or NO: offer only those,
+            # so the recognizer picks among 13 signs, not the whole bomb.
+            v["bot_words"] = sorted(set(room.bot.page.pool) | set(config.CORE_SIGNS))
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
@@ -242,12 +255,23 @@ def expire_if_due(room: Room) -> bool:
     return True
 
 
+def start_countdown(room: Room) -> None:
+    """The agent is ready: count 3-2-1, so nobody is caught out when signing goes live."""
+    if room.countdown_end is None:
+        room.countdown_end = time.monotonic() + COUNTDOWN_S
+
+
 async def watch_timer(room: Room):
     waited = 0.0
     while room.phase == "playing" and not room.armed:
-        await asyncio.sleep(0.1)
-        waited += 0.1
-        if room.phase == "playing" and not room.armed and waited >= ARM_TIMEOUT_S:
+        await asyncio.sleep(0.05)
+        waited += 0.05
+        if room.phase != "playing" or room.armed:
+            break
+        if room.countdown_end is None and waited >= ARM_TIMEOUT_S:
+            start_countdown(room)
+            await broadcast(room)
+        elif room.countdown_end is not None and time.monotonic() >= room.countdown_end:
             arm(room)
             await broadcast(room)
     while room.phase == "playing":
@@ -256,8 +280,14 @@ async def watch_timer(room: Room):
             await broadcast(room)
 
 
+def room_level(room: Room) -> config.Level:
+    if room.level == "custom":
+        return config.custom_level(room.custom_modules, room.custom_timer_s)
+    return config.LEVELS[room.level]
+
+
 def start_game(room: Room):
-    level = config.LEVELS[room.level]
+    level = room_level(room)
     room.seed = random.randrange(1_000_000)
     rng = random.Random(room.seed)
     room.modules = draw(rng, level)
@@ -269,8 +299,9 @@ def start_game(room: Room):
     room.chat = []
     room.phase = "playing"
     room.timer_s = float(level.timer_s or 600)
-    room.armed = False  # the clock starts on {"type": "ready"} (see arm)
-    room.say({"kind": "event", "text": "Mission started. Confirm the combination to open the case."})
+    room.armed = False  # the clock starts after {"type": "ready"} and a 3-2-1 (see arm)
+    room.countdown_end = None
+    room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
     if room.solo:
         room.bot = HqBot()  # a fresh bot per game: no page from the last game
         bot_say(room, room.bot.case_lock_prompt())
@@ -458,6 +489,16 @@ async def handle(room: Room, me: Player, msg: dict):
             me.role = role
     elif kind == "level" and room.phase == "lobby" and msg.get("level") in config.LEVELS:
         room.level = msg["level"]
+    elif kind == "level" and room.phase == "lobby" and msg.get("level") == "custom":
+        # Optional "modules" and "timer_s"; a value out of range (or not an int) is ignored.
+        n, t = msg.get("modules"), msg.get("timer_s")
+        lo, hi = config.CUSTOM_MODULES
+        if type(n) is int and lo <= n <= hi:
+            room.custom_modules = n
+        lo, hi = config.CUSTOM_TIMER_S
+        if type(t) is int and lo <= t <= hi:
+            room.custom_timer_s = t
+        room.level = "custom"
     elif kind == "start" and room.can_start():
         start_game(room)
     elif (kind in ("signs", "wire_cut") and room.phase == "playing" and me.role == "defuser"
@@ -499,9 +540,8 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None and result is not None and room.phase == "playing":
                 bot = room.bot
                 bot_later(room, lambda: bot.on_result(result))
-    elif (kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed
-          and msg.get("round_id", room.round_id) == room.round_id):
-        arm(room)
+    elif kind == "ready" and room.phase == "playing" and me.role == "defuser" and not room.armed:
+        start_countdown(room)
     elif kind == "again" and room.phase in ("escaped", "boom"):
         back_to_lobby(room)
     elif kind == "exit" and room.phase == "playing":

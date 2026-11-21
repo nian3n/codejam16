@@ -20,6 +20,7 @@ dependencies = [
 model = [
     "tensorflow-cpu>=2.16; sys_platform == 'win32'",
     "ai-edge-litert>=1.2; sys_platform != 'win32'",
+    "onnx>=1.16,<1.18",
 ]
 # The full desktop tools (sign-test, record-digits): uv sync --extra vision
 # No Windows-on-ARM wheels for mediapipe/tensorflow: use an x64 Python there (README).
@@ -28,6 +29,7 @@ vision = [
     "opencv-python>=4.9",
     "tensorflow-cpu>=2.16; sys_platform == 'win32'",
     "ai-edge-litert>=1.2; sys_platform != 'win32'",
+    "onnx>=1.16,<1.18",
 ]
 
 [project.scripts]

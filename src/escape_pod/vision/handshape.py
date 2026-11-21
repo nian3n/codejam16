@@ -35,20 +35,24 @@ def pick_hand(left: np.ndarray, right: np.ndarray) -> tuple[np.ndarray, bool]:
     return (left, True) if seen_l > seen_r else (right, False)
 
 
-def normalize(hand: np.ndarray, is_left: bool) -> np.ndarray:
-    """(T, 21, 3) -> (T, 21, 3): wrist at the origin, hand size 1, left hands mirrored."""
+def normalize(hand: np.ndarray, is_left: bool, scale_xyz: bool = False) -> np.ndarray:
+    """(T, 21, 3) -> (T, 21, 3): wrist at the origin, hand size 1, left hands mirrored.
+
+    The hand size uses x, y only (MediaPipe's z is noisy), unless scale_xyz: the
+    ready-made digit model (digit_mlp.py) was trained with the 3-D length.
+    """
     out = hand - hand[:, WRIST:WRIST + 1, :]
-    size = np.linalg.norm(out[:, MIDDLE_MCP, :2], axis=1)  # x, y only: MediaPipe's z is noisy
+    size = np.linalg.norm(out[:, MIDDLE_MCP, :3 if scale_xyz else 2], axis=1)
     out = out / np.where(size > 1e-6, size, np.nan)[:, None, None]
     if is_left:
         out[..., 0] *= -1
     return out
 
 
-def features_from_hands(left: np.ndarray, right: np.ndarray) -> np.ndarray | None:
+def features_from_hands(left: np.ndarray, right: np.ndarray, scale_xyz: bool = False) -> np.ndarray | None:
     """left, right: (T, 21, 3) with NaN where the hand was not found. None if no usable frame."""
     hand, is_left = pick_hand(left, right)
-    norm = normalize(hand.astype(np.float64), is_left)
+    norm = normalize(hand.astype(np.float64), is_left, scale_xyz)
     ok = np.isfinite(norm).all(axis=(1, 2))
     frames = norm[ok]
     if len(frames) == 0:

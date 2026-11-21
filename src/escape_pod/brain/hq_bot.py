@@ -33,11 +33,11 @@ from escape_pod.puzzles.engine import ALPHA, ORDERS, WIDGETS, cond_holds, load_p
 from escape_pod.puzzles.models import Action, PuzzleSpec
 from escape_pod.puzzles.phrase import phrase, word
 
-BOT_NAME = "HQ bot"
+BOT_NAME = "Rob"  # the solo handler. Players found "HQ" unclear, so the bot has a name
 CORE = {"yes", "no", "finish"}
 POSITIONS = ("first", "last")
 
-GREETING = "HQ here. Which module do you need help with? Tell me one thing you see on it."
+GREETING = f"{BOT_NAME} here. Which module do you need help with? Tell me one thing you see on it."
 NEXT = "Good work. Which module is next? Tell me one thing you see on it."
 UNKNOWN = "I do not know that word. Tell me one thing from the module again."
 

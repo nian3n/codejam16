@@ -416,6 +416,7 @@ from test_hq_bot import answer  # noqa: E402
 @pytest.fixture(autouse=True)
 def _fast_bot(monkeypatch):
     monkeypatch.setattr(server, "BOT_DELAY_S", 0)  # the 1 s "thinking" pause, off in tests
+    monkeypatch.setattr(server, "COUNTDOWN_S", 0.3)  # the 3-2-1 before the clock, short in tests
 
 
 def _start_solo(level="beginner", *, open_gates=True):
@@ -678,8 +679,11 @@ def test_solo_bot_thinks_before_it_replies(monkeypatch):
     typing = _drain(a, lambda s: s["chat"][-1]["kind"] == "signs")
     assert typing["bot_typing"] is True and typing["bot_stage"] == "module"
     done = _bot_said(a, len(typing["chat"]))
-    assert time.monotonic() - t0 >= 0.3
-    assert done["bot_typing"] is False and done["bot_stage"] == "details"
+    # Windows clocks tick in about 16 ms steps, so allow a little less than 0.3 s.
+    assert time.monotonic() - t0 >= 0.25
+    # One item can already decide the page (a rule "if there is a TV"): then the bot gives
+    # the instruction at once and goes back to "module". Either way the stage matches the bot.
+    assert done["bot_typing"] is False and done["bot_stage"] == server.rooms[code].bot.stage
     a.__exit__(None, None, None)
 
 
@@ -692,12 +696,16 @@ def test_the_timer_waits_for_the_agent_to_be_ready():
     assert sa["armed"] is False and sa["remaining_s"] == full
     time.sleep(0.3)
     assert server.rooms[code].remaining() == full  # frozen while initializing
-    b.send_json({"type": "ready"})  # HQ cannot start the clock
+    b.send_json({"type": "ready"})  # the handler cannot start the clock
     b.send_json({"type": "say", "text": "ping"})
-    _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
-    assert server.rooms[code].armed is False
+    s = _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
+    assert server.rooms[code].armed is False and "countdown_s" not in s
     a.send_json({"type": "ready"})
+    # Ready starts a 3-2-1 that both players see. The clock holds until it ends.
+    s = _drain(a, lambda s: "countdown_s" in s)
+    assert s["armed"] is False and 0 < s["countdown_s"] <= server.COUNTDOWN_S and s["remaining_s"] == full
     s = _drain(b, lambda s: s["armed"])
+    assert "countdown_s" not in s
     time.sleep(0.3)
     assert server.rooms[code].remaining() < full
     a.__exit__(None, None, None)
@@ -751,3 +759,30 @@ def test_a_two_cut_answer_is_checked_click_by_click():
     assert s["strikes"] == 0 and s["chat"][-1]["text"] == "Module 1 defused!"
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_solo_keypad_questions_take_only_digits_and_core_signs():
+    code, a, s = _start_solo()
+    assert "bot_words" not in s  # naming a module: any word on the bomb
+    a.send_json({"type": "signs", "glosses": ["7"]})  # the keypad page
+    s = _bot_said(a, len(s["chat"]))
+    assert s["bot_words"] == sorted(list("0123456789") + list(config.CORE_SIGNS))
+    a.__exit__(None, None, None)
+
+
+def test_custom_level_sets_modules_and_time():
+    code = client.post("/api/rooms", json={"solo": True}).json()["code"]
+    a = _join(code, "Ana")
+    _drain(a, lambda s: s["can_start"])
+    a.send_json({"type": "level", "level": "custom", "modules": 2, "timer_s": 420})
+    s = _drain(a, lambda s: s["level"] == "custom")
+    assert s["levels"]["custom"]["modules"] == 2 and s["levels"]["custom"]["timer_s"] == 420
+    for bad in ({"modules": 6}, {"modules": 0}, {"timer_s": 30}, {"timer_s": 99999}, {"modules": "3"}):
+        a.send_json({"type": "level", "level": "custom", **bad})  # out of range: ignored
+    a.send_json({"type": "level", "level": "custom", "modules": 5})  # time stays 420
+    s = _drain(a, lambda s: s["levels"]["custom"]["modules"] == 5)
+    assert s["levels"]["custom"]["timer_s"] == 420
+    a.send_json({"type": "start"})
+    s = _drain(a, lambda s: s["phase"] == "playing")
+    assert len(s["bomb"]) == 5 and s["remaining_s"] == 420
+    a.__exit__(None, None, None)

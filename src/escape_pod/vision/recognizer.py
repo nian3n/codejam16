@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from escape_pod.vision.digit_mlp import DigitMLP
 from escape_pod.vision.handshape import DIGITS, HandshapeModel
 from escape_pod.vision.word_model import WordModel
 
@@ -54,10 +55,14 @@ def rank(logits: dict[str, float], allowed: set[str] | None, k: int = 5) -> list
     return [Guess(names[i], float(p[i])) for i in order]
 
 
-def hand_model() -> HandshapeModel:
+def hand_model() -> DigitMLP | HandshapeModel:
+    """The digit model: the downloaded ASL Landmark MLP, else our own k-NN (train-digits)."""
     global _hand
     if _hand is None:
-        _hand = HandshapeModel.load()
+        try:
+            _hand = DigitMLP.load()
+        except FileNotFoundError:
+            _hand = HandshapeModel.load()
     return _hand
 
 

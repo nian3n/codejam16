@@ -314,7 +314,14 @@ class Module:
         A one-click answer is one step. A wrong click keeps the progress so far, like a
         cut wire that stays cut.
         """
-        steps, ordered = self.widget.steps(self.solution())
+        solution = self.solution()
+        if action == solution:
+            # The whole answer in one message (an older client, a test, the answer key):
+            # same as making every click that is left.
+            self.done.extend(a for a in self.widget.steps(solution)[0] if a not in self.done)
+            self.defused = True
+            return "defused"
+        steps, ordered = self.widget.steps(solution)
         left = list(steps)
         for a in self.done:
             left.remove(a)

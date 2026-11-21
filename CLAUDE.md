@@ -17,7 +17,7 @@ You help a team of 4 build a hackathon game. In the game, two players practice *
 The game is inspired by *Keep Talking and Nobody Explodes*. Two players join one room in their browsers. Each player takes one role.
 
 - **Defuser** (on screen: **Field agent**): sees the bomb, but not the manual. Signs what they see to the webcam, one sign at a time. Clicks the bomb to act.
-- **Expert** (on screen: **HQ handler**): sees the manual, but never the bomb. Reads the signs, finds the page and tells the defuser what to do in English text.
+- **Expert** (on screen: **Handler**. The game no longer says "HQ": players did not know it means headquarters): sees the manual, but never the bomb. Reads the signs, finds the page and tells the defuser what to do in English text.
 
 Each game **draws modules from a pool of 20 puzzles**. **Every puzzle teaches a different vocabulary topic** (colors, numbers, animals and so on). Every word in a puzzle is a sign the recognizer knows (§5.1).
 
@@ -62,7 +62,7 @@ Each puzzle has its own topic, so the signs alone identify the manual page. Sign
 | Icons | emoji placeholders in `assets/icons.json`. Replace them with CC0 PNGs (Kenney) later |
 | Landmarks | MediaPipe Holistic (543 landmarks per frame: face, both hands, pose). Where it runs is open (§6.0) |
 | Word signs | `sign/kaggle-asl-signs-1st-place` from Hugging Face: `model.tflite` (11.2 MB) + `sign_to_prediction_index_map.json`, 250 signs, MIT license |
-| Numbers 0–9 | our own small classifier on MediaPipe hand landmarks, trained on team recordings (§6.4) |
+| Numbers 0–9 | the ready-made "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp`, CC BY-NC 4.0) on MediaPipe hand landmarks (§6.4). Fallback: our own k-NN on team recordings |
 | Retrieval (phase 2) | `sentence-transformers` (`all-MiniLM-L6-v2`), NumPy cosine similarity |
 | LLM (phase 2) | provider SDK behind `brain/llm.py`, JSON output checked with `pydantic` |
 | Tests | `pytest`, with FastAPI's `TestClient` for WebSocket tests |
@@ -167,14 +167,14 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | Client sends | Who | Phase |
 |---|---|---|
 | `{"type": "role", "role": "defuser" \| "expert"}` | anyone | lobby |
-| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}` | anyone | lobby |
+| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}`, or `{"type": "level", "level": "custom", "modules": 1-5, "timer_s": 60-1200}` (both fields optional, out-of-range values ignored) | anyone | lobby |
 | `{"type": "start"}` | anyone, when both roles are taken | lobby |
 | `{"type": "signs", "glosses": ["cat", "dog"]}` | defuser | playing |
 | `{"type": "signs", "glosses": ["0"], "round_id": ..., "mission_revision": ...}` | defuser | armed, case lock or wire tray |
 | `{"type": "wire_cut", "wire": 0, "round_id": ..., "mission_revision": ...}` | defuser | armed, wire tray. Wire indexes count from zero, top to bottom |
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
-| `{"type": "ready"}`: the agent's hand tracker and the word model are loaded. The clock starts (`armed` becomes true). Without it, the clock starts after 45 s | defuser | playing |
+| `{"type": "ready"}`: the agent's hand tracker and the word model are loaded. The server counts 3-2-1 (`countdown_s` in the state), then the clock starts (`armed` becomes true). Without `ready`, the count starts after 45 s | defuser | playing |
 | `{"type": "again"}` | anyone | escaped or boom |
 | `{"type": "exit"}`: ends the game for both players. Both go back to the lobby with their roles | anyone | playing |
 | `{"type": "leave"}`: frees the seat and the role. A running game ends. The last player out deletes the room | anyone | any |
@@ -318,7 +318,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 **Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to HQ". That press confirms the signs (rule 4). A "Type the signs instead" fallback stays under the chips for a missing camera and for the digits, until the digit model is trained.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
 
 ### 6.1 Pipeline
 
@@ -402,12 +402,14 @@ Choosing among 10 signs is much more reliable than among 250.
 
 ### 6.4 Numbers (handshape classifier)
 
-The word model does not cover numbers. Train a small classifier:
+The word model does not cover numbers. A second, small model reads the digits from one hand's shape.
 
-- `tools/record_samples.py`: each teammate records about 30 samples of each digit 0–9.
-- Features: the dominant hand's 21 landmarks, moved to the wrist and scaled by hand size (63 numbers). Average them over the steadiest 5 frames of the clip.
-- Model: k-nearest neighbors or a small MLP, saved to `models/handshape.*`.
-- `recognize` routes to this classifier when the allowed set is digits.
+- **Model (November 2026):** the ready-made "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp` on Hugging Face, CC BY-NC 4.0). It scores 36 still hand shapes (0–9, A–Z) from 21 MediaPipe hand points, trained on the ASL-HG dataset. The game uses only the 10 digit scores. `uv run download-models` gets the ONNX file and converts it once to NumPy weights (`models/digits/asl_mlp.npz`, `vision/digit_mlp.py`). The server needs no ONNX runtime.
+- **Features:** the signing hand's 21 points, moved to the wrist and divided by the 3-D length from the wrist to the middle-finger knuckle, as the model card says. The code averages them over the steadiest 5 frames. A left hand is mirrored to a right hand.
+- **Mixing:** `rank_mixed` in `vision/recognizer.py`. The word model's probability for the allowed words stays with those words. The rest goes to the digits, split by the digit model. `/api/practice/guess` mixes when the allowed set has digits.
+- **Solo:** while the bot is on the keypad page, the state has `bot_words` (the digits and the core signs), and the page offers only those.
+- **Fallback:** our own k-NN (`vision/handshape.py`, `uv run record-digits` and `uv run train-digits`) loads only when the downloaded model is missing.
+- **Not measured yet:** the model card reports 100 % on its own dataset. Check it with our cameras and hands (§6.5).
 
 ### 6.5 Evaluation (`tools/eval_signs.py`)
 
@@ -430,7 +432,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 ## 8. The LLM alien (phase 2, Teammate 4)
 
-**Built first: the scripted bot HQ** (`brain/hq_bot.py`, design in `docs/superpowers/specs/2026-11-21-solo-bot-hq-design.md`). In a solo room, the bot takes the expert seat. It knows only the manual and the signs, never the bomb. The agent signs one item to name the module. The bot then reads the page's rules in order and asks only for the fact that the next rule needs, one question at a time: "Do you see DOG?", "Tell me the color of the top wire.", "Is the LAMP switch on?". The agent answers with YES, NO or an item. When a rule holds, the bot gives the instruction with `phrase()`. It trusts the signs, so a wrong sign gives a wrong instruction. The bot sounds nervous (`brain/hq_voice.py`): it adds a few shaky words around its sentence, and never changes the sentence. The nerves grow after a strike and when time runs low. After a strike, it walks the same page again. The LLM alien can later reword the bot's replies, with the script as the fallback.
+**Built first: the scripted bot handler, Rob** (`brain/hq_bot.py`, design in `docs/superpowers/specs/2026-11-21-solo-bot-hq-design.md`). In a solo room, Rob takes the expert seat. It knows only the manual and the signs, never the bomb. The agent signs one item to name the module. The bot then reads the page's rules in order and asks only for the fact that the next rule needs, one question at a time: "Do you see DOG?", "Tell me the color of the top wire.", "Is the LAMP switch on?". The agent answers with YES, NO or an item. When a rule holds, the bot gives the instruction with `phrase()`. It trusts the signs, so a wrong sign gives a wrong instruction. The bot sounds nervous (`brain/hq_voice.py`): it adds a few shaky words around its sentence, and never changes the sentence. The nerves grow after a strike and when time runs low. After a strike, it walks the same page again. The LLM alien can later reword the bot's replies, with the script as the fallback.
 
 - **Answer (`brain/answer.py`):** the system prompt says that the alien reads a defusal manual and gets a list of ASL glosses. The alien uses only the given page. It turns the glosses into facts and restates them in one short English sentence (`recast`). Then it picks the action that the rules give and writes it as one short instruction. The output is JSON that matches `Answer`. One retry on invalid JSON, then `ask_more`.
 - **Verify (`brain/verify.py`):** wrong page → `ask_sure`. A fact the rules need is missing → `ask_more`. A fact is wrong → `ask_sure`. Facts match and action equals `module.solution()` → `ok`. Otherwise → `corrected` with `phrase(module.solution(), module)`. **Never show an LLM answer before `verify()`.**
@@ -451,11 +453,13 @@ The expert's manual already highlights the pages that contain the signed words (
 | Briefing before the bomb | yes, each topic's signs shown and practiced | yes, shown only | no |
 | Sign cards beside the camera | yes | no | no |
 
+**Custom level:** the lobby also has a "Custom" card. The players pick 1 to 5 modules and 1 to 20 minutes, in 1-minute steps. All other settings are as at Intermediate (`config.custom_level`, `CUSTOM_MODULES`, `CUSTOM_TIMER_S`).
+
 ### 9.2 Features (M5)
 
 - **Briefing:** before the timer starts, show each drawn module's topic and its signs as looping animations.
 - **Sign cards:** at Beginner, the pool of the module being signed shows beside the camera. The cards show the whole pool, so they do not give away which items are on the module.
-- **Glossary (built):** the "📖 Glossary (G)" button in the game top bar, or the **G** key, opens the Field Sign Dictionary, for both roles, at any time during a game. The timer keeps running. It lists every game word A to Z, plus YES, NO and FINISH (topic "game controls"), never only this bomb's words (rule 3). A click plays a looping PopSign clip from `signs/clips/` (`uv run fetch-signs`). The digits have no clip yet. Later: our own signer's animations and a "practice" button.
+- **Glossary (built):** the "📖 Glossary (G)" button in the game top bar, or the **G** key, opens the Field Sign Dictionary, for both roles, at any time during a game. The timer keeps running. It lists every game word A to Z, plus YES, NO and FINISH (topic "game controls"), never only this bomb's words (rule 3). A click plays a looping PopSign clip from `signs/clips/` (`uv run fetch-signs`). The digits show a still picture when the team adds one (`signs/clips/pictures/`, with its source and license in `index.json`). Until then, they say "No picture yet". Later: our own signer's animations and a "practice" button.
 - **Retry is free:** a rejected guess or a NO costs nothing. Only wrong actions on the bomb cost strikes.
 - **Round report:** modules defused, strikes, time, topics practiced, every sign confirmed, and the signs that needed retries.
 - **Wording:** present the game as ASL vocabulary practice. Do not claim that it translates ASL. It recognizes single signs.
@@ -466,13 +470,13 @@ The expert's manual already highlights the pages that contain the signed words (
 
 `HOME → LOBBY → GAME → END → LOBBY`
 
-- **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The HQ handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`, and the package name `escape_pod`.
-- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Play solo (bot HQ)** makes a solo room (§4.2). Its lobby shows the level picker, Start and the player's own camera, so they can frame their hands. The game also shows the own camera full size. Above the sign chips, a line shows the bot's template: "I need help with:" (name a module with one item) or "My answer:" (the answer to the bot's question). **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
-- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
+- **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`, and the package name `escape_pod`.
+- **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Play solo** makes a solo room (§4.2). The bot is named Rob (`hq_bot.BOT_NAME`, sent as `bot_name` in the state). Its lobby shows the level picker, Start and the player's own camera, so they can frame their hands. The game also shows the own camera full size. Above the sign chips, a line shows the bot's template: "I need help with:" (name a module with one item) or "My answer:" (the answer to the bot's question). **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
+- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role (in a solo room, at once). No hint line sits under Start. A solo lobby shows no room code and no invite link. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
-- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to HQ", a typed fallback and the message feed.
+- **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the sign capture (Space starts and stops a recording, one chip per sign), "Send to <handler name>" and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
-- **Initializing (both roles):** after Start, an "INITIALIZING" screen covers the game, and the timer holds the full time. The agent's browser loads the hand tracker and asks the server to load the word model (`GET /api/practice/warmup`), then sends `ready` (`static/init.js`). The server also loads the model in the background when it starts, because the first load takes about 6 s.
+- **Initializing (both roles):** after Start, an "INITIALIZING" screen covers the game, and the timer holds the full time. The agent's browser loads the hand tracker and asks the server to load the word model (`GET /api/practice/warmup`), then sends `ready` (`static/init.js`). The screen then shows "GET READY" and a 3-2-1 for both players, so signing never goes live without warning. The server also loads the model in the background when it starts, because the first load takes about 6 s.
 - **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
 - **End:** "DEVICE NEUTRALIZED" or "DETONATION", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
@@ -569,7 +573,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 4. **M4: assets and polish.** CC0 icons and module art in place of emoji, sounds, a credits screen.
 5. **M5: learner support and media.** Glossary, signer recordings turned into animations, briefing, sign cards, round report, progress file.
 6. **M6: LLM alien (phase 2).** Retrieval, the answer call, `verify()`, `--mock-llm`, as in §7 and §8.
-7. **M7: demo hardening.** Test with people outside the team and in venue lighting. Latency within target. A typed-sign fallback if the camera fails. A recorded backup run.
+7. **M7: demo hardening.** Test with people outside the team and in venue lighting. Latency within target. A plan for a camera that fails (the typed fallback was removed in November 2026). A recorded backup run.
 
 ---
 
@@ -603,6 +607,7 @@ Show these in the README and on an in-game credits screen.
 
 - **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license. It is the winning solution of Google's Kaggle "Isolated Sign Language Recognition" competition.
 - **Training data behind the model:** PopSign ASL v1.0, Georgia Tech, CC BY 4.0 (https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/). Required attribution: credit PopSign ASL v1.0 and its authors. The glossary shows PopSign clips, and `signs/fetch_popsign.py` holds the credit line that the glossary displays.
+- **Digit model:** "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp` on Hugging Face), CC BY-NC 4.0: non-commercial use only, with credit. Trained on ASL-HG (Pranto et al., *Data in Brief*, 2026, https://data.mendeley.com/datasets/j4y5w2c8w9/1). Cite both.
 - **MediaPipe:** Google, Apache 2.0.
 - **Embedding model:** `sentence-transformers/all-MiniLM-L6-v2`, Apache 2.0.
 - **Emoji:** the system emoji font of each player's device (placeholder only).

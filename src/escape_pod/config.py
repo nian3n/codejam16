@@ -21,7 +21,8 @@ ENV_FILE = ETC_DIR / ".env"
 TLS_DIR = ETC_DIR / "tls"                # self-signed cert for --https (git-ignored with etc/)
 MODELS_DIR = ROOT / "models"             # git-ignored; uv run download-models fills it
 ISLR_DIR = MODELS_DIR / "islr"
-HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # digit model (uv run train-digits)
+HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # our own digit model, the fallback (uv run train-digits)
+DIGIT_MLP_FILE = MODELS_DIR / "digits" / "asl_mlp.npz"  # ready-made digit model (uv run download-models)
 HANDSHAPE_DATA_DIR = ROOT / "data" / "handshape"  # recorded digit samples, git-ignored (uv run record-digits)
 LOGS_DIR = ROOT / "logs"                 # git-ignored
 
@@ -82,7 +83,7 @@ MAX_STRIKES = 3
 
 @dataclass(frozen=True)
 class Level:
-    name: Literal["beginner", "intermediate", "advanced"]
+    name: Literal["beginner", "intermediate", "advanced", "custom"]
     modules: int
     allow_hard: bool
     timer_s: int | None
@@ -101,3 +102,13 @@ LEVELS = {
     "intermediate": Level("intermediate", 4, False, 300, "bomb", True, False, True),
     "advanced": Level("advanced", 4, True, 180, "all", False, False, False),
 }
+
+# The lobby's "Custom" level: the players pick the module count and the time. Everything
+# else is as at Intermediate (no hard puzzles, the bomb's words). 5 modules is the most
+# the bomb case holds (2 rows of 3 slots, one is the timer).
+CUSTOM_MODULES = (1, 5)
+CUSTOM_TIMER_S = (60, 1200)  # 1 to 20 minutes
+
+
+def custom_level(modules: int, timer_s: int) -> Level:
+    return Level("custom", modules, False, timer_s, "bomb", True, False, True)

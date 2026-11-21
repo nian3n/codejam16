@@ -235,3 +235,21 @@ def test_a_one_click_answer_is_one_step():
     m = _mod("pets_farm", {"icons": ["cat", "dog", "pig", "duck"]})
     assert m.apply(Action("press", {"icon": "cow"})) == "strike" and not m.defused
     assert m.apply(m.solution()) == "defused" and m.defused
+
+
+def test_the_whole_answer_at_once_also_defuses():
+    m = _mod("colors", {"colors": ["green", "white", "black", "orange"]})
+    assert m.apply(m.solution()) == "defused" and m.defused
+    m = _mod("colors", {"colors": ["green", "white", "black", "orange"]})
+    m.apply(Action("cut", {"color": "white"}))
+    assert m.apply(m.solution()) == "defused"
+
+
+@pytest.mark.parametrize("n", range(config.CUSTOM_MODULES[0], config.CUSTOM_MODULES[1] + 1))
+def test_custom_levels_draw_1_to_5_modules(n):
+    lv = config.custom_level(n, 120)
+    assert lv.name == "custom" and lv.timer_s == 120 and not lv.allow_hard
+    for seed in range(50):
+        mods = draw(random.Random(seed), lv)
+        assert len(mods) == n and len({m.spec.id for m in mods}) == n
+        assert len({m.spec.widget for m in mods}) >= min(3, n)
