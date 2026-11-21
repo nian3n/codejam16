@@ -141,3 +141,22 @@ def test_train_digits_reads_recordings_scores_each_person_on_the_others_and_save
     train_digits.main(["--data", str(tmp_path / "data"), "--k", "3"])
     assert "Accuracy (leave-one-person-out over 2 people): 80/80" in capsys.readouterr().out
     assert HandshapeModel.load().predict(X[0]) == y[0]
+
+
+def test_allowed_sets_by_level_use_only_game_words():
+    from escape_pod import config
+    from escape_pod.puzzles.engine import draw
+    from escape_pod.vision.recognizer import allowed_for, game_words
+    import random
+
+    words = game_words()
+    assert {"cat", "yes", "no", "finish", "0", "9"} <= words
+    assert "callonphone" not in words  # a model gloss that no puzzle uses
+    assert not any(len(g) == 1 and g.isalpha() for g in words)  # no fingerspelled letters
+
+    mods = draw(random.Random(7), config.LEVELS["intermediate"])
+    one = allowed_for(config.LEVELS["beginner"], module=mods[0], modules=mods)
+    assert one == (set(mods[0].spec.pool) | set(config.CORE_SIGNS)) & words
+    bomb = allowed_for(config.LEVELS["intermediate"], module=mods[0], modules=mods)
+    assert one <= bomb <= words
+    assert allowed_for(config.LEVELS["advanced"], module=mods[0], modules=mods) == words

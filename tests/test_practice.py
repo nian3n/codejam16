@@ -39,3 +39,16 @@ def test_practice_needs_detected_hands():
         content=clip.tobytes(), headers={"Content-Type": "application/octet-stream"},
     )
     assert result.status_code == 422
+
+
+def test_practice_lists_only_game_words(monkeypatch):
+    monkeypatch.setattr(practice, "model", lambda: SimpleNamespace(
+        glosses=["cat", "dog", "callonphone", "yes"], scores=lambda _: {},
+    ))
+    assert client.get("/api/practice").json()["words"] == ["cat", "dog", "yes"]
+    clip = np.zeros((3, N_POINTS, 3), dtype="<f4")
+    result = client.post(
+        "/api/practice/score", params={"target": "callonphone"},
+        content=clip.tobytes(), headers={"Content-Type": "application/octet-stream"},
+    )
+    assert result.status_code == 400

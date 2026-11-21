@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from escape_pod.vision.landmarks import LEFT, N_POINTS, RIGHT
-from escape_pod.vision.recognizer import model, rank
+from escape_pod.vision.recognizer import game_words, model, rank
 
 router = APIRouter(prefix="/api/practice")
 APPROVAL_THRESHOLD = 0.75
@@ -29,7 +29,12 @@ def practice_model():
 @router.get("")
 def practice_options():
     with model_lock:
-        return {"words": sorted(practice_model().glosses), "threshold": APPROVAL_THRESHOLD}
+        glosses = set(practice_model().glosses)
+    # Only the game's words (the glossary words), so every practice word has a clip to
+    # learn from. Scoring below still ranks against all 250, so a sign is never approved
+    # just because the list is short.
+    words = game_words(glosses) & glosses
+    return {"words": sorted(words), "threshold": APPROVAL_THRESHOLD}
 
 
 def score_clip(data: bytearray, target: str):
@@ -46,7 +51,7 @@ def score_clip(data: bytearray, target: str):
 
     with model_lock:
         classifier = practice_model()
-        if target not in classifier.glosses:
+        if target not in classifier.glosses or target not in game_words(set(classifier.glosses)):
             raise HTTPException(400, "Choose a word from the practice list.")
         logits = classifier.scores(clip[frames[0]:frames[-1] + 1])
     if not np.isfinite(list(logits.values())).all():

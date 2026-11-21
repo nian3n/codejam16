@@ -92,6 +92,41 @@ def rank_mixed(word_logits: dict[str, float] | None, hand_logprobs: dict[str, fl
     return [Guess(g, p / total) for g, p in ranked]
 
 
+def game_words(model_glosses: set[str] | None = None) -> set[str]:
+    """Every sign the game can ask for: the puzzle words, the digits and the core signs.
+
+    These are the glossary words, so a player can look up any sign the recognizer
+    accepts. Letter puzzles and pool words that the model does not know are left out.
+    Pass the word model's glosses to check against them; None trusts the pools.
+    """
+    from escape_pod import config
+    from escape_pod.puzzles.engine import load_pool
+
+    # Letter puzzles are skipped: the game reads digits, not fingerspelling.
+    pools = [spec.pool for spec in load_pool().values() if spec.target_words != "letters"]
+    words = {g for pool in pools for g in pool} | set(config.CORE_SIGNS)
+    return {g for g in words if g in DIGITS or model_glosses is None or g in model_glosses}
+
+
+def allowed_for(level, module=None, modules=None, model_glosses: set[str] | None = None) -> set[str]:
+    """The allowed set for one capture, by level (spec §6.3).
+
+    module: the Module being signed. modules: every Module on the bomb.
+    "all" means every game word, not all 250 model glosses: a shorter list is more
+    accurate, and every sign the game accepts has a glossary clip.
+    """
+    from escape_pod import config
+
+    core = set(config.CORE_SIGNS)
+    if level.allowed_scope == "module" and module is not None:
+        words = set(module.spec.pool) | core
+    elif level.allowed_scope in ("module", "bomb") and modules:
+        words = set().union(*(m.spec.pool for m in modules)) | core
+    else:
+        return game_words(model_glosses)
+    return words & game_words(model_glosses)
+
+
 def recognize(clip: np.ndarray, allowed: set[str], k: int = 3) -> list[Guess]:
     if allowed and any(g in DIGITS for g in allowed):
         others = {g for g in allowed if g not in DIGITS}
