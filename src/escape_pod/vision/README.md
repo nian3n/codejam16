@@ -24,3 +24,32 @@ Not measured yet. The sign-test tool logs `mirror_input` with every attempt. Do 
 ## Label map
 
 All word-model glosses in the 18 picture puzzles are in the label map. The one difference is `TV`, which `WordModel` lowercases to `tv`. The core signs `yes`, `no` and `finish` are in the map. The map also has `on`, but not `off`.
+
+## Digits 0–9 (handshape model)
+
+The word model knows no numbers, so a second small model reads the digits from the shape of one hand (spec §6.4). The recognizer uses it when the allowed set has digits, for example on the keypad.
+
+1. Record about 30 samples of each digit per person. Use the same webcam as the demo if you can:
+
+   ```
+   uv run --extra vision record-digits --name ana
+   ```
+
+   The tool shows a digit. Make the hand shape and hold it still. After 0.6 s it saves the sample and turns the frame green. Move your hand, then do the next digit. One person needs about 10 minutes.
+2. Repeat step 1 for each teammate. Ideally, also record one person from outside the team.
+3. Train the model:
+
+   ```
+   uv run train-digits
+   ```
+
+   The tool prints the accuracy and the digits that it confuses. With two or more people, it tests each person on a model that it trained only on the other people. That number tells you how a stranger at the demo will do.
+4. Test it live. Press A or Z until the allowed set is "numbers":
+
+   ```
+   uv run --extra vision sign-test --set numbers --target
+   ```
+
+- **Model:** k nearest neighbors on 63 features. The features are the 21 hand points, moved to the wrist and scaled by the hand size, averaged over the 5 steadiest frames. A left hand is mirrored, so it matches right-hand samples.
+- **Files:** the samples go to `data/handshape/<person>/<digit>/`, and the model goes to `models/handshape.npz`. Git ignores both. The samples are landmarks only, with no images. The `--photos` option saves one photo per digit for the glossary. Ask the person first.
+- **Mixed sets:** the keypad allows 0–9 plus YES, NO and FINISH. The word model decides how likely the clip is one of the three word signs. The digit model splits the rest of the probability among the digits.

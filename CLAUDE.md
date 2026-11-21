@@ -389,9 +389,9 @@ Check these on day one, and write the results in a `vision/README.md`:
 |---|---|
 | Beginner | the pool of the module being signed, plus core signs (yes, no, finish) |
 | Intermediate | the pools of all modules on this bomb, plus core signs |
-| Advanced | all 250 glosses |
+| Advanced | every game word: the puzzle words, the digits and the core signs (the glossary words, about 140) |
 
-Choosing among 10 signs is much more reliable than among 250.
+Choosing among 10 signs is much more reliable than among 250. `recognizer.allowed_for(level, module, modules)` builds the set. The model never offers a word that the glossary does not have. Solo practice also lists only game words, but it still scores against all 250.
 
 ### 6.4 Numbers and letters (handshape classifier)
 
@@ -440,7 +440,7 @@ The expert's manual already highlights the pages that contain the signed words (
 |---|---|---|---|
 | Modules | 3, no hard ones | 4, no hard ones | 4, at most one hard one |
 | Timer | 10 min | 5 min | 3 min |
-| Recognizer choices | this module's words | this bomb's words | all 250 |
+| Recognizer choices | this module's words | this bomb's words | every game word |
 | Briefing before the bomb | yes, each topic's signs shown and practiced | yes, shown only | no |
 | Sign cards beside the camera | yes | no | no |
 
