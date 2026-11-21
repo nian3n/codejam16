@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from escape_pod.vision.landmarks import LEFT, N_POINTS, RIGHT
-from escape_pod.vision.recognizer import game_words, model, rank
+from escape_pod.vision.handshape import DIGITS
+from escape_pod.vision.recognizer import game_words, hand_model, model, rank, rank_mixed
 
 router = APIRouter(prefix="/api/practice")
 APPROVAL_THRESHOLD = 0.75
@@ -104,7 +105,18 @@ def guess_clip(data: bytearray, words: str | None):
         allowed &= {w.strip() for w in words.split(",")}
         if not allowed:
             raise HTTPException(400, "None of those words is a game word.")
-    return {"guesses": [{"gloss": g.gloss, "score": g.score} for g in rank(logits, allowed, k=3)]}
+    guesses = rank(logits, allowed, k=3)
+    if allowed & set(DIGITS):
+        # A keypad is on the bomb: the digit model takes the probability the word model
+        # does not give to the allowed words (recognizer.rank_mixed). Without a digit
+        # model, digits stay typed only.
+        try:
+            with model_lock:
+                hand = hand_model().scores(clip)
+            guesses = rank_mixed(logits, hand, allowed, k=3)
+        except FileNotFoundError:
+            pass
+    return {"guesses": [{"gloss": g.gloss, "score": g.score} for g in guesses]}
 
 
 async def read_clip(request: Request) -> bytearray:

@@ -173,6 +173,10 @@ def view(room: Room, me: Player) -> dict:
     if room.bot is not None:
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
         v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply
+        if room.bot.page is not None and room.bot.page.widget == "keypad":
+            # Every keypad question is answered with digits, YES or NO: offer only those,
+            # so the recognizer picks among 13 signs, not the whole bomb.
+            v["bot_words"] = sorted(set(room.bot.page.pool) | set(config.CORE_SIGNS))
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.

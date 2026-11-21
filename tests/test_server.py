@@ -517,3 +517,12 @@ def test_a_two_cut_answer_is_checked_click_by_click():
     assert s["strikes"] == 0 and s["chat"][-1]["text"] == "Module 1 defused!"
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_solo_keypad_questions_take_only_digits_and_core_signs():
+    code, a, s = _start_solo()
+    assert "bot_words" not in s  # naming a module: any word on the bomb
+    a.send_json({"type": "signs", "glosses": ["7"]})  # the keypad page
+    s = _bot_said(a, len(s["chat"]))
+    assert s["bot_words"] == sorted(list("0123456789") + list(config.CORE_SIGNS))
+    a.__exit__(None, None, None)

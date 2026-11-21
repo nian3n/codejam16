@@ -111,6 +111,7 @@ The script reads only the start of each PopSign archive, so each word needs abou
 
 - **Sign videos in the glossary, and the training data behind the sign model:** PopSign ASL v1.0, by Thad Starner, Rohit Sridhar, Matthew So, Gururaj Deshpande and others, Georgia Tech and the Deaf Professional Arts Network. CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Dataset: https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/. We cut and shrank the clips.
 - **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license.
+- **Digit model:** "ASL Landmark MLP" by nocontextdoruk (https://huggingface.co/nocontextdoruk/asl-landmark-mlp), CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/): non-commercial use only. We convert its ONNX weights to NumPy. Trained on the ASL-HG dataset: Pranto et al., *Data in Brief*, 2026 (https://data.mendeley.com/datasets/j4y5w2c8w9/1).
 - **MediaPipe:** Google, Apache 2.0.
 - **Emoji:** the system emoji font of each player's device.
 

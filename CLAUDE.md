@@ -62,7 +62,7 @@ Each puzzle has its own topic, so the signs alone identify the manual page. Sign
 | Icons | emoji placeholders in `assets/icons.json`. Replace them with CC0 PNGs (Kenney) later |
 | Landmarks | MediaPipe Holistic (543 landmarks per frame: face, both hands, pose). Where it runs is open (§6.0) |
 | Word signs | `sign/kaggle-asl-signs-1st-place` from Hugging Face: `model.tflite` (11.2 MB) + `sign_to_prediction_index_map.json`, 250 signs, MIT license |
-| Numbers 0–9 | our own small classifier on MediaPipe hand landmarks, trained on team recordings (§6.4) |
+| Numbers 0–9 | the ready-made "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp`, CC BY-NC 4.0) on MediaPipe hand landmarks (§6.4). Fallback: our own k-NN on team recordings |
 | Retrieval (phase 2) | `sentence-transformers` (`all-MiniLM-L6-v2`), NumPy cosine similarity |
 | LLM (phase 2) | provider SDK behind `brain/llm.py`, JSON output checked with `pydantic` |
 | Tests | `pytest`, with FastAPI's `TestClient` for WebSocket tests |
@@ -314,7 +314,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 **Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to HQ". That press confirms the signs (rule 4). A "Type the signs instead" fallback stays under the chips for a missing camera and for the digits, until the digit model is trained.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to HQ". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). A "Type the signs instead" fallback stays under the chips for a missing camera.
 
 ### 6.1 Pipeline
 
@@ -398,12 +398,14 @@ Choosing among 10 signs is much more reliable than among 250.
 
 ### 6.4 Numbers (handshape classifier)
 
-The word model does not cover numbers. Train a small classifier:
+The word model does not cover numbers. A second, small model reads the digits from one hand's shape.
 
-- `tools/record_samples.py`: each teammate records about 30 samples of each digit 0–9.
-- Features: the dominant hand's 21 landmarks, moved to the wrist and scaled by hand size (63 numbers). Average them over the steadiest 5 frames of the clip.
-- Model: k-nearest neighbors or a small MLP, saved to `models/handshape.*`.
-- `recognize` routes to this classifier when the allowed set is digits.
+- **Model (November 2026):** the ready-made "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp` on Hugging Face, CC BY-NC 4.0). It scores 36 still hand shapes (0–9, A–Z) from 21 MediaPipe hand points, trained on the ASL-HG dataset. The game uses only the 10 digit scores. `uv run download-models` gets the ONNX file and converts it once to NumPy weights (`models/digits/asl_mlp.npz`, `vision/digit_mlp.py`). The server needs no ONNX runtime.
+- **Features:** the signing hand's 21 points, moved to the wrist and divided by the 3-D length from the wrist to the middle-finger knuckle, as the model card says. The code averages them over the steadiest 5 frames. A left hand is mirrored to a right hand.
+- **Mixing:** `rank_mixed` in `vision/recognizer.py`. The word model's probability for the allowed words stays with those words. The rest goes to the digits, split by the digit model. `/api/practice/guess` mixes when the allowed set has digits.
+- **Solo:** while the bot is on the keypad page, the state has `bot_words` (the digits and the core signs), and the page offers only those.
+- **Fallback:** our own k-NN (`vision/handshape.py`, `uv run record-digits` and `uv run train-digits`) loads only when the downloaded model is missing.
+- **Not measured yet:** the model card reports 100 % on its own dataset. Check it with our cameras and hands (§6.5).
 
 ### 6.5 Evaluation (`tools/eval_signs.py`)
 
@@ -599,6 +601,7 @@ Show these in the README and on an in-game credits screen.
 
 - **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license. It is the winning solution of Google's Kaggle "Isolated Sign Language Recognition" competition.
 - **Training data behind the model:** PopSign ASL v1.0, Georgia Tech, CC BY 4.0 (https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/). Required attribution: credit PopSign ASL v1.0 and its authors. The glossary shows PopSign clips, and `signs/fetch_popsign.py` holds the credit line that the glossary displays.
+- **Digit model:** "ASL Landmark MLP" (`nocontextdoruk/asl-landmark-mlp` on Hugging Face), CC BY-NC 4.0: non-commercial use only, with credit. Trained on ASL-HG (Pranto et al., *Data in Brief*, 2026, https://data.mendeley.com/datasets/j4y5w2c8w9/1). Cite both.
 - **MediaPipe:** Google, Apache 2.0.
 - **Embedding model:** `sentence-transformers/all-MiniLM-L6-v2`, Apache 2.0.
 - **Emoji:** the system emoji font of each player's device (placeholder only).

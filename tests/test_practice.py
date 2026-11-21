@@ -82,3 +82,29 @@ def test_warmup_without_the_model_says_so(monkeypatch):
     monkeypatch.setattr(practice, "model", missing)
     body = client.get("/api/practice/warmup").json()
     assert body["ready"] is False and "download-models" in body["detail"]
+
+
+def test_guess_mixes_in_the_digits_when_they_are_allowed(monkeypatch):
+    logits = {"cat": 0.0, "yes": 0.0, "no": 0.0, **{f"x{i}": 0.0 for i in range(200)}}  # unsure: a hand shape
+    monkeypatch.setattr(practice, "model", lambda: SimpleNamespace(glosses=list(logits), scores=lambda _: logits))
+    hand = {d: math.log(0.9 if d == "7" else 0.1 / 9) for d in "0123456789"}
+    monkeypatch.setattr(practice, "hand_model", lambda: SimpleNamespace(scores=lambda _: hand))
+    clip = np.full((4, N_POINTS, 3), np.nan, dtype="<f4")
+    clip[:, LEFT] = 0.5
+    got = client.post("/api/practice/guess", params={"words": "7,3,yes,no"}, content=clip.tobytes(),
+                      headers={"Content-Type": "application/octet-stream"}).json()["guesses"]
+    assert got[0]["gloss"] == "7"
+
+
+def test_guess_without_a_digit_model_still_ranks_the_words(monkeypatch):
+    logits = {"cat": 3.0, "yes": 1.0}
+    monkeypatch.setattr(practice, "model", lambda: SimpleNamespace(glosses=list(logits), scores=lambda _: logits))
+
+    def missing():
+        raise FileNotFoundError("no digit model")
+    monkeypatch.setattr(practice, "hand_model", missing)
+    clip = np.full((4, N_POINTS, 3), np.nan, dtype="<f4")
+    clip[:, LEFT] = 0.5
+    got = client.post("/api/practice/guess", params={"words": "7,yes"}, content=clip.tobytes(),
+                      headers={"Content-Type": "application/octet-stream"}).json()["guesses"]
+    assert [g["gloss"] for g in got] == ["yes"]

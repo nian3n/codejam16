@@ -127,5 +127,7 @@ function entryPage() {
     el("p", { class: "gl-pos", text: `topic: ${e.topic}` }),
     media,
     el("p", { class: "gl-how", text: NOTES[e.gloss] || "Watch the clip. It repeats. Sign it the same way, facing the camera." }),
-    el("p", { class: "gl-credit", text: clips?.credit || "" }));
+    el("p", { class: "gl-credit", text: clips?.credit || "" }),
+    // CC BY-NC 4.0 asks for credit wherever the model is used (vision/digit_mlp.py).
+    el("p", { class: "gl-credit", text: "Digit recognition: ASL Landmark MLP by nocontextdoruk (CC BY-NC 4.0), trained on ASL-HG (Pranto et al., 2026)." }));
 }

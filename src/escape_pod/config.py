@@ -21,7 +21,8 @@ ENV_FILE = ETC_DIR / ".env"
 TLS_DIR = ETC_DIR / "tls"                # self-signed cert for --https (git-ignored with etc/)
 MODELS_DIR = ROOT / "models"             # git-ignored; uv run download-models fills it
 ISLR_DIR = MODELS_DIR / "islr"
-HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # digit model (uv run train-digits)
+HANDSHAPE_FILE = MODELS_DIR / "handshape.npz"   # our own digit model, the fallback (uv run train-digits)
+DIGIT_MLP_FILE = MODELS_DIR / "digits" / "asl_mlp.npz"  # ready-made digit model (uv run download-models)
 HANDSHAPE_DATA_DIR = ROOT / "data" / "handshape"  # recorded digit samples, git-ignored (uv run record-digits)
 LOGS_DIR = ROOT / "logs"                 # git-ignored
 

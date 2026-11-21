@@ -43,6 +43,7 @@ const chips = () => (store.local.signChips ??= []);
  */
 function allowedWords() {
   const s = store.state;
+  if (s?.bot_words) return s.bot_words;  // solo: the bot asked for numbers (server.py view)
   if (!s?.bomb || s.level === "advanced") return null;
   return [...new Set([...s.bomb.flatMap((m) => m.pool), ...CORE])];
 }
