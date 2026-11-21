@@ -1,0 +1,67 @@
+{
+  "id": "food",
+  "title": "Snack dial",
+  "widget": "dial",
+  "topic": "food",
+  "hard": false,
+  "looks_like": "A dial with five foods around it and a needle pointing at one.",
+  "pool": [
+    "apple",
+    "carrot",
+    "cereal",
+    "pizza",
+    "frenchfries",
+    "icecream",
+    "chocolate",
+    "nuts"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 5
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:pizza",
+          "==",
+          true
+        ],
+        [
+          "needle",
+          "!=",
+          "pizza"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "pizza"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "needle",
+          "==",
+          "apple"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "last"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "turn",
+        "target": {
+          "to": "first"
+        }
+      }
+    }
+  ]
+}

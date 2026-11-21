@@ -1,0 +1,64 @@
+{
+  "id": "numbers",
+  "title": "Number keypad",
+  "widget": "keypad",
+  "topic": "numbers",
+  "hard": false,
+  "looks_like": "A keypad with the digits 0 to 9 and a small display that shows three digits.",
+  "pool": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9"
+  ],
+  "target_words": "digits",
+  "setup": {
+    "shown": 3
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:0",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "type",
+        "target": {
+          "keys_from": "sorted"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          ">",
+          "last"
+        ]
+      ],
+      "then": {
+        "verb": "type",
+        "target": {
+          "keys_from": "reversed"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "type",
+        "target": {
+          "keys_from": "display"
+        }
+      }
+    }
+  ]
+}

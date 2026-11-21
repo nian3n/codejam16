@@ -1,0 +1,59 @@
+{
+  "id": "toys",
+  "title": "Toy box",
+  "widget": "icons",
+  "topic": "toys and play",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing a toy.",
+  "pool": [
+    "doll",
+    "toy",
+    "balloon",
+    "puzzle",
+    "gift"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:balloon",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "balloon"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "doll"
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "first"
+        }
+      }
+    }
+  ]
+}

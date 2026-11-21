@@ -1,0 +1,59 @@
+{
+  "id": "school",
+  "title": "School supplies",
+  "widget": "icons",
+  "topic": "school things",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing a school thing.",
+  "pool": [
+    "book",
+    "pen",
+    "pencil",
+    "scissors",
+    "flag"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:scissors",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "scissors"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "flag"
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "pencil"
+        }
+      }
+    }
+  ]
+}

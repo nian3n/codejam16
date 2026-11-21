@@ -1,0 +1,58 @@
+{
+  "id": "transport",
+  "title": "Travel dial",
+  "widget": "dial",
+  "topic": "transport",
+  "hard": false,
+  "looks_like": "A dial with four vehicles around it and a needle pointing at one.",
+  "pool": [
+    "car",
+    "boat",
+    "airplane",
+    "helicopter"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "needle",
+          "==",
+          "car"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "boat"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "needle",
+          "==",
+          "boat"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "helicopter"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "turn",
+        "target": {
+          "to": "car"
+        }
+      }
+    }
+  ]
+}

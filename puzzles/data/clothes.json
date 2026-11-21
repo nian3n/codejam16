@@ -1,0 +1,67 @@
+{
+  "id": "clothes",
+  "title": "Wardrobe panel",
+  "widget": "icons",
+  "topic": "clothes",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing a piece of clothing.",
+  "pool": [
+    "hat",
+    "shirt",
+    "shoe",
+    "jacket",
+    "jeans",
+    "mitten",
+    "pajamas",
+    "zipper"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:hat",
+          "==",
+          true
+        ],
+        [
+          "has:mitten",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "mitten"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:jacket",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "jacket"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "first"
+        }
+      }
+    }
+  ]
+}

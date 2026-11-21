@@ -1,0 +1,67 @@
+{
+  "id": "pets_farm",
+  "title": "Animal panel",
+  "widget": "icons",
+  "topic": "pets and farm animals",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing a pet or farm animal.",
+  "pool": [
+    "cat",
+    "dog",
+    "cow",
+    "pig",
+    "horse",
+    "duck",
+    "hen",
+    "donkey"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:cat",
+          "==",
+          true
+        ],
+        [
+          "has:dog",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "dog"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:cow",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "cow"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    }
+  ]
+}

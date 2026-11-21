@@ -1,0 +1,82 @@
+{
+  "id": "wild_animals",
+  "title": "Safari panel",
+  "widget": "icons",
+  "topic": "wild animals",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing a wild animal.",
+  "pool": [
+    "lion",
+    "tiger",
+    "zebra",
+    "giraffe",
+    "elephant",
+    "alligator",
+    "wolf",
+    "owl"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:lion",
+          "==",
+          true
+        ],
+        [
+          "has:tiger",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "tiger"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "owl"
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:zebra",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "zebra"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "first"
+        }
+      }
+    }
+  ]
+}

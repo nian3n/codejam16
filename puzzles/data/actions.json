@@ -1,0 +1,67 @@
+{
+  "id": "actions",
+  "title": "Action panel",
+  "widget": "icons",
+  "topic": "actions",
+  "hard": false,
+  "looks_like": "A panel with four buttons, each showing someone doing something.",
+  "pool": [
+    "jump",
+    "dance",
+    "sleep",
+    "read",
+    "cry",
+    "kiss",
+    "hide",
+    "ride"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:dance",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "dance"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:sleep",
+          "==",
+          true
+        ],
+        [
+          "has:read",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "read"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    }
+  ]
+}

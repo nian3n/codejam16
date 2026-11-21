@@ -1,0 +1,470 @@
+# Escape Pod defusal manual
+
+Find the page whose words match what the defuser signs. Each page has one topic.
+
+1. [Action panel](actions.md): actions
+2. [Letter keypad](alphabet.md): fingerspelling
+3. [Body scanner](body.md): body parts
+4. [Wardrobe panel](clothes.md): clothes
+5. [Wire panel](colors.md): colors
+6. [Family photos](family.md): family
+7. [Mood button](feelings.md): feelings
+8. [Snack dial](food.md): food
+9. [Home power board](home_things.md): things at home
+10. [Number keypad](numbers.md): numbers
+11. [Opposite levers](opposites.md): opposites
+12. [Crew badges](people_jobs.md): people and jobs
+13. [Animal panel](pets_farm.md): pets and farm animals
+14. [Room lights](places.md): places
+15. [School supplies](school.md): school things
+16. [Time panel](time_words.md): time words
+17. [Toy box](toys.md): toys and play
+18. [Travel dial](transport.md): transport
+19. [Sky dial](weather_sky.md): weather and sky
+20. [Safari panel](wild_animals.md): wild animals
+
+---
+
+# 1. Action panel
+
+**Topic:** actions · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing someone doing something.
+
+Words you can see on it: jump, dance, sleep, read, cry, kiss, hide, ride.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** dance is shown: Press the dance.
+2. **If** sleep is shown and read is shown: Press the read.
+3. **Otherwise:** Press the last button.
+
+---
+
+# 2. Letter keypad
+
+**Topic:** fingerspelling · **Widget:** Keypad · **Hard**
+
+## How to recognize it
+
+A keypad with letters and a small display that shows three letters.
+
+Words you can see on it: A, B, C, D, E, F, G, H, I, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y.
+
+The display is read from left to right.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** the first letter is one of A, E, I, O, U: Type the display in reverse order.
+2. **If** the display shows B: Type the display in alphabet order.
+3. **Otherwise:** Type the display as shown.
+
+---
+
+# 3. Body scanner
+
+**Topic:** body parts · **Widget:** Picture buttons
+
+## How to recognize it
+
+A scanner with four buttons, each showing a part of the body.
+
+Words you can see on it: ear, eye, nose, mouth, tooth, tongue, hair, arm, finger, feet.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** nose is shown and mouth is shown: Press the mouth.
+2. **If** the last button shows the eye: Press the first button.
+3. **If** hair is shown: Press the hair.
+4. **Otherwise:** Press the last button.
+
+---
+
+# 4. Wardrobe panel
+
+**Topic:** clothes · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing a piece of clothing.
+
+Words you can see on it: hat, shirt, shoe, jacket, jeans, mitten, pajamas, zipper.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** hat is shown and mitten is shown: Press the mitten.
+2. **If** jacket is shown: Press the jacket.
+3. **Otherwise:** Press the first button.
+
+---
+
+# 5. Wire panel
+
+**Topic:** colors · **Widget:** Wires
+
+## How to recognize it
+
+A panel with four colored wires.
+
+Words you can see on it: red, blue, green, yellow, black, white, brown, orange.
+
+Wires are counted from top to bottom.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** there is a red wire and there is a blue wire: Cut the blue wire.
+2. **If** the last wire is white: Cut the first wire.
+3. **If** there is no yellow wire: Cut the last wire.
+4. **Otherwise:** Cut the yellow wire.
+
+---
+
+# 6. Family photos
+
+**Topic:** family · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four photo buttons, each showing a family member.
+
+Words you can see on it: mom, dad, grandma, grandpa, brother, aunt, uncle.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** mom is shown and dad is shown: Press the dad.
+2. **If** grandma is shown: Press the grandma.
+3. **Otherwise:** Press the last button.
+
+---
+
+# 7. Mood button
+
+**Topic:** feelings · **Widget:** Big button · **Hard**
+
+## How to recognize it
+
+A big button with a screen. While you hold the button, the screen shows four faces, one after another.
+
+Words you can see on it: happy, sad, mad, sleepy, hungry, thirsty, sick.
+
+Faces are counted in the order the screen shows them.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** sad is shown and happy is shown: Hold the button and let go when the face is happy.
+2. **If** the first face is mad: Hold the button and let go when the last face shows.
+3. **If** sleepy is shown: Hold the button and let go when the face is sleepy.
+4. **Otherwise:** Hold the button and let go when the first face shows.
+
+---
+
+# 8. Snack dial
+
+**Topic:** food · **Widget:** Dial
+
+## How to recognize it
+
+A dial with five foods around it and a needle pointing at one.
+
+Words you can see on it: apple, carrot, cereal, pizza, french fries, ice cream, chocolate, nuts.
+
+Pictures are counted clockwise, starting at the top.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** pizza is shown and the needle does not point at the pizza: Turn the dial to the pizza.
+2. **If** the needle points at the apple: Turn the dial to the last picture.
+3. **Otherwise:** Turn the dial to the first picture.
+
+---
+
+# 9. Home power board
+
+**Topic:** things at home · **Widget:** Switches
+
+## How to recognize it
+
+A board with four on/off switches, each with a picture of a thing at home.
+
+Words you can see on it: bed, chair, table, lamp, TV, radio, refrigerator, drawer.
+
+Switches are counted from left to right.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** lamp is shown and the lamp switch is off: Flip the lamp switch.
+2. **If** 3 or more switches are on: Flip the first switch.
+3. **If** TV is shown: Flip the TV switch.
+4. **Otherwise:** Flip the last switch.
+
+---
+
+# 10. Number keypad
+
+**Topic:** numbers · **Widget:** Keypad
+
+## How to recognize it
+
+A keypad with the digits 0 to 9 and a small display that shows three digits.
+
+Words you can see on it: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9.
+
+The display is read from left to right.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** the display shows 0: Type the display from smallest to largest.
+2. **If** the first digit is bigger than the last digit: Type the display in reverse order.
+3. **Otherwise:** Type the display as shown.
+
+---
+
+# 11. Opposite levers
+
+**Topic:** opposites · **Widget:** Switches
+
+## How to recognize it
+
+A board with four levers. Each lever has a word picture, and each lever is on or off.
+
+Words you can see on it: up, down, open, close, wet, dry, clean, dirty, loud, quiet.
+
+Switches are counted from left to right.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** up is shown and down is shown: Flip the down switch.
+2. **If** 2 or more switches are on: Flip the last switch.
+3. **Otherwise:** Flip the first switch.
+
+---
+
+# 12. Crew badges
+
+**Topic:** people and jobs · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four badge buttons, each showing a person or a job.
+
+Words you can see on it: fireman, police, cowboy, clown, boy, girl, man, child.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** police is shown: Press the police.
+2. **If** clown is shown and cowboy is shown: Press the cowboy.
+3. **Otherwise:** Press the first button.
+
+---
+
+# 13. Animal panel
+
+**Topic:** pets and farm animals · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing a pet or farm animal.
+
+Words you can see on it: cat, dog, cow, pig, horse, duck, hen, donkey.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** cat is shown and dog is shown: Press the dog.
+2. **If** cow is shown: Press the cow.
+3. **Otherwise:** Press the last button.
+
+---
+
+# 14. Room lights
+
+**Topic:** places · **Widget:** Switches
+
+## How to recognize it
+
+A board with four light switches, each with a picture of a place.
+
+Words you can see on it: bedroom, backyard, pool, store, farm, outside, stairs, closet.
+
+Switches are counted from left to right.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** backyard is shown and the backyard switch is on: Flip the backyard switch.
+2. **If** no switch is on: Flip the first switch.
+3. **Otherwise:** Flip the last switch.
+
+---
+
+# 15. School supplies
+
+**Topic:** school things · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing a school thing.
+
+Words you can see on it: book, pen, pencil, scissors, flag.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** scissors is shown: Press the scissors.
+2. **If** the first button shows the flag: Press the last button.
+3. **Otherwise:** Press the pencil.
+
+---
+
+# 16. Time panel
+
+**Topic:** time words · **Widget:** Picture buttons · **Hard**
+
+## How to recognize it
+
+A panel with four buttons, each showing a time word.
+
+Words you can see on it: morning, night, now, later, yesterday, tomorrow.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** yesterday is shown and tomorrow is shown: Press the tomorrow.
+2. **If** now is shown and later is shown: Press the now.
+3. **Otherwise:** Press the last button.
+
+---
+
+# 17. Toy box
+
+**Topic:** toys and play · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing a toy.
+
+Words you can see on it: doll, toy, balloon, puzzle, gift.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** balloon is shown: Press the balloon.
+2. **If** the first button shows the doll: Press the last button.
+3. **Otherwise:** Press the first button.
+
+---
+
+# 18. Travel dial
+
+**Topic:** transport · **Widget:** Dial
+
+## How to recognize it
+
+A dial with four vehicles around it and a needle pointing at one.
+
+Words you can see on it: car, boat, airplane, helicopter.
+
+Pictures are counted clockwise, starting at the top.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** the needle points at the car: Turn the dial to the boat.
+2. **If** the needle points at the boat: Turn the dial to the helicopter.
+3. **Otherwise:** Turn the dial to the car.
+
+---
+
+# 19. Sky dial
+
+**Topic:** weather and sky · **Widget:** Dial
+
+## How to recognize it
+
+A dial with five weather pictures around it and a needle pointing at one.
+
+Words you can see on it: sun, moon, cloud, rain, snow.
+
+Pictures are counted clockwise, starting at the top.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** the needle points at the sun: Turn the dial to the moon.
+2. **If** the needle points at the rain: Turn the dial to the snow.
+3. **If** the first picture shows the cloud: Turn the dial to the last picture.
+4. **Otherwise:** Turn the dial to the sun.
+
+---
+
+# 20. Safari panel
+
+**Topic:** wild animals · **Widget:** Picture buttons
+
+## How to recognize it
+
+A panel with four buttons, each showing a wild animal.
+
+Words you can see on it: lion, tiger, zebra, giraffe, elephant, alligator, wolf, owl.
+
+Buttons are counted left to right, top row first.
+
+## Rules
+
+Read the rules in order. Do the first rule that is true.
+
+1. **If** lion is shown and tiger is shown: Press the tiger.
+2. **If** the first button shows the owl: Press the last button.
+3. **If** zebra is shown: Press the zebra.
+4. **Otherwise:** Press the first button.

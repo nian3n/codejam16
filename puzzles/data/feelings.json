@@ -1,0 +1,81 @@
+{
+  "id": "feelings",
+  "title": "Mood button",
+  "widget": "big_button",
+  "topic": "feelings",
+  "hard": true,
+  "looks_like": "A big button with a screen. While you hold the button, the screen shows four faces, one after another.",
+  "pool": [
+    "happy",
+    "sad",
+    "mad",
+    "sleepy",
+    "hungry",
+    "thirsty",
+    "sick"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:sad",
+          "==",
+          true
+        ],
+        [
+          "has:happy",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "hold",
+        "target": {
+          "release_on": "happy"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "mad"
+        ]
+      ],
+      "then": {
+        "verb": "hold",
+        "target": {
+          "release_on": "last"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:sleepy",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "hold",
+        "target": {
+          "release_on": "sleepy"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "hold",
+        "target": {
+          "release_on": "first"
+        }
+      }
+    }
+  ]
+}

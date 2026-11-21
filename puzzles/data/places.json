@@ -1,0 +1,70 @@
+{
+  "id": "places",
+  "title": "Room lights",
+  "widget": "switches",
+  "topic": "places",
+  "hard": false,
+  "looks_like": "A board with four light switches, each with a picture of a place.",
+  "pool": [
+    "bedroom",
+    "backyard",
+    "pool",
+    "store",
+    "farm",
+    "outside",
+    "stairs",
+    "closet"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:backyard",
+          "==",
+          true
+        ],
+        [
+          "state_of:backyard",
+          "==",
+          "on"
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "backyard",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "count_on",
+          "==",
+          0
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "first",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "set",
+        "target": {
+          "switch": "last",
+          "state": "flip"
+        }
+      }
+    }
+  ]
+}

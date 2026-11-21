@@ -1,0 +1,72 @@
+{
+  "id": "opposites",
+  "title": "Opposite levers",
+  "widget": "switches",
+  "topic": "opposites",
+  "hard": false,
+  "looks_like": "A board with four levers. Each lever has a word picture, and each lever is on or off.",
+  "pool": [
+    "up",
+    "down",
+    "open",
+    "close",
+    "wet",
+    "dry",
+    "clean",
+    "dirty",
+    "loud",
+    "quiet"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:up",
+          "==",
+          true
+        ],
+        [
+          "has:down",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "down",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "count_on",
+          ">=",
+          2
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "last",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "set",
+        "target": {
+          "switch": "first",
+          "state": "flip"
+        }
+      }
+    }
+  ]
+}

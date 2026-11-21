@@ -1,0 +1,82 @@
+{
+  "id": "colors",
+  "title": "Wire panel",
+  "widget": "wires",
+  "topic": "colors",
+  "hard": false,
+  "looks_like": "A panel with four colored wires.",
+  "pool": [
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "black",
+    "white",
+    "brown",
+    "orange"
+  ],
+  "target_words": "color",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:red",
+          "==",
+          true
+        ],
+        [
+          "has:blue",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "cut",
+        "target": {
+          "color": "blue"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "last",
+          "==",
+          "white"
+        ]
+      ],
+      "then": {
+        "verb": "cut",
+        "target": {
+          "wire": "first"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:yellow",
+          "==",
+          false
+        ]
+      ],
+      "then": {
+        "verb": "cut",
+        "target": {
+          "wire": "last"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "cut",
+        "target": {
+          "color": "yellow"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "id": "home_things",
+  "title": "Home power board",
+  "widget": "switches",
+  "topic": "things at home",
+  "hard": false,
+  "looks_like": "A board with four on/off switches, each with a picture of a thing at home.",
+  "pool": [
+    "bed",
+    "chair",
+    "table",
+    "lamp",
+    "tv",
+    "radio",
+    "refrigerator",
+    "drawer"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:lamp",
+          "==",
+          true
+        ],
+        [
+          "state_of:lamp",
+          "==",
+          "off"
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "lamp",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "count_on",
+          ">=",
+          3
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "first",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:tv",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "set",
+        "target": {
+          "switch": "tv",
+          "state": "flip"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "set",
+        "target": {
+          "switch": "last",
+          "state": "flip"
+        }
+      }
+    }
+  ]
+}

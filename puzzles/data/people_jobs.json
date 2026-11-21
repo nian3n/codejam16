@@ -1,0 +1,67 @@
+{
+  "id": "people_jobs",
+  "title": "Crew badges",
+  "widget": "icons",
+  "topic": "people and jobs",
+  "hard": false,
+  "looks_like": "A panel with four badge buttons, each showing a person or a job.",
+  "pool": [
+    "fireman",
+    "police",
+    "cowboy",
+    "clown",
+    "boy",
+    "girl",
+    "man",
+    "child"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:police",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "police"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:clown",
+          "==",
+          true
+        ],
+        [
+          "has:cowboy",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "cowboy"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "first"
+        }
+      }
+    }
+  ]
+}

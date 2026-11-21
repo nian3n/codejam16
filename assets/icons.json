@@ -1,0 +1,61 @@
+{
+  "_note": "Placeholder icons: system emoji. caption=true shows the English word under the emoji where the emoji alone is ambiguous. Replace with assets/icons/<gloss>.png (Kenney CC0) later.",
+  "cat": {"emoji": "🐱"}, "dog": {"emoji": "🐶"}, "cow": {"emoji": "🐮"}, "pig": {"emoji": "🐷"},
+  "horse": {"emoji": "🐴"}, "duck": {"emoji": "🦆"}, "hen": {"emoji": "🐔"}, "donkey": {"emoji": "🫏", "caption": true},
+
+  "lion": {"emoji": "🦁"}, "tiger": {"emoji": "🐯"}, "zebra": {"emoji": "🦓"}, "giraffe": {"emoji": "🦒"},
+  "elephant": {"emoji": "🐘"}, "alligator": {"emoji": "🐊"}, "wolf": {"emoji": "🐺"}, "owl": {"emoji": "🦉"},
+
+  "mom": {"emoji": "👩", "caption": true}, "dad": {"emoji": "👨", "caption": true},
+  "grandma": {"emoji": "👵", "caption": true}, "grandpa": {"emoji": "👴", "caption": true},
+  "brother": {"emoji": "👦", "caption": true}, "aunt": {"emoji": "👩‍🦰", "caption": true},
+  "uncle": {"emoji": "👨‍🦱", "caption": true},
+
+  "fireman": {"emoji": "🧑‍🚒"}, "police": {"emoji": "👮"}, "cowboy": {"emoji": "🤠"}, "clown": {"emoji": "🤡"},
+  "boy": {"emoji": "👦", "caption": true}, "girl": {"emoji": "👧", "caption": true},
+  "man": {"emoji": "👨", "caption": true}, "child": {"emoji": "🧒", "caption": true},
+
+  "ear": {"emoji": "👂"}, "eye": {"emoji": "👁️"}, "nose": {"emoji": "👃"}, "mouth": {"emoji": "👄"},
+  "tooth": {"emoji": "🦷"}, "tongue": {"emoji": "👅"}, "hair": {"emoji": "💇", "caption": true},
+  "arm": {"emoji": "💪"}, "finger": {"emoji": "☝️"}, "feet": {"emoji": "🦶"},
+
+  "apple": {"emoji": "🍎"}, "carrot": {"emoji": "🥕"}, "cereal": {"emoji": "🥣"}, "pizza": {"emoji": "🍕"},
+  "frenchfries": {"emoji": "🍟"}, "icecream": {"emoji": "🍦"}, "chocolate": {"emoji": "🍫"}, "nuts": {"emoji": "🥜"},
+
+  "hat": {"emoji": "🎩"}, "shirt": {"emoji": "👕"}, "shoe": {"emoji": "👟"}, "jacket": {"emoji": "🧥"},
+  "jeans": {"emoji": "👖"}, "mitten": {"emoji": "🧤"}, "pajamas": {"emoji": "🛌", "caption": true},
+  "zipper": {"emoji": "🤐", "caption": true},
+
+  "sun": {"emoji": "☀️"}, "moon": {"emoji": "🌙"}, "cloud": {"emoji": "☁️"}, "rain": {"emoji": "🌧️"}, "snow": {"emoji": "❄️"},
+
+  "car": {"emoji": "🚗"}, "boat": {"emoji": "⛵"}, "airplane": {"emoji": "✈️"}, "helicopter": {"emoji": "🚁"},
+
+  "happy": {"emoji": "😀"}, "sad": {"emoji": "😢"}, "mad": {"emoji": "😠"}, "sleepy": {"emoji": "😴"},
+  "hungry": {"emoji": "🤤", "caption": true}, "thirsty": {"emoji": "🥤", "caption": true}, "sick": {"emoji": "🤒"},
+
+  "jump": {"emoji": "🤸", "caption": true}, "dance": {"emoji": "💃"}, "sleep": {"emoji": "🛌", "caption": true},
+  "read": {"emoji": "📖"}, "cry": {"emoji": "😭"}, "kiss": {"emoji": "💋"}, "hide": {"emoji": "🙈"}, "ride": {"emoji": "🚴"},
+
+  "bed": {"emoji": "🛏️"}, "chair": {"emoji": "🪑"}, "table": {"emoji": "🪵", "caption": true}, "lamp": {"emoji": "💡"},
+  "tv": {"emoji": "📺"}, "radio": {"emoji": "📻"}, "refrigerator": {"emoji": "🧊", "caption": true},
+  "drawer": {"emoji": "🗄️", "caption": true},
+
+  "bedroom": {"emoji": "🛏️", "caption": true}, "backyard": {"emoji": "🌳", "caption": true},
+  "pool": {"emoji": "🏊", "caption": true}, "store": {"emoji": "🏪", "caption": true},
+  "farm": {"emoji": "🚜", "caption": true}, "outside": {"emoji": "🏞️", "caption": true},
+  "stairs": {"emoji": "🪜", "caption": true}, "closet": {"emoji": "🚪", "caption": true},
+
+  "doll": {"emoji": "🪆"}, "toy": {"emoji": "🧸"}, "balloon": {"emoji": "🎈"}, "puzzle": {"emoji": "🧩"}, "gift": {"emoji": "🎁"},
+
+  "book": {"emoji": "📕"}, "pen": {"emoji": "🖊️"}, "pencil": {"emoji": "✏️"}, "scissors": {"emoji": "✂️"}, "flag": {"emoji": "🚩"},
+
+  "up": {"emoji": "⬆️", "caption": true}, "down": {"emoji": "⬇️", "caption": true},
+  "open": {"emoji": "📂", "caption": true}, "close": {"emoji": "📁", "caption": true},
+  "wet": {"emoji": "💧", "caption": true}, "dry": {"emoji": "🏜️", "caption": true},
+  "clean": {"emoji": "🧼", "caption": true}, "dirty": {"emoji": "🟫", "caption": true},
+  "loud": {"emoji": "📢", "caption": true}, "quiet": {"emoji": "🤫", "caption": true},
+
+  "morning": {"emoji": "🌅", "caption": true}, "night": {"emoji": "🌃", "caption": true},
+  "now": {"emoji": "⏱️", "caption": true}, "later": {"emoji": "⏳", "caption": true},
+  "yesterday": {"emoji": "⏪", "caption": true}, "tomorrow": {"emoji": "⏩", "caption": true}
+}

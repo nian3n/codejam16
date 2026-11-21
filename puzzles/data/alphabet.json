@@ -1,0 +1,84 @@
+{
+  "id": "alphabet",
+  "title": "Letter keypad",
+  "widget": "keypad",
+  "topic": "fingerspelling",
+  "hard": true,
+  "looks_like": "A keypad with letters and a small display that shows three letters.",
+  "pool": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y"
+  ],
+  "target_words": "letters",
+  "setup": {
+    "shown": 3
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "first",
+          "in",
+          [
+            "a",
+            "e",
+            "i",
+            "o",
+            "u"
+          ]
+        ]
+      ],
+      "then": {
+        "verb": "type",
+        "target": {
+          "keys_from": "reversed"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:b",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "type",
+        "target": {
+          "keys_from": "sorted"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "type",
+        "target": {
+          "keys_from": "display"
+        }
+      }
+    }
+  ]
+}

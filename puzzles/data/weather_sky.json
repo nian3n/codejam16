@@ -1,0 +1,74 @@
+{
+  "id": "weather_sky",
+  "title": "Sky dial",
+  "widget": "dial",
+  "topic": "weather and sky",
+  "hard": false,
+  "looks_like": "A dial with five weather pictures around it and a needle pointing at one.",
+  "pool": [
+    "sun",
+    "moon",
+    "cloud",
+    "rain",
+    "snow"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 5
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "needle",
+          "==",
+          "sun"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "moon"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "needle",
+          "==",
+          "rain"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "snow"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "first",
+          "==",
+          "cloud"
+        ]
+      ],
+      "then": {
+        "verb": "turn",
+        "target": {
+          "to": "last"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "turn",
+        "target": {
+          "to": "sun"
+        }
+      }
+    }
+  ]
+}

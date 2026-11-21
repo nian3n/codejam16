@@ -1,0 +1,70 @@
+{
+  "id": "time_words",
+  "title": "Time panel",
+  "widget": "icons",
+  "topic": "time words",
+  "hard": true,
+  "looks_like": "A panel with four buttons, each showing a time word.",
+  "pool": [
+    "morning",
+    "night",
+    "now",
+    "later",
+    "yesterday",
+    "tomorrow"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:yesterday",
+          "==",
+          true
+        ],
+        [
+          "has:tomorrow",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "tomorrow"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:now",
+          "==",
+          true
+        ],
+        [
+          "has:later",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "now"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    }
+  ]
+}

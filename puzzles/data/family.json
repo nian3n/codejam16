@@ -1,0 +1,66 @@
+{
+  "id": "family",
+  "title": "Family photos",
+  "widget": "icons",
+  "topic": "family",
+  "hard": false,
+  "looks_like": "A panel with four photo buttons, each showing a family member.",
+  "pool": [
+    "mom",
+    "dad",
+    "grandma",
+    "grandpa",
+    "brother",
+    "aunt",
+    "uncle"
+  ],
+  "target_words": "name",
+  "setup": {
+    "shown": 4
+  },
+  "rules": [
+    {
+      "if": [
+        [
+          "has:mom",
+          "==",
+          true
+        ],
+        [
+          "has:dad",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "dad"
+        }
+      }
+    },
+    {
+      "if": [
+        [
+          "has:grandma",
+          "==",
+          true
+        ]
+      ],
+      "then": {
+        "verb": "press",
+        "target": {
+          "icon": "grandma"
+        }
+      }
+    },
+    {
+      "else": {
+        "verb": "press",
+        "target": {
+          "icon": "last"
+        }
+      }
+    }
+  ]
+}
