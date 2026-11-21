@@ -5,7 +5,7 @@ import { $, el, send, store } from "./core.js";
 import { WIDGETS } from "./widgets/index.js";
 
 function sendAct(i, verb, target) {
-  send({ type: "act", module: i, action: { verb, target } });
+  send({ type: "act", round_id: store.state.round_id, module: i, action: { verb, target } });
 }
 
 export function renderBomb() {

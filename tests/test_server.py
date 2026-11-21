@@ -152,6 +152,59 @@ def test_rejoin_with_pid_keeps_the_seat():
         assert s["me"]["role"] == "expert" and len(s["players"]) == 1
 
 
+def test_practice_credit_follows_the_exchange_and_survives_a_reconnect():
+    with client:
+        code, agent, hq, sa, sh = _start_game()
+        room = server.rooms[code]
+        round_id = sa["round_id"]
+        credit = f"{round_id}:0"
+        module = room.modules[0]
+        correct = {"type": "act", "round_id": round_id, "module": 0, "action": module.solution().to_json()}
+        hq_online = True
+        try:
+            agent.send_json({"type": "ready"})
+            agent.send_json({"type": "signs", "glosses": module.widget.items(module.facts)})
+            _drain(hq, lambda s: s["chat"][-1]["kind"] == "signs")
+            hq.send_json({"type": "say", "text": "Try the matching control."})
+            _drain(agent, lambda s: s["chat"][-1]["kind"] == "say")
+            agent.send_json({**correct, "action": {"verb": "wrong", "target": {}}})
+            assert _drain(agent, lambda s: s["strikes"] == 1)["practice_credits"] == []
+
+            other = room.modules[1].solution().to_json()
+            agent.send_json({**correct, "module": 1, "action": other})
+            assert _drain(agent, lambda s: s["progress"]["defused"] == 1)["practice_credits"] == []
+
+            hq.__exit__(None, None, None)
+            hq_online = False
+            _drain(agent, lambda s: not s["players"][1]["online"])
+            agent.send_json(correct)
+            agent.send_json(correct)
+            assert _drain(agent, lambda s: s["progress"]["defused"] == 2)["practice_credits"] == [credit]
+
+            with client.websocket_connect(f"/ws/{code}") as returning_hq:
+                returning_hq.send_json({"type": "hello", "name": "Ben", "pid": sh["me"]["pid"]})
+                assert returning_hq.receive_json()["pid"] == sh["me"]["pid"]
+                assert _last_state(returning_hq)["practice_credits"] == [credit]
+                returning_hq.send_json({"type": "practice_saved", "credits": [credit, credit]})
+                returning_hq.send_json({"type": "say", "text": "Back online."})
+                assert _drain(returning_hq, lambda s: s["chat"][-1].get("text") == "Back online.")["practice_credits"] == []
+
+                room.deadline = time.monotonic()
+                assert _drain(agent, lambda s: s["phase"] == "boom")["practice_credits"] == [credit]
+                agent.send_json({"type": "again"})
+                _drain(agent, lambda s: s["phase"] == "lobby")
+                agent.send_json({"type": "start"})
+                new = _drain(agent, lambda s: s["phase"] == "playing")
+                assert new["round_id"] != round_id and new["practice_credits"] == [credit]
+                agent.send_json(correct)  # Ignore a confirmation from the last round.
+                agent.send_json({"type": "ready"})
+                assert _drain(agent, lambda s: s["armed"])["progress"]["defused"] == 0
+        finally:
+            if hq_online:
+                hq.__exit__(None, None, None)
+            agent.__exit__(None, None, None)
+
+
 def test_answer_key_needs_debug():
     code, a, b, _, _ = _start_game()
     assert client.get(f"/api/rooms/{code}/answer-key").status_code == 403
@@ -371,11 +424,13 @@ def test_solo_bot_answers_signs():
 
 def test_solo_full_game_reaches_escaped():
     code, a, s = _start_solo()
+    round_id = s["round_id"]
     for i, m in enumerate(server.rooms[code].modules):
         s = _talk(code, a, s, m)
         a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
         s = _drain(a, lambda s, i=i: s["progress"]["defused"] == i + 1)
     assert s["phase"] == "escaped"
+    assert s["practice_credits"] == [f"{round_id}:{i}" for i in range(len(server.rooms[code].modules))]
     a.__exit__(None, None, None)
 
 

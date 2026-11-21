@@ -76,6 +76,7 @@ class Player:
     name: str
     role: str | None = None
     ws: WebSocket | None = None
+    practice_credits: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -85,6 +86,9 @@ class Room:
     phase: Literal["lobby", "playing", "escaped", "boom"] = "lobby"
     level: str = "intermediate"
     seed: int = 0
+    round_id: str | None = None
+    signed_modules: set[int] = field(default_factory=set)
+    replied_modules: set[int] = field(default_factory=set)
     modules: list[Module] = field(default_factory=list)
     strikes: int = 0
     deadline: float = 0.0
@@ -158,6 +162,8 @@ def view(room: Room, me: Player) -> dict:
         "players": [{"name": p.name, "role": p.role, "online": p.ws is not None, "you": p.pid == me.pid}
                     for p in room.players.values()],
         "phase": room.phase,
+        "round_id": room.round_id,
+        "practice_credits": sorted(me.practice_credits),
         "level": room.level,
         "levels": {k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
                    for k, l in config.LEVELS.items()},
@@ -241,6 +247,9 @@ def start_game(room: Room):
     level = config.LEVELS[room.level]
     room.seed = random.randrange(1_000_000)
     room.modules = draw(random.Random(room.seed), level)
+    room.round_id = uuid.uuid4().hex
+    room.signed_modules.clear()
+    room.replied_modules.clear()
     room.strikes = 0
     room.chat = []
     room.phase = "playing"
@@ -259,6 +268,7 @@ def back_to_lobby(room: Room, why: str | None = None):
         room.timer_task.cancel()
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+    room.round_id = None
     stop_bot(room)
     room.bot = None
     if why:
@@ -327,6 +337,12 @@ def act(room: Room, index: int, action: Action) -> bool | None:
     ok = m.check(action)
     if ok:
         m.defused = True
+        # A solved module confirms the outcome of a signed clue and HQ reply.
+        if room.solo or index in room.replied_modules:
+            credit = f"{room.round_id}:{index}"
+            for player in room.players.values():
+                if player.role in ROLES:
+                    player.practice_credits.add(credit)
         room.say({"kind": "event", "text": f"Module {index + 1} defused!"})
         if all(x.defused for x in room.modules):
             end_game(room, "escaped", "All modules defused. Device neutralized.")
@@ -365,6 +381,12 @@ async def handle(room: Room, me: Player, msg: dict):
     kind = msg.get("type")
     if me.pid not in room.players:
         return  # this player left; ignore what the closing socket still sends
+    if kind == "practice_saved":
+        credits = msg.get("credits")
+        if isinstance(credits, list):
+            # Until the browser confirms storage, a reconnect can replay these credits.
+            me.practice_credits.difference_update(credit for credit in credits if isinstance(credit, str))
+        return
     if kind == "leave":
         leave(room, me)
     elif kind == "rtc":
@@ -382,6 +404,12 @@ async def handle(room: Room, me: Player, msg: dict):
         glosses = clean_glosses(msg.get("glosses"))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses})
+            if not room.solo:
+                signed = set(glosses)
+                room.signed_modules.update(
+                    i for i, m in enumerate(room.modules)
+                    if not m.defused and not signed.isdisjoint(m.widget.items(m.facts))
+                )
             if room.bot is not None:
                 bot = room.bot
                 bot_later(room, lambda: bot.reply(glosses))
@@ -389,7 +417,10 @@ async def handle(room: Room, me: Player, msg: dict):
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
             room.say({"kind": "say", "from": me.name, "text": text})
-    elif kind == "act" and room.phase == "playing" and me.role == "defuser":
+            room.replied_modules.update(room.signed_modules)
+            room.signed_modules.clear()
+    elif (kind == "act" and room.phase == "playing" and me.role == "defuser"
+          and msg.get("round_id", room.round_id) == room.round_id):
         i = msg.get("module")
         a = msg.get("action")
         if isinstance(i, int) and 0 <= i < len(room.modules) and isinstance(a, dict):

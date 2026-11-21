@@ -15,7 +15,20 @@
     <div class="card home-card">
       <h1 class="logo">KEEP MOVING<span>and nobody explodes</span></h1>
       <p class="tag">No words. Only hands. Keep moving.</p>
-      <label>Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="off"></label>
+      <div id="profile-picker">
+        <label>Player profile <select id="profile" aria-describedby="profile-note"></select></label>
+        <label id="profile-name">Your name <input id="name" maxlength="20" placeholder="e.g. Sam" autocomplete="nickname"></label>
+        <p id="profile-note">Progress is saved in this browser.</p>
+        <div id="practice-progress" class="practice-progress hidden">
+          <div class="practice-progress-heading">
+            <span id="practice-progress-label">ASL practice progress</span>
+            <span id="practice-progress-text" role="status"></span>
+          </div>
+          <progress id="practice-progress-bar" max="100" value="0" aria-labelledby="practice-progress-label"
+            aria-describedby="practice-progress-description"></progress>
+          <p id="practice-progress-description">Counts accepted practice responses and completed game exchanges.</p>
+        </div>
+      </div>
       <button id="create" class="btn primary">Create a room</button>
       <button id="create-solo" class="btn">Play solo (bot HQ)</button>
       <div class="or">or join a friend</div>

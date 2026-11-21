@@ -18,12 +18,14 @@ import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { renderInit } from "./init.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
-import { bindSequence } from "./practice_sequence.js";
+import { bindSequence, setSequenceProfile } from "./practice_sequence.js";
+import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
 
-let code = null;
-let closedOnPurpose = false;
+let activeSeatKey = null;
+let activeScreen = "home";
 
 async function boot() {
+  const legacyProfile = bindProfiles();
   const [icons, pages] = await Promise.all([
     fetch("/api/icons").then((r) => r.json()),
     fetch("/api/manual").then((r) => r.json()),
@@ -31,21 +33,14 @@ async function boot() {
   store.icons = icons;
   store.pages = pages;
   store.pageById = Object.fromEntries(pages.map((p) => [p.id, p]));
-  $("#name").value = localStorage.getItem("ep:name") || "";
   const q = new URLSearchParams(location.search).get("room");
   if (q) $("#code").value = q.toUpperCase();
-  $("#create").onclick = async () => {
-    if (!saveName()) return;
-    const r = await fetch("/api/rooms", { method: "POST" }).then((r) => r.json());
-    connect(r.code);
+  $("#create").onclick = () => void createRoom(false);
+  $("#create-solo").onclick = () => void createRoom(true);
+  $("#join").onclick = () => {
+    const profile = requireProfile();
+    if (profile) connect($("#code").value.trim().toUpperCase(), profile);
   };
-  $("#create-solo").onclick = async () => {
-    if (!saveName()) return;
-    const r = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ solo: true }) }).then((r) => r.json());
-    connect(r.code);
-  };
-  $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
   $("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#join").click(); });
   $("#again").onclick = () => send({ type: "again" });
   $("#leave").onclick = leaveRoom;
@@ -53,59 +48,120 @@ async function boot() {
   bindLobby();
   bindGlossary();
   bindSequence();
-  $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
+  $("#open-practice").onclick = () => {
+    const profile = requireProfile();
+    if (!profile) return;
+    setSequenceProfile(profile);
+    showScreen("practice");
+    void enterPractice();
+  };
   // Start loading MediaPipe as soon as the player points at the button.
   for (const ev of ["pointerenter", "focus", "touchstart"]) $("#open-practice").addEventListener(ev, preloadMediaPipe, { once: true, passive: true });
   $("#close-practice").onclick = () => showScreen("home");
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
-  // Reloading the page with ?room=CODE and a saved player id rejoins the same seat.
-  if (q && localStorage.getItem(`ep:pid:${q.toUpperCase()}`)) connect(q.toUpperCase());
+  // Keep room seats in each tab so a fresh invite can be opened by another profile.
+  const profile = currentProfile();
+  if (q && profile) {
+    const room = q.toUpperCase();
+    const key = seatKey(profile, room);
+    const oldKey = `ep:pid:${room}`;
+    const legacySeat = legacyProfile?.id === profile.id && localStorage.getItem(oldKey);
+    if (legacySeat) {
+      sessionStorage.setItem(key, legacySeat);
+      localStorage.removeItem(oldKey);
+    }
+    if (sessionStorage.getItem(key)) connect(room, profile);
+  }
 }
 
-function saveName() {
-  const n = $("#name").value.trim();
-  if (!n) { $("#home-error").textContent = "Type your name first."; return false; }
-  localStorage.setItem("ep:name", n);
-  return true;
+function requireProfile() {
+  const profile = saveProfile();
+  $("#home-error").textContent = profile ? "" : "Choose a profile or type your name first.";
+  if (!profile) $("#name").focus();
+  return profile;
 }
 
-function connect(c) {
+function setConnecting(connecting) {
+  for (const field of ["#profile", "#name", "#create", "#create-solo", "#join", "#open-practice"]) {
+    $(field).disabled = connecting;
+  }
+}
+
+async function createRoom(solo) {
+  const profile = requireProfile();
+  if (!profile) return;
+  setConnecting(true);
+  try {
+    const response = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ solo }) });
+    if (!response.ok) throw new Error();
+    const room = await response.json();
+    connect(room.code, profile);
+  } catch {
+    setConnecting(false);
+    $("#home-error").textContent = "Couldn’t create a room. Try again.";
+  }
+}
+
+function seatKey(profile, room) {
+  return `ep:pid:${profile.id}:${room}`;
+}
+
+function connect(c, profile) {
   if (!/^[A-Z]{4}$/.test(c)) { $("#home-error").textContent = "A room code has 4 letters."; return; }
-  code = c;
-  closedOnPurpose = false;
+  setConnecting(true);
+  const key = seatKey(profile, c);
+  activeSeatKey = key;
+  let rejected = false;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/${c}`);
   store.ws = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: localStorage.getItem(`ep:pid:${c}`), name: localStorage.getItem("ep:name") }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: sessionStorage.getItem(key), name: profile.name }));
   ws.onmessage = (e) => {
+    if (store.ws !== ws) return;
     const m = JSON.parse(e.data);
     if (m.type === "welcome") {
-      localStorage.setItem(`ep:pid:${c}`, m.pid);
+      sessionStorage.setItem(key, m.pid);
       history.replaceState(null, "", `/?room=${c}`);
     } else if (m.type === "error") {
-      closedOnPurpose = true;
+      rejected = true;
+      stopVideo();
+      store.state = null;
+      setConnecting(false);
       showScreen("home");
       $("#home-error").textContent = m.text;
-    } else if (m.type === "state") onState(m);
-    else if (m.type === "rtc") onRtc(m.data);
+    } else if (m.type === "state") {
+      const credits = savePracticeCredits(profile, m.practice_credits ?? []);
+      if (credits.length) send({ type: "practice_saved", credits });
+      setConnecting(false);
+      onState(m);
+    } else if (m.type === "rtc") onRtc(m.data);
   };
-  ws.onclose = () => { if (!closedOnPurpose && store.state) setTimeout(() => connect(code), 1500); };
+  ws.onclose = () => {
+    if (rejected || store.ws !== ws) return;
+    if (store.state) setTimeout(() => { if (store.ws === ws) connect(c, profile); }, 1500);
+    else {
+      setConnecting(false);
+      $("#home-error").textContent = "Couldn’t reach the room. Try again.";
+    }
+  };
 }
 
 /** Lobby "Leave room": give up the seat and go back to the home screen. */
 function leaveRoom() {
   send({ type: "leave" });
-  closedOnPurpose = true;
-  store.ws?.close();
+  const ws = store.ws;
   store.ws = null;
   store.state = null;
-  localStorage.removeItem(`ep:pid:${code}`);  // a reload must not rejoin the old seat
+  ws?.close();
+  sessionStorage.removeItem(activeSeatKey);  // a reload must not rejoin the old seat
   history.replaceState(null, "", "/");
   $("#code").value = "";
   $("#home-error").textContent = "";
   stopVideo();
   closeGlossary();
+  setConnecting(false);
   showScreen("home");
 }
 
@@ -134,6 +190,10 @@ function disarmExit() {
 function showScreen(id) {
   if (id !== "practice" && !$("#practice").classList.contains("hidden")) leavePractice();
   for (const s of ["home", "lobby", "game", "practice"]) $("#" + s).classList.toggle("hidden", s !== id);
+  if (activeScreen !== id) {
+    activeScreen = id;
+    moveProgress(id);
+  }
 }
 
 function onState(s) {

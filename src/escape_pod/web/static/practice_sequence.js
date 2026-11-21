@@ -9,6 +9,7 @@
 import { $, el, wordOf } from "./core.js";
 import { Sequencer } from "./sequence.js";
 import { onPracticeFrame, onPracticeStop, practiceCameraReady, practiceWords } from "./practice.js";
+import { newPracticeId, savePracticeCredits } from "./progress.js";
 
 const TARGET_COUNT = 3;
 const CORE = new Set(["yes", "no", "finish"]);
@@ -24,6 +25,8 @@ let mode = "one";
 let targets = [];
 let chips = [];        // {id, state: "pending" | "done" | "unclear" | "error", guesses, pick, text}
 let nextId = 1;
+let profile = null;
+let roundId = null;
 let oneText = "";  // the One word instructions, restored when the player switches back
 
 const banner = $("#seq-banner");
@@ -57,6 +60,7 @@ function newTargets() {
 }
 
 function clearChips() {
+  roundId = newPracticeId();
   chips = [];
   $("#practice-result").classList.add("hidden");
   render();
@@ -129,7 +133,9 @@ function check() {
   const picks = chips.filter((c) => c.state === "done").map((c) => c.pick);
   const marks = targets.map((g, i) => `${picks[i] === g ? "✓" : "✗"} ${wordOf(g).toUpperCase()}` +
     (picks[i] && picks[i] !== g ? ` (you: ${wordOf(picks[i]).toUpperCase()})` : picks[i] ? "" : " (missing)"));
-  const right = targets.filter((g, i) => picks[i] === g).length;
+  const credits = targets.flatMap((g, i) => picks[i] === g ? [`${roundId}:${i}`] : []);
+  savePracticeCredits(profile, credits);
+  const right = credits.length;
   const result = $("#practice-result");
   result.textContent = `${right} / ${targets.length} right · ${marks.join(" · ")}` +
     (picks.length > targets.length ? ` · ${picks.length - targets.length} extra sign(s)` : "");
@@ -150,6 +156,12 @@ function render() {
   const busy = chips.some((c) => c.state === "pending");
   $("#seq-check").disabled = recording || busy || !chips.some((c) => c.state === "done");
   $("#seq-clear").disabled = recording || !chips.length;
+}
+
+export function setSequenceProfile(nextProfile) {
+  if (profile?.id === nextProfile.id) return;
+  profile = nextProfile;
+  newTargets();
 }
 
 export function bindSequence() {

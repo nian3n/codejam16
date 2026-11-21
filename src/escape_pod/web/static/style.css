@@ -65,11 +65,12 @@ body::after { background: #c3160b; opacity: 0; z-index: 9; }
 .btn.big { padding: 14px 28px; font-size: 1.1rem; width: 100%; }
 .btn.small { padding: 4px 10px; font-size: .8rem; }
 .btn.danger:hover:not(:disabled), .btn.danger.armed { border-color: var(--warn); color: var(--warn); }
-input {
+input, #profile {
   background: #0c0d0e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
   padding: 10px 12px; font: inherit; width: 100%;
 }
 input:focus { outline: none; border-color: var(--acc); }
+#profile:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .row { display: flex; gap: 8px; }
 .error { color: var(--warn); min-height: 1.2em; margin: 0; }
@@ -90,6 +91,18 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .tag { margin: -4px 0 8px; text-align: center; color: var(--dim); font-family: var(--mono); font-size: .85rem; }
 .or { text-align: center; color: var(--dim); font-size: .85rem; }
 .code-input { text-transform: uppercase; letter-spacing: .3em; text-align: center; font-weight: 700; }
+#profile-picker { display: grid; gap: 8px; }
+#profile-note, #practice-progress-description { margin: 0; color: var(--dim); font-size: .85rem; }
+.practice-progress { display: grid; gap: 6px; min-width: 0; }
+.practice-progress-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-weight: 700; }
+#practice-progress-bar {
+  appearance: none; display: block; width: 100%; height: 12px; border: 0;
+  border-radius: 999px; overflow: hidden; color: #5ee0c8; background: var(--bg);
+}
+#practice-progress-bar::-webkit-progress-bar { border-radius: inherit; background: var(--bg); }
+#practice-progress-bar::-webkit-progress-value { border-radius: inherit; background: currentColor; }
+#practice-progress-bar::-moz-progress-bar { border-radius: inherit; background: currentColor; }
+#game > .practice-progress { padding: 12px 20px 0; background: var(--bg2); }
 
 /* ---------- lobby ---------- */
 .lobby-card { width: min(760px, 100%); display: grid; gap: 22px; }
@@ -124,8 +137,18 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .strikes { display: flex; gap: 6px; }
 .strike-led { width: 16px; height: 16px; border-radius: 50%; background: #3a1a1a; border: 1px solid #000; }
 .strike-led.on { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
-.game-main { display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 16px; height: calc(100vh - 58px); }
-@media (max-width: 1000px) { .game-main { grid-template-columns: 1fr; height: auto; } }
+@media (max-width: 640px) {
+  .topbar { flex-wrap: wrap; gap: 8px 12px; }
+  .op { flex: 1; }
+  .top-right { flex-basis: 100%; flex-wrap: wrap; }
+}
+#game { display: flex; flex-direction: column; }
+.game-main { display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 16px; }
+@media (min-width: 1001px) {
+  #game { height: 100vh; }
+  .game-main { flex: 1; min-height: 0; }
+}
+@media (max-width: 1000px) { .game-main { grid-template-columns: 1fr; } }
 #stage { min-width: 0; overflow: auto; }
 .side { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; min-height: 0; }
 .feed { background: #15171ae6; border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 200px; }
