@@ -58,7 +58,8 @@ def test_500_seeds_give_a_valid_target(pid):
             cut = t["colors"] if "colors" in t else [t["color"]]
             assert cut and set(cut) <= set(items) and len(set(cut)) == len(cut)
         elif sol.verb == "type":
-            assert len(t["keys"]) == len(items) and set(t["keys"]) <= set(spec.pool)
+            # Keys on the keypad: "add 1" can type a digit the display never shows (2).
+            assert len(t["keys"]) == len(items) and set(t["keys"]) <= set("0123456789")
         elif sol.verb == "press":
             pressed = t["icons"] if "icons" in t else [t["icon"]]
             assert pressed and set(pressed) <= set(items) and len(set(pressed)) == len(pressed)
@@ -298,3 +299,9 @@ def test_the_sorter_manual_lists_the_groups():
     assert p["rules"][0] == {"if": "pizza is shown",
                              "then": "Put the treats in the left box and the healthy food in the right box."}
     assert p["rules"][1]["if"] == "the first picture is a healthy food"
+
+
+def test_the_keypad_never_shows_2():
+    # The digit model rarely reads a signed 2 (playtest, Nov 2026). The keys still have a 2:
+    # "add 1" can type one, and typing is a click, not a sign.
+    assert "2" not in POOL["numbers"].pool

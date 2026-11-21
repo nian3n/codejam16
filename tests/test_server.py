@@ -820,7 +820,7 @@ def test_solo_keypad_questions_take_only_digits_and_core_signs():
     assert "bot_words" not in s  # naming a module: any word on the bomb
     a.send_json({"type": "signs", "glosses": ["7"]})  # the keypad page
     s = _bot_said(a, len(s["chat"]))
-    assert s["bot_words"] == sorted(list("0123456789") + list(config.CORE_SIGNS))
+    assert s["bot_words"] == sorted(list("013456789") + list(config.CORE_SIGNS))  # no 2 on the keypad
     a.__exit__(None, None, None)
 
 

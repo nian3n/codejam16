@@ -237,7 +237,7 @@ All 20 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the
 | id | Topic | Widget | Pool (glosses) |
 |---|---|---|---|
 | `colors` | Colors | wires | red, blue, green, yellow, black, white, brown, orange |
-| `numbers` | Numbers 0–9 | keypad | 0–9 (handshapes) |
+| `numbers` | Numbers 0–9 | keypad | 0, 1, 3–9 (handshapes). No 2: the digit model rarely reads it. The keys still include 2, which "add 1" can type |
 | `pets_farm` | Pets and farm animals | icons | cat, dog, cow, pig, horse, duck, hen, donkey |
 | `senses` | Senses | dial | see, look, hear, listen, taste, touch, smile, think |
 | `wild_animals` | Wild animals | icons | lion, tiger, zebra, giraffe, elephant, alligator, wolf, owl |
