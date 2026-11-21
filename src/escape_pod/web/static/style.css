@@ -431,8 +431,8 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
 .seq-banner[data-phase="arming"] b { color: var(--amber); }
 .seq-banner[data-phase="signing"] { border-color: var(--warn); }
 .seq-banner[data-phase="signing"] b { color: var(--warn); }
-.seq-banner[data-phase="next"] { border-color: var(--ok); }
-.seq-banner[data-phase="next"] b { color: var(--ok); }
+.seq-banner[data-phase="cooldown"] { border-color: var(--ok); }
+.seq-banner[data-phase="cooldown"] b { color: var(--ok); }
 #seq-record.rec { background: var(--warn); color: #fff; }
 .seq-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; }
 .seq-empty { color: var(--dim); font-size: .85rem; margin: 0; }

@@ -15,7 +15,8 @@
 export const CFG = {
   ARM_MS: 1000,          // after Space: time to set up the hands before recording starts
   STOP_HOLD_MS: 500,     // the "next" pose must be held this still for this long
-  DOWN_MS: 150,          // hands down this long ends a sign
+  DOWN_MS: 300,          // hands down this long ends a sign (shorter dropouts are tracking blips)
+  COOLDOWN_MS: 1000,     // after a sign is taken, no new sign starts for this long
   MIN_SIGN_MS: 300,      // shorter clips are noise (a twitch), dropped
   MAX_SIGN_MS: 3000,     // longer clips are not one sign: shown as "unclear"
   MAX_FRAMES: 75,        // the server's limit per clip (practice.py MAX_FRAMES)
@@ -86,7 +87,9 @@ function wristFall(prev, cur, dtMs) {
 
 /**
  * Phases: "idle" -> start() -> "arming" (ARM_MS) -> "ready" -> "signing" -> (separator)
- * -> "ready" or "next" (pose still held) -> ... -> stop() -> "idle".
+ * -> "cooldown" (COOLDOWN_MS, nothing starts) -> "ready" -> ... -> stop() -> "idle".
+ * The cooldown stops a sign from turning into two words when the hands leave the
+ * frame and come straight back.
  * push() and stop() return events: {type: "phase", phase} and
  * {type: "clip", frames: [payload...], ms, unclear}.
  */
@@ -99,6 +102,7 @@ export class Sequencer {
     this.recent = [];       // the last PRE_ROLL frames while ready
     this.prev = null;       // the previous frame's results and time, for speed
     this.downSince = null;  // time the hands went down (during a sign)
+    this.coolUntil = 0;     // end of the cooldown after a taken sign
     this.openSince = null;  // time the hands first took the "next" shape (continuous)
     this.stillSince = null; // time the "next" shape became still
   }
@@ -164,22 +168,26 @@ export class Sequencer {
         this.recent = [];
         this.setPhase("signing", out);
       } else {
-        this.recent = [...this.recent, frame].slice(-this.cfg.PRE_ROLL);
+        // Pre-roll never holds pose frames: the separator must not leak into the next clip.
+        this.recent = shape ? [] : [...this.recent, frame].slice(-this.cfg.PRE_ROLL);
       }
     } else if (this.phase === "signing") {
       this.seg.push(frame);
       if (this.downSince != null && t - this.downSince >= this.cfg.DOWN_MS) {
         out.push(...this.close(this.seg.filter((f) => f.t < this.downSince)));
         this.seg = [];
-        this.setPhase("ready", out);
+        this.coolUntil = this.downSince + this.cfg.COOLDOWN_MS;  // 1 s from when the hands left
+        this.setPhase("cooldown", out);
       } else if (nextHeld) {
         // Cut from the moment the hands took the open shape: the pose is not part of the sign.
         out.push(...this.close(this.seg.filter((f) => f.t < this.openSince)));
         this.seg = [];
-        this.setPhase("next", out);
+        this.coolUntil = t + this.cfg.COOLDOWN_MS;
+        this.setPhase("cooldown", out);
       }
-    } else if (this.phase === "next") {
-      if (!shape || moving) this.setPhase("ready", out);  // the next frame with raised hands starts a sign
+    } else if (this.phase === "cooldown") {
+      // Ready again after the cooldown. A still-held pose does not start a sign (see "ready").
+      if (t >= this.coolUntil) this.setPhase("ready", out);
     }
     return out;
   }

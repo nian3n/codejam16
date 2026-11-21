@@ -16,7 +16,7 @@ const PROMPTS = {
   arming: ["GET YOUR HANDS READY", "Recording starts in 1 second."],
   ready: ["RECORDING", "Sign a word. Then lower your hands, or hold both palms up ✋✋."],
   signing: ["SIGNING…", "Lower your hands or hold both palms up when the sign is done."],
-  next: ["✋✋ NEXT", "Got it. Sign the next word, or press Space to stop."],
+  cooldown: ["✓ GOT IT", "Wait a moment… then sign the next word, or press Space to stop."],
 };
 
 const seq = new Sequencer();

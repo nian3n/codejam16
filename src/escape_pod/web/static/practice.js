@@ -70,12 +70,19 @@ async function showDemo() {
   clipVideo.play().catch(() => {});
 }
 
-function renderWords(preferredIndex = 0) {
+// Approved words stay in the list with a check mark: a word that silently vanished looked
+// like a bug (the progress lives in this browser only). after: select the next word
+// that is not approved yet, starting after this gloss.
+function renderWords(after = null) {
   const remaining = words.filter((gloss) => !approved.has(gloss));
-  word.replaceChildren(...remaining.map((gloss) => el("option", { value: gloss, text: wordOf(gloss).toUpperCase() })));
-  if (remaining.length) word.selectedIndex = preferredIndex % remaining.length;
-  word.disabled = !remaining.length;
-  reset.classList.toggle("hidden", !!remaining.length);
+  word.replaceChildren(...words.map((gloss) => el("option", {
+    value: gloss, text: (approved.has(gloss) ? "✓ " : "") + wordOf(gloss).toUpperCase() })));
+  const start = after == null ? 0 : words.indexOf(after) + 1;
+  const next = words.findIndex((_, i) => !approved.has(words[(start + i) % words.length]));
+  word.selectedIndex = next < 0 ? 0 : (start + next) % words.length;
+  word.disabled = !words.length;
+  reset.textContent = `Reset progress (${approved.size} / ${words.length} approved)`;
+  reset.classList.toggle("hidden", !approved.size);
   void showDemo();
   return remaining.length;
 }
@@ -123,8 +130,9 @@ export async function enterPractice() {
     approved = new Set([...approved, ...loadProgress()]);
     const remaining = renderWords();
     const error = cameraUnavailable();
-    status.textContent = remaining ? error || "Turn on your camera when you’re ready." : "You approved every word.";
-    cameraButton.disabled = !remaining || !!error;
+    status.textContent = error || (remaining ? "Turn on your camera when you’re ready."
+      : "You approved every word. You can still practice any of them.");
+    cameraButton.disabled = !words.length || !!error;
   } catch (error) {
     if (visit === controller) status.textContent = error.message;
   }
@@ -236,7 +244,6 @@ async function captureSign() {
   const session = camera;
   const target = word.value;
   const { abort } = session;
-  const targetIndex = word.selectedIndex;
   const frames = [];
   captureButton.disabled = word.disabled = true;
   result.classList.add("hidden");
@@ -271,12 +278,9 @@ async function captureSign() {
     if (score.approved) {
       approved.add(target);
       saveProgress();
-      const remaining = renderWords(targetIndex);
-      if (!remaining) {
-        stopPracticeCamera("You approved every word.");
-      } else {
-        status.textContent = `${remaining} words left. The next word is ready.`;
-      }
+      const remaining = renderWords(target);
+      status.textContent = remaining ? `${remaining} words left. The next word is ready.`
+        : "You approved every word! Reset your progress to start again.";
     } else {
       status.textContent = "Capture again or choose another word.";
     }

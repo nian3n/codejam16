@@ -103,19 +103,19 @@ def test_hands_down_ends_a_sign_and_the_rest_is_not_in_the_clip():
     (c,) = clips(r)
     assert c["kinds"] == ["rest", "sign"] or c["kinds"] == ["sign"]  # pre-roll may keep 2 rest frames
     assert 950 <= c["ms"] <= 1150 and not c["unclear"]
-    assert r[-1] == "ready"
+    assert r[-1] == "cooldown"  # 0.4 s after the sign: still inside the 1 s cooldown
 
 
 def test_the_next_pose_splits_signs_and_never_reaches_a_clip():
-    r = run({"s": [["rest", 1100], ["sign", 800], ["next", 700], ["sign", 900], ["stop", 0]]})["s"]
+    r = run({"s": [["rest", 1100], ["sign", 800], ["next", 1600], ["sign", 900], ["stop", 0]]})["s"]
     got = clips(r)
     assert len(got) == 2
     assert all("next" not in c["kinds"] for c in got)
-    assert "next" in r  # the phase shows the player that the pose was seen
+    assert "cooldown" in r  # the banner shows the player that the sign was taken
 
 
 def test_many_signs_in_a_row():
-    steps = [["rest", 1100]] + [s for _ in range(4) for s in (["sign", 900], ["next", 650])] + [["stop", 0]]
+    steps = [["rest", 1100]] + [s for _ in range(4) for s in (["sign", 900], ["next", 1600])] + [["stop", 0]]
     assert len(clips(run({"s": steps})["s"])) == 4
 
 
@@ -135,3 +135,18 @@ def test_a_twitch_is_dropped_and_a_long_stretch_is_unclear():
 def test_lowering_the_hands_after_the_pose_records_nothing():
     r = run({"s": [["rest", 1100], ["sign", 800], ["next", 700], ["lower", 400], ["rest", 400], ["stop", 0]]})["s"]
     assert len(clips(r)) == 1
+
+
+def test_a_short_dropout_does_not_split_a_sign():
+    # The hands leave the frame for 0.2 s in the middle of a sign: still one word.
+    r = run({"s": [["rest", 1100], ["sign", 600], ["rest", 200], ["sign", 600], ["rest", 500], ["stop", 0]]})["s"]
+    assert len(clips(r)) == 1
+
+
+def test_no_new_word_within_one_second_after_a_sign():
+    # Hands drop (the sign ends), then come back at once: the cooldown ignores them.
+    quick = run({"s": [["rest", 1100], ["sign", 800], ["rest", 400], ["sign", 500], ["rest", 600], ["stop", 0]]})["s"]
+    assert len(clips(quick)) == 1
+    # After the cooldown, the next sign counts.
+    later = run({"s": [["rest", 1100], ["sign", 800], ["rest", 1400], ["sign", 800], ["rest", 500], ["stop", 0]]})["s"]
+    assert len(clips(later)) == 2
