@@ -18,7 +18,9 @@ The playtest found that signing every item before any answer was too hard. The b
 
 Over 600 random modules, a perfect player needs 3.4 exchanges on average, and 6 at most. The sections below describe the first version. Where they differ, this section wins.
 
-Also from the playtest: the glossary button moved from the top bar to the side panel, and the G key opens it. The LAMP icon (a light bulb) now shows its word.
+Also from the playtest: the G key opens the glossary. The glossary button moved to the side panel for one round, then went back to the top bar. The LAMP icon (a light bulb) now shows its word.
+
+After the second playtest, an "INITIALIZING" screen shows between Start and the timer. It loads the hand tracker and the word model, so the first sign does not wait about 6 s.
 
 ## Intent
 
