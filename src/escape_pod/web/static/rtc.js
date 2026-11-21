@@ -37,12 +37,15 @@ const remoteVideo = el("video", { class: "remote-video", autoplay: "", playsinli
 const localVideo = el("video", { class: "local-video", autoplay: "", playsinline: "", muted: "" });
 const status = el("div", { class: "vstatus", text: "Waiting for the other player..." });
 const remoteName = el("span", { class: "vname" });
+// "● LIVE" shows only while the other player's video actually plays; the label names the channel in the story.
+const liveLabel = el("span", { text: "AGENT CAM" });
+const liveTag = el("span", { class: "live-tag hidden" }, el("span", { class: "live-dot", text: "● " }), "LIVE · ", liveLabel);
 const camBtn = el("button", { class: "btn small", text: "Camera off", onclick: toggleCamera });
 const retryBtn = el("button", { class: "btn small hidden", text: "Try the camera again", onclick: () => { cameraError = ""; startCamera(true); } });
 remoteVideo.muted = true;   // no audio track anyway; muted lets autoplay start without a click
 localVideo.muted = true;
 const dock = el("div", { class: "video-dock" },
-  el("div", { class: "remote-wrap" }, remoteVideo, status, remoteName, localVideo),
+  el("div", { class: "remote-wrap" }, remoteVideo, status, remoteName, liveTag, localVideo),
   el("div", { class: "vbar" }, camBtn, retryBtn));
 
 /** Put the dock at the top of `parent` (the lobby card or the game side panel). */
@@ -64,6 +67,8 @@ export function onRoomState(s) {
   }
   const label = { defuser: "agent", expert: "HQ" }[other?.role] || "";
   remoteName.textContent = other ? `${other.name}${label ? " · " + label : ""}` : "";
+  liveLabel.textContent = other?.role === "expert" ? "HQ LINK" : "AGENT CAM";
+  showLive();
   if (!other) {
     setStatus("Waiting for the other player...");
   } else if (!other.online) {
@@ -75,6 +80,10 @@ export function onRoomState(s) {
     wanted = true;
     startCamera(false);
   }
+}
+
+function showLive() {
+  liveTag.classList.toggle("hidden", !remoteVideo.srcObject);
 }
 
 function setStatus(text) {
@@ -144,6 +153,7 @@ function ensurePc() {
     remoteVideo.srcObject = e.streams[0] || new MediaStream([e.track]);
     remoteVideo.play().catch(() => {});
     setStatus("");
+    showLive();
   };
   pc.onicecandidate = (e) => { if (e.candidate) sendRtc({ candidate: e.candidate.toJSON() }); };
   pc.onnegotiationneeded = async () => {
@@ -172,6 +182,7 @@ function dropPeer() {
   remoteSid = null;
   remoteVideo.srcObject = null;
   makingOffer = ignoreOffer = false;
+  showLive();
 }
 
 function resetPc() {

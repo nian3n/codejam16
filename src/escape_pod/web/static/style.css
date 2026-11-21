@@ -1,12 +1,16 @@
 /* Owner: Teammate 1 (Game, scenes, widgets) */
 :root {
-  --bg: #0d1018;
-  --bg2: #151a26;
-  --card: #1b2131;
-  --line: #2c3548;
-  --ink: #e8ecf4;
-  --dim: #8a94a8;
-  --acc: #5ee0c8;
+  --bg: #101112;
+  --bg2: #17191b;
+  --card: #1c1f22;
+  --line: #3a3e44;
+  --ink: #ecebe6;
+  --dim: #a09d94;
+  --acc: #f2c230;       /* hazard yellow: the accent everywhere */
+  --haz: #f2c230;
+  --acc-bg: #2b2710;    /* selected role, level, manual page */
+  --mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+  --stripes: repeating-linear-gradient(45deg, var(--haz) 0 12px, #121212 12px 24px);
   --warn: #ff5a4a;
   --ok: #4ade80;
   --amber: #ffb43c;
@@ -17,29 +21,53 @@
   color: var(--ink);
 }
 * { box-sizing: border-box; }
+/* The room: a concrete block wall with grain over a darker floor. The grain is an inline SVG noise filter. */
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(ellipse at top, #1a2236 0%, var(--bg) 60%);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    repeating-linear-gradient(0deg, transparent 0 89px, #0000004d 89px 91px),
+    repeating-linear-gradient(90deg, transparent 0 179px, #00000033 179px 181px),
+    linear-gradient(180deg, transparent 0 72%, #0a0a0b 72% 100%),
+    radial-gradient(ellipse at 50% 25%, #2d2f31 0%, #18191b 55%, #0d0e0f 100%);
+  background-color: var(--bg);
+  background-attachment: fixed;
 }
+/* Vignette (before) and the strike flash (after) sit on fixed layers above the wall, below the UI. */
+body::before, body::after { content: ""; position: fixed; inset: 0; pointer-events: none; }
+body::before { background: radial-gradient(ellipse at 50% 40%, transparent 45%, #000000b3 100%); z-index: 0; }
+body::after { background: #c3160b; opacity: 0; z-index: 9; }
+.screen { position: relative; z-index: 1; }
 .hidden { display: none !important; }
 .screen { min-height: 100vh; }
 #home, #lobby { display: grid; place-items: center; padding: 16px; }
 
 /* ---------- cards, buttons, inputs ---------- */
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+.card {
+  background: linear-gradient(180deg, #1f2225f2, #15171af2); border: 1px solid var(--line); border-radius: 6px; padding: 28px;
+  box-shadow: 0 18px 50px #000c, inset 0 1px 0 #ffffff12;
+}
+/* Hazard tape along the top and bottom edge of the main panels, in the padding, outside the content. */
+.home-card, .lobby-card, .end-card { position: relative; overflow: hidden; padding-top: 38px; padding-bottom: 38px; }
+.home-card::before, .home-card::after, .lobby-card::before, .lobby-card::after, .end-card::before, .end-card::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 10px; background: var(--stripes);
+}
+.home-card::before, .lobby-card::before, .end-card::before { top: 0; }
+.home-card::after, .lobby-card::after, .end-card::after { bottom: 0; }
 .btn {
-  background: var(--bg2); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
-  padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--bg2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
+  padding: 10px 18px; font: inherit; font-weight: 700; cursor: pointer; letter-spacing: .03em;
 }
 .btn:hover:not(:disabled) { border-color: var(--acc); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
-.btn.primary { background: var(--acc); color: #062a24; border-color: var(--acc); }
+.btn.primary { background: var(--acc); color: #141204; border-color: #000; text-transform: uppercase; letter-spacing: .08em; }
+.btn.primary:hover:not(:disabled) { border-color: #fff; }
 .btn.big { padding: 14px 28px; font-size: 1.1rem; width: 100%; }
 .btn.small { padding: 4px 10px; font-size: .8rem; }
 .btn.danger:hover:not(:disabled), .btn.danger.armed { border-color: var(--warn); color: var(--warn); }
 input {
-  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  background: #0c0d0e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
   padding: 10px 12px; font: inherit; width: 100%;
 }
 input:focus { outline: none; border-color: var(--acc); }
@@ -52,9 +80,15 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 
 /* ---------- home ---------- */
 .home-card { width: min(420px, 100%); display: grid; gap: 16px; }
-.logo { margin: 0; font-size: 3rem; letter-spacing: .12em; text-align: center; }
-.logo span { color: var(--warn); margin-left: .3em; }
-.tag { margin: -8px 0 8px; text-align: center; color: var(--dim); }
+.logo {
+  margin: 0; text-align: center; line-height: 1; font-family: "Arial Black", "Segoe UI Black", Impact, sans-serif;
+  font-size: 2.6rem; letter-spacing: .08em; color: var(--acc); text-shadow: 0 3px 0 #000;
+}
+.logo span {
+  display: block; margin-top: 8px; font-family: var(--mono); font-size: .95rem; font-weight: 700;
+  letter-spacing: .32em; text-transform: uppercase; color: var(--warn);
+}
+.tag { margin: -4px 0 8px; text-align: center; color: var(--dim); font-family: var(--mono); font-size: .85rem; }
 .or { text-align: center; color: var(--dim); font-size: .85rem; }
 .code-input { text-transform: uppercase; letter-spacing: .3em; text-align: center; font-weight: 700; }
 
@@ -62,25 +96,30 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .lobby-card { width: min(760px, 100%); display: grid; gap: 22px; }
 .lobby-top { display: flex; justify-content: flex-start; margin: -10px 0 -18px; }
 .room-code { display: flex; align-items: center; gap: 14px; justify-content: center; font-size: 1.2rem; }
+.room-code { font-family: var(--mono); text-transform: uppercase; letter-spacing: .1em; }
 .room-code b { font-size: 2rem; letter-spacing: .3em; color: var(--acc); }
 .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 640px) { .roles { grid-template-columns: 1fr; } }
-.role { border: 2px solid var(--line); border-radius: 14px; padding: 18px; text-align: center; display: grid; gap: 8px; }
-.role.mine { border-color: var(--acc); background: #16302e; }
-.role h2 { margin: 0; }
+.role { border: 2px solid var(--line); border-radius: 6px; padding: 18px; text-align: center; display: grid; gap: 8px; background: #0000002e; }
+.role.mine { border-color: var(--acc); background: var(--acc-bg); }
+.role h2 { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: 1.3rem; }
 .role p { margin: 0; color: var(--dim); font-size: .9rem; }
 .role-icon { font-size: 2.6rem; }
 .role-who { min-height: 1.4em; font-weight: 600; color: var(--amber); }
 .levels { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.level { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; cursor: pointer; text-align: center; min-width: 140px; }
-.level.on { border-color: var(--acc); background: #16302e; }
+.level { border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; cursor: pointer; text-align: center; min-width: 140px; }
+.level.on { border-color: var(--acc); background: var(--acc-bg); }
 .level small { display: block; color: var(--dim); }
 
 /* ---------- game layout ---------- */
 .topbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 10px 20px; background: var(--bg2); border-bottom: 1px solid var(--line);
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 8px 20px 14px; background: #0e0f10ee; font-family: var(--mono);
 }
+.topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: var(--stripes); }
+.op { display: grid; gap: 2px; min-width: 0; }
+.op-line { color: var(--acc); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.op-sub { color: var(--dim); font-size: .8rem; }
 .top-right { display: flex; align-items: center; gap: 14px; }
 .top-timer { font-family: Consolas, monospace; font-size: 1.6rem; color: var(--warn); text-shadow: 0 0 8px #ff3b2b88; }
 .strikes { display: flex; gap: 6px; }
@@ -90,11 +129,12 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 @media (max-width: 1000px) { .game-main { grid-template-columns: 1fr; height: auto; } }
 #stage { min-width: 0; overflow: auto; }
 .side { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; min-height: 0; }
-.feed { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 200px; }
+.feed { background: #15171ae6; border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 200px; }
 .msg { padding: 8px 12px; border-radius: 10px; background: var(--bg2); font-size: .95rem; }
 .msg .who { font-size: .75rem; color: var(--dim); display: block; margin-bottom: 2px; }
-.msg.say { background: #1d2b48; align-self: flex-end; max-width: 90%; }
-.msg.signs { background: #222a1a; }
+.msg.say { background: #2b2614; border-left: 3px solid var(--acc); align-self: flex-end; max-width: 90%; }
+.msg.signs { background: #1b251b; border-left: 3px solid var(--ok); }
+.msg .who { font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 .msg.event { background: transparent; color: var(--dim); text-align: center; font-size: .85rem; padding: 2px; }
 .msg.event.strike { color: var(--warn); font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -103,13 +143,13 @@ button.chip { cursor: pointer; color: var(--ink); font-family: inherit; }
 button.chip:hover { border-color: var(--warn); }
 .page-links { margin-top: 6px; font-size: .8rem; color: var(--dim); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .page-links button { font-size: .8rem; }
-.composer { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+.composer { background: #15171ae6; border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 10px; }
 .composer .label { font-size: .8rem; color: var(--dim); }
 
 /* ---------- the bomb ---------- */
 .bomb {
   position: relative; margin: 0 auto; max-width: 980px; padding: 28px;
-  border-radius: 22px; border: 3px solid #111;
+  border: 10px solid transparent; border-image: var(--stripes) 10;
   background: linear-gradient(160deg, var(--metal1), var(--metal2) 45%, var(--metal3));
   box-shadow: inset 0 2px 0 #8a909c, inset 0 -4px 10px #0008, 0 20px 40px #000a;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
@@ -206,16 +246,22 @@ button.chip:hover { border-color: var(--warn); }
 /* ---------- expert manual ---------- */
 .manual { display: grid; grid-template-columns: 260px 1fr; gap: 16px; height: 100%; min-height: 0; }
 @media (max-width: 1000px) { .manual { grid-template-columns: 1fr; } }
-.man-index { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; overflow-y: auto; display: grid; gap: 4px; align-content: start; }
+.man-index { background: #15171ae6; border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow-y: auto; display: grid; gap: 4px; align-content: start; }
 .man-index input { margin-bottom: 6px; }
 .man-entry { text-align: left; background: none; border: 1px solid transparent; color: var(--ink); border-radius: 8px; padding: 6px 8px; cursor: pointer; font: inherit; }
 .man-entry:hover { border-color: var(--line); }
-.man-entry.open { background: #16302e; border-color: var(--acc); }
+.man-entry.open { background: var(--acc-bg); border-color: var(--acc); }
 .man-entry.match { border-color: var(--amber); }
 .man-entry small { color: var(--dim); display: block; font-size: .75rem; }
 .page {
-  background: #efe6cf; color: #2a2116; border-radius: 6px; padding: 28px 34px; overflow-y: auto;
+  position: relative; background: #efe6cf; color: #2a2116; border-radius: 3px; padding: 64px 34px 28px; overflow-y: auto;
   box-shadow: 0 10px 30px #000a, inset 0 0 60px #c9b88f; font-family: Georgia, "Times New Roman", serif;
+}
+/* The field manual: a red CLASSIFIED stamp. The extra top padding keeps it off the title. */
+.page::before {
+  content: "CLASSIFIED"; position: absolute; top: 16px; right: 22px; transform: rotate(-6deg);
+  font-family: var(--mono); font-weight: 900; letter-spacing: .2em; font-size: .95rem;
+  color: #b3261e; border: 3px double #b3261e; padding: 2px 10px; opacity: .8;
 }
 .page h2 { margin: 0 0 4px; font-size: 1.8rem; }
 .page .meta { color: #6b5a40; margin-bottom: 18px; font-style: italic; }
@@ -229,25 +275,41 @@ button.chip:hover { border-color: var(--warn); }
 /* ---------- overlay & effects ---------- */
 .overlay { position: fixed; inset: 0; background: #000c; display: grid; place-items: center; z-index: 10; padding: 16px; }
 .end-card { width: min(480px, 100%); text-align: center; display: grid; gap: 14px; }
-.end-card h1 { margin: 0; font-size: 2.4rem; }
+.end-card h1 { margin: 0; font-size: 2.1rem; font-family: var(--mono); letter-spacing: .12em; }
 .end-card.win h1 { color: var(--ok); }
 .end-card.lose h1 { color: var(--warn); }
-body.flash { animation: flash .45s; }
-@keyframes flash { 0%, 100% { background-color: var(--bg); } 30% { background-color: #5a0f0a; } }
+/* The wall is a background image now, so the flash is an overlay (body::after), not a background color. */
+body.flash::after { animation: flash .45s; }
+@keyframes flash { 0%, 100% { opacity: 0; } 30% { opacity: .45; } }
 .shake { animation: shake .35s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
 
 /* ---------- video between the players (rtc.js) ---------- */
 .video-dock { display: grid; gap: 6px; }
 .remote-wrap {
-  position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden;
-  background: #05070c; border: 1px solid var(--line);
+  position: relative; aspect-ratio: 4 / 3; border-radius: 4px; overflow: hidden;
+  background: #050505; border: 1px solid var(--line);
 }
+/* Camera corner brackets, at the very edge so they never cover the signer. */
+.remote-wrap::after {
+  content: ""; position: absolute; inset: 6px; pointer-events: none; --b: #ffffffb3;
+  background:
+    linear-gradient(var(--b), var(--b)) top left / 18px 2px no-repeat, linear-gradient(var(--b), var(--b)) top left / 2px 18px no-repeat,
+    linear-gradient(var(--b), var(--b)) top right / 18px 2px no-repeat, linear-gradient(var(--b), var(--b)) top right / 2px 18px no-repeat,
+    linear-gradient(var(--b), var(--b)) bottom left / 18px 2px no-repeat, linear-gradient(var(--b), var(--b)) bottom left / 2px 18px no-repeat,
+    linear-gradient(var(--b), var(--b)) bottom right / 18px 2px no-repeat, linear-gradient(var(--b), var(--b)) bottom right / 2px 18px no-repeat;
+}
+.live-tag {
+  position: absolute; right: 12px; top: 12px; background: #000b; padding: 2px 8px; border-radius: 3px;
+  font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .12em; color: #fff;
+}
+.live-dot { color: #ff3b2b; animation: blink 1.2s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
 /* Not mirrored: the camera sees the signer the way a person facing them would. Only the self-view is mirrored. */
 .remote-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .local-video {
-  position: absolute; right: 8px; bottom: 8px; width: 30%; aspect-ratio: 4 / 3; object-fit: cover;
-  border-radius: 8px; border: 2px solid var(--acc); transform: scaleX(-1); background: #000;
+  position: absolute; right: 14px; bottom: 14px; width: 30%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: 3px; border: 2px solid var(--acc); transform: scaleX(-1); background: #000;
 }
 .local-video.off { opacity: .25; }
 .vstatus {
@@ -255,10 +317,28 @@ body.flash { animation: flash .45s; }
   padding: 16px; color: var(--dim); font-size: .9rem;
 }
 .vname {
-  position: absolute; left: 8px; top: 8px; background: #000a; padding: 2px 8px; border-radius: 6px;
-  font-size: .8rem; font-weight: 600;
+  position: absolute; left: 12px; top: 12px; background: #000b; padding: 2px 8px; border-radius: 3px;
+  font-family: var(--mono); font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
 }
 .vname:empty { display: none; }
 .vbar { display: flex; gap: 8px; justify-content: flex-end; }
 #lobby-video .remote-wrap { max-width: 480px; margin: 0 auto; }
 #lobby-video .vbar { max-width: 480px; margin: 0 auto; width: 100%; }
+
+/* ---------- the alarm light (index.html .alarm) ---------- */
+/* A red beacon in the top-right corner, mostly off screen. Fixed and behind the UI, so it never covers the game. */
+.alarm {
+  position: fixed; top: -140px; right: -140px; width: 360px; height: 360px; border-radius: 50%;
+  background: radial-gradient(circle, #ff2a1a99 0%, #ff2a1a33 35%, transparent 70%);
+  pointer-events: none; z-index: 0; animation: alarm 2s ease-in-out infinite;
+}
+@keyframes alarm { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+/* Under 30 seconds (app.js tickTimer sets body.critical): faster, bigger, and a red edge. */
+body.critical .alarm { animation-duration: .6s; width: 520px; height: 520px; top: -200px; right: -200px; }
+body.critical::before { background: radial-gradient(ellipse at 50% 40%, transparent 40%, #3a0603cc 100%); }
+
+/* Players who ask for less motion get a still room. */
+@media (prefers-reduced-motion: reduce) {
+  .alarm, .live-dot, body.flash::after, .shake { animation: none !important; }
+  .alarm { opacity: .6; }
+}

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <div class="alarm" aria-hidden="true"></div>
   <!-- HOME: create or join a room -->
   <section id="home" class="screen">
     <div class="card home-card">
@@ -58,7 +59,10 @@
   <!-- GAME -->
   <section id="game" class="screen hidden">
     <header class="topbar">
-      <div>Room <b id="game-code"></b> · <span id="game-role"></span></div>
+      <div class="op">
+        <span id="op-line" class="op-line"></span>
+        <span class="op-sub">Room <b id="game-code"></b> · <span id="game-role"></span></span>
+      </div>
       <div class="top-timer" id="top-timer">0:00</div>
       <div id="top-strikes" class="strikes"></div>
       <div class="top-right">

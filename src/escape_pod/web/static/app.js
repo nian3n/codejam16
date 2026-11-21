@@ -155,6 +155,8 @@ function setupGame() {
   const s = store.state;
   $("#game-code").textContent = s.code;
   $("#game-role").textContent = s.me.role === "defuser" ? "🕵️ Field agent" : "🎧 HQ handler";
+  const by = (role) => s.players.find((p) => p.role === role)?.name || "?";
+  $("#op-line").textContent = `Operation KMNE-${s.code} · Agent ${by("defuser")} · HQ ${by("expert")}`;
   $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
   const bar = $(".topbar");
   bar.querySelector(".dbg")?.remove();
@@ -175,8 +177,10 @@ function renderGame() {
 
 function tickTimer() {
   const s = store.state;
-  if (!s) return;
+  if (!s) { document.body.classList.remove("critical"); return; }
   const left = s.phase === "playing" ? Math.max(0, (store.deadlineAt - performance.now()) / 1000) : s.remaining_s;
+  // The alarm speeds up in the last 30 s of a running game only, so it never leaks into the lobby or end screen.
+  document.body.classList.toggle("critical", s.phase === "playing" && left < 30);
   const t = fmt(Math.ceil(left));
   $("#top-timer").textContent = t;
   const seg = $(".seg");
