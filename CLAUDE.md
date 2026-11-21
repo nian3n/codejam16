@@ -305,6 +305,8 @@ The game is a web app now, so the webcam is in the defuser's browser. Pick one o
 
 Most of the rest of §6 applies to both options.
 
+**Status:** the `sign-model-test` branch has the Python pipeline in `src/escape_pod/vision/` and a test tool, `uv run sign-test`. The tool measures the model before the team picks an option. The day-one results are in `src/escape_pod/vision/README.md`. Python 3.12 is pinned because `mediapipe==0.10.21` (the last version with Holistic) has no 3.13 wheels.
+
 ### 6.1 Pipeline
 
 ```
@@ -536,7 +538,7 @@ Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket mess
 
 ## 16. Open questions
 
-1. **Switch states have no sign.** Switch rules depend on on/off, but no sign in the pools means "on" or "off". Add a sign for it, or change those rules so they do not depend on the state.
+1. **Switch states have no sign.** Switch rules depend on on/off, but no sign in the pools means "on" or "off". The model's label map has `on`, but not `off`. Add a sign for it, or change those rules so they do not depend on the state.
 2. **Where recognition runs** (§6.0).
 3. **How the LLM alien joins** the two-player game (§8).
 
