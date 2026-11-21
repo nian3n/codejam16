@@ -786,7 +786,7 @@ def test_custom_level_sets_modules_and_time():
     a.send_json({"type": "level", "level": "custom", "modules": 2, "timer_s": 420})
     s = _drain(a, lambda s: s["level"] == "custom")
     assert s["levels"]["custom"]["modules"] == 2 and s["levels"]["custom"]["timer_s"] == 420
-    for bad in ({"modules": 6}, {"modules": 0}, {"timer_s": 30}, {"timer_s": 99999}, {"modules": "3"}):
+    for bad in ({"modules": 7}, {"modules": 0}, {"timer_s": 30}, {"timer_s": 99999}, {"modules": "3"}):
         a.send_json({"type": "level", "level": "custom", **bad})  # out of range: ignored
     a.send_json({"type": "level", "level": "custom", "modules": 5})  # time stays 420
     s = _drain(a, lambda s: s["levels"]["custom"]["modules"] == 5)

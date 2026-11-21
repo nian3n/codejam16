@@ -106,7 +106,7 @@ LEVELS = {
 # The lobby's "Custom" level: the players pick the module count and the time. Everything
 # else is as at Intermediate (no hard puzzles, the bomb's words). 5 modules is the most
 # the bomb case holds (2 rows of 3 slots, one is the timer).
-CUSTOM_MODULES = (1, 5)
+CUSTOM_MODULES = (1, 6)
 CUSTOM_TIMER_S = (60, 1200)  # 1 to 20 minutes
 
 

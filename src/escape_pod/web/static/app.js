@@ -273,7 +273,7 @@ function setupGame() {
   const by = (role) => s.players.find((p) => p.role === role)?.name || (s.solo && role === "expert" ? s.bot_name : "?");
   // Solo: no room code on screen (nobody joins). The operation name drops it too.
   $("#game-room").classList.toggle("hidden", !!s.solo);
-  $("#op-line").textContent = `Operation KMNE${s.solo ? "" : "-" + s.code} · Agent ${by("defuser")} · Handler ${by("expert")}`;
+  $("#op-line").textContent = `Operation KSNE${s.solo ? "" : "-" + s.code} · Agent ${by("defuser")} · Handler ${by("expert")}`;
   $("#composer").replaceChildren(s.me.role === "defuser" ? defuserComposer() : expertComposer());
   const bar = $(".topbar");
   bar.querySelector(".dbg")?.remove();

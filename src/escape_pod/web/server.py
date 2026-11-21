@@ -53,7 +53,7 @@ BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tes
 HINT_WAIT_S = 20.0
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
-app = FastAPI(title="Keep Moving and Nobody Explodes")
+app = FastAPI(title="Keep Signing and Nobody Explodes")
 app.state.debug = False
 
 

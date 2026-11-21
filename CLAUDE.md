@@ -1,4 +1,4 @@
-# Keep Moving and Nobody Explodes: Project Spec (ASL)
+# Keep Signing and Nobody Explodes: Project Spec (ASL)
 
 You help a team of 4 build a hackathon game. In the game, two players practice **American Sign Language (ASL)** vocabulary: one player signs to the other through the webcam. Read this whole file before you write code.
 
@@ -167,7 +167,7 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | Client sends | Who | Phase |
 |---|---|---|
 | `{"type": "role", "role": "defuser" \| "expert"}` | anyone | lobby |
-| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}`, or `{"type": "level", "level": "custom", "modules": 1-5, "timer_s": 60-1200}` (both fields optional, out-of-range values ignored) | anyone | lobby |
+| `{"type": "level", "level": "beginner" \| "intermediate" \| "advanced"}`, or `{"type": "level", "level": "custom", "modules": 1-6, "timer_s": 60-1200}` (both fields optional, out-of-range values ignored) | anyone | lobby |
 | `{"type": "start"}` | anyone, when both roles are taken | lobby |
 | `{"type": "signs", "glosses": ["cat", "dog"]}` | defuser | playing |
 | `{"type": "signs", "glosses": ["0"], "round_id": ..., "mission_revision": ...}`: digits at a solo case lock, or 1 to 4 wire colors at the tray | defuser | armed, case lock or wire tray |
@@ -460,7 +460,7 @@ The expert's manual already highlights the pages that contain the signed words (
 | Briefing before the bomb | yes, each topic's signs shown and practiced | yes, shown only | no |
 | Sign cards beside the camera | yes | no | no |
 
-**Custom level:** the lobby also has a "Custom" card. The players pick 1 to 5 modules and 1 to 20 minutes, in 1-minute steps. All other settings are as at Intermediate (`config.custom_level`, `CUSTOM_MODULES`, `CUSTOM_TIMER_S`).
+**Custom level:** the lobby also has a "Custom" card. The players pick 1 to 6 modules and 1 to 20 minutes, in 1-minute steps. All other settings are as at Intermediate (`config.custom_level`, `CUSTOM_MODULES`, `CUSTOM_TIMER_S`).
 
 ### 9.2 Features (M5)
 

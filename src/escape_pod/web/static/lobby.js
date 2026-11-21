@@ -27,7 +27,7 @@ export function renderLobby() {
   $("#lobby-note").textContent = last?.kind === "event" ? last.text : "";
 }
 
-/** The "Custom" level card: the players pick 1-5 modules and 1-20 minutes (config.py). */
+/** The "Custom" level card: the players pick 1-6 modules and 1-20 minutes (config.py). */
 function customLevel(l, on) {
   const pick = (modules, timer_s) => send({ type: "level", level: "custom", modules, timer_s });
   const [mLo, mHi] = l.range.modules;

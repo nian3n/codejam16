@@ -1,4 +1,4 @@
-# Keep Moving and Nobody Explodes: field manual
+# Keep Signing and Nobody Explodes: field manual
 
 Find the page whose words match what the field agent signs. Each page has one topic.
 
