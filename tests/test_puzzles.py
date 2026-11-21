@@ -235,3 +235,11 @@ def test_a_one_click_answer_is_one_step():
     m = _mod("pets_farm", {"icons": ["cat", "dog", "pig", "duck"]})
     assert m.apply(Action("press", {"icon": "cow"})) == "strike" and not m.defused
     assert m.apply(m.solution()) == "defused" and m.defused
+
+
+def test_the_whole_answer_at_once_also_defuses():
+    m = _mod("colors", {"colors": ["green", "white", "black", "orange"]})
+    assert m.apply(m.solution()) == "defused" and m.defused
+    m = _mod("colors", {"colors": ["green", "white", "black", "orange"]})
+    m.apply(Action("cut", {"color": "white"}))
+    assert m.apply(m.solution()) == "defused"
