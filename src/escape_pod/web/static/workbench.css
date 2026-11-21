@@ -134,7 +134,10 @@
   background: repeating-linear-gradient(0deg, #263336 0 18px, #192629 19px 22px);
   box-shadow: inset 2px 4px 10px #0009;
 }
-#case-tray:empty, [data-stage="wire_tray"][data-outcome=""] #case-tray { display: none; }
+/* The cut tray stays out of sight while the modules are in play: next to the modules it
+   looked like part of the board. It shows again in the end view. */
+#case-tray:empty, [data-stage="wire_tray"][data-outcome=""] #case-tray,
+[data-stage="modules"][data-outcome=""] #case-tray { display: none; }
 #case-tray .harness-wire { width: 100%; min-height: 17px; }
 #stage-effect {
   inset: 8px;
