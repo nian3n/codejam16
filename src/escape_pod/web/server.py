@@ -36,6 +36,7 @@ from escape_pod.manual.solve import sheet_markdown
 from escape_pod.puzzles.engine import Module, draw
 from escape_pod.puzzles.models import Action
 from escape_pod.web.ice import ice_servers
+from escape_pod.web.mission import Mission
 from escape_pod.web.practice import router as practice_router, warm_model
 
 STATIC = config.STATIC_DIR
@@ -77,6 +78,7 @@ class Player:
     name: str
     role: str | None = None
     ws: WebSocket | None = None
+    practice_credits: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -88,14 +90,20 @@ class Room:
     custom_modules: int = 3     # the "custom" level (config.custom_level)
     custom_timer_s: int = 600
     seed: int = 0
+    round_id: str | None = None
+    mission: Mission | None = None
+    signed_modules: set[int] = field(default_factory=set)
+    replied_modules: set[int] = field(default_factory=set)
     modules: list[Module] = field(default_factory=list)
     strikes: int = 0
     deadline: float = 0.0
     ended_left: float = 0.0
+    timed_out: bool = False
     chat: list[dict] = field(default_factory=list)
     timer_task: asyncio.Task | None = None
     # "Initializing": the clock waits until the agent's browser has loaded the hand tracker
     # and the server has loaded the word model ({"type": "ready"}), or ARM_TIMEOUT_S.
+    # The mission gates (case lock, wire tray) open with the clock: they check armed.
     armed: bool = False
     countdown_end: float | None = None  # monotonic time the 3-2-1 ends; None before "ready"
     voice_rng: random.Random = field(default_factory=random.Random)  # the solo bot's nervous words
@@ -162,6 +170,8 @@ def view(room: Room, me: Player) -> dict:
         "players": [{"name": p.name, "role": p.role, "online": p.ws is not None, "you": p.pid == me.pid}
                     for p in room.players.values()],
         "phase": room.phase,
+        "round_id": room.round_id,
+        "practice_credits": sorted(me.practice_credits),
         "level": room.level,
         "levels": {**{k: {"modules": l.modules, "timer_s": l.timer_s, "hard": l.allow_hard}
                       for k, l in config.LEVELS.items()},
@@ -172,6 +182,7 @@ def view(room: Room, me: Player) -> dict:
         "armed": room.armed,
         **({"countdown_s": round(max(0.0, room.countdown_end - time.monotonic()), 2)}
            if room.phase == "playing" and not room.armed and room.countdown_end is not None else {}),
+        "timed_out": room.timed_out,
         "strikes": room.strikes,
         "max_strikes": config.MAX_STRIKES,
         "chat": room.chat,
@@ -179,7 +190,9 @@ def view(room: Room, me: Player) -> dict:
         "solo": room.solo,
         "bot_name": BOT_NAME,  # the solo handler's name, for the page text
     }
-    if room.bot is not None:
+    if room.mission is not None:
+        v["mission"] = room.mission.view(me.role)
+    if room.bot is not None and room.mission is not None and room.mission.stage == "modules":
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
         v["bot_typing"] = room.bot_task is not None  # the feed shows "…" until the reply
         if room.bot.page is not None and room.bot.page.widget == "keypad":
@@ -189,7 +202,8 @@ def view(room: Room, me: Player) -> dict:
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
-    if room.modules and (me.role == "defuser" or room.phase in ("escaped", "boom")):
+    if (room.modules and room.mission is not None and room.mission.stage == "modules"
+            and (me.role == "defuser" or room.phase in ("escaped", "boom"))):
         v["bomb"] = [{"id": m.spec.id, "title": m.spec.title, "widget": m.spec.widget,
                       "target_words": m.spec.target_words, "pool": m.spec.pool,
                       "facts": shown_facts(m), "defused": m.defused,
@@ -208,12 +222,14 @@ def shown_facts(m) -> dict:
 
 async def broadcast(room: Room):
     for p in list(room.players.values()):
-        if p.ws is None:
+        ws = p.ws
+        if ws is None:
             continue
         try:
-            await p.ws.send_json(view(room, p))
+            await ws.send_json(view(room, p))
         except Exception:
-            p.ws = None
+            if p.ws is ws:
+                p.ws = None
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +245,14 @@ def end_game(room: Room, result: Literal["escaped", "boom"], why: str):
     room.timer_task = None
 
 
+def expire_if_due(room: Room) -> bool:
+    if room.phase != "playing" or not room.armed or room.remaining() > 0:
+        return False
+    room.timed_out = True
+    end_game(room, "boom", "Time ran out. Detonation!")
+    return True
+
+
 def arm(room: Room) -> None:
     """Start the clock."""
     room.armed = True
@@ -237,7 +261,9 @@ def arm(room: Room) -> None:
 
 def start_countdown(room: Room) -> None:
     """The agent is ready: count 3-2-1, so nobody is caught out when signing goes live."""
-    if room.countdown_end is None:
+    if COUNTDOWN_S <= 0:  # no count configured (the tests): start the clock now
+        arm(room)
+    elif room.countdown_end is None:
         room.countdown_end = time.monotonic() + COUNTDOWN_S
 
 
@@ -255,9 +281,8 @@ async def watch_timer(room: Room):
             arm(room)
             await broadcast(room)
     while room.phase == "playing":
-        await asyncio.sleep(0.25)
-        if room.phase == "playing" and room.remaining() <= 0:
-            end_game(room, "boom", "Time ran out. Detonation!")
+        await asyncio.sleep(min(0.25, room.remaining()))
+        if expire_if_due(room):
             await broadcast(room)
 
 
@@ -270,17 +295,24 @@ def room_level(room: Room) -> config.Level:
 def start_game(room: Room):
     level = room_level(room)
     room.seed = random.randrange(1_000_000)
-    room.modules = draw(random.Random(room.seed), level)
+    rng = random.Random(room.seed)
+    room.modules = draw(rng, level)
+    room.mission = Mission.draw(rng)
+    room.round_id = uuid.uuid4().hex
+    room.signed_modules.clear()
+    room.replied_modules.clear()
     room.strikes = 0
     room.chat = []
     room.phase = "playing"
     room.timer_s = float(level.timer_s or 600)
     room.armed = False  # the clock starts after {"type": "ready"} and a 3-2-1 (see arm)
     room.countdown_end = None
+    room.ended_left = 0.0
+    room.timed_out = False
     room.say({"kind": "event", "text": f"The bomb is armed: {len(room.modules)} modules. Good luck!"})
     if room.solo:
         room.bot = HqBot()  # a fresh bot per game: no page from the last game
-        bot_say(room, room.bot.greeting())
+        bot_say(room, room.bot.case_lock_prompt())
     room.timer_task = asyncio.create_task(watch_timer(room))
 
 
@@ -290,6 +322,12 @@ def back_to_lobby(room: Room, why: str | None = None):
         room.timer_task.cancel()
     room.timer_task = None
     room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+    room.round_id = None
+    room.armed = False
+    room.countdown_end = None
+    room.ended_left = 0.0
+    room.timed_out = False
+    room.mission = None
     stop_bot(room)
     room.bot = None
     if why:
@@ -350,6 +388,13 @@ def stop_bot(room: Room) -> None:
     room.bot_task = None
 
 
+def strike(room: Room) -> None:
+    room.strikes += 1
+    room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
+    if room.strikes >= config.MAX_STRIKES:
+        end_game(room, "boom", "Three strikes. Detonation!")
+
+
 def act(room: Room, index: int, action: Action) -> bool | None:
     """True: defused. False: a strike. None: nothing to judge yet (the module was already
     defused, or the click was a right step of a longer answer, see Module.apply)."""
@@ -361,14 +406,18 @@ def act(room: Room, index: int, action: Action) -> bool | None:
         return None
     ok = result == "defused"
     if ok:
+        m.defused = True
+        # A solved module confirms the outcome of a signed clue and the handler's reply.
+        if room.solo or index in room.replied_modules:
+            credit = f"{room.round_id}:{index}"
+            for player in room.players.values():
+                if player.role in ROLES:
+                    player.practice_credits.add(credit)
         room.say({"kind": "event", "text": f"Module {index + 1} defused!"})
         if all(x.defused for x in room.modules):
             end_game(room, "escaped", "All modules defused. Device neutralized.")
     else:
-        room.strikes += 1
-        room.say({"kind": "event", "text": f"Strike {room.strikes} of {config.MAX_STRIKES}!", "strike": True})
-        if room.strikes >= config.MAX_STRIKES:
-            end_game(room, "boom", "Three strikes. Detonation!")
+        strike(room)
     return ok
 
 
@@ -377,6 +426,50 @@ def clean_glosses(raw) -> list[str]:
         return []
     out = [str(g).strip().lower()[:MAX_GLOSS_LEN] for g in raw[:MAX_SIGNS]]
     return [g for g in out if g]
+
+
+def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
+    revision = msg.get("mission_revision")
+    if (not room.armed or msg.get("round_id") != room.round_id
+            or type(revision) is not int or revision != mission.revision):
+        return False
+    stage = mission.stage
+    if msg["type"] == "signs":
+        previous_digits = mission.lock_confirmed
+        glosses = mission.confirm(clean_glosses(msg.get("glosses")))
+        if glosses:
+            room.say({"kind": "signs", "from": me.name, "glosses": glosses, "mission_stage": stage})
+        if stage == "case_lock":
+            for slot in range(previous_digits, mission.lock_confirmed):
+                me.practice_credits.add(f"{room.round_id}:case_lock:{slot}")
+            if mission.stage == "wire_tray":
+                room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
+                if room.bot is not None:
+                    bot_say(room, room.bot.wire_tray_prompt(mission.position_order[0]))
+            return True
+        if not glosses:
+            return True
+        # Pass the next position to the existing cut check. It compares the
+        # confirmed color against that wire and applies the same strike rules.
+        index = mission.wire_order[len(mission.cuts)]
+    else:
+        index = msg.get("wire")
+        if (stage != "wire_tray" or type(index) is not int
+                or not 0 <= index < len(mission.colors) or index in mission.cuts):
+            return False
+
+    outcome = mission.cut(index)
+    if outcome == "strike":
+        strike(room)
+    elif outcome == "cut":
+        me.practice_credits.add(f"{room.round_id}:wire_tray:{index}")
+        if mission.stage == "modules":
+            room.say({"kind": "event", "text": f"Tray cleared. {len(room.modules)} modules are ready."})
+            if room.bot is not None:
+                bot_say(room, room.bot.greeting())
+        elif room.bot is not None:
+            bot_say(room, room.bot.wire_tray_prompt(mission.position_order[len(mission.cuts)]))
+    return True
 
 
 async def relay_rtc(room: Room, me: Player, data) -> None:
@@ -399,6 +492,16 @@ async def handle(room: Room, me: Player, msg: dict):
     kind = msg.get("type")
     if me.pid not in room.players:
         return  # this player left; ignore what the closing socket still sends
+    if kind == "practice_saved":
+        credits = msg.get("credits")
+        if isinstance(credits, list):
+            # Until the browser confirms storage, a reconnect can replay these credits.
+            me.practice_credits.difference_update(credit for credit in credits if isinstance(credit, str))
+        return
+    if kind in ("signs", "wire_cut", "act", "say", "exit") and expire_if_due(room):
+        await broadcast(room)
+        return
+    mission = room.mission
     if kind == "leave":
         leave(room, me)
     elif kind == "rtc":
@@ -422,10 +525,22 @@ async def handle(room: Room, me: Player, msg: dict):
         room.level = "custom"
     elif kind == "start" and room.can_start():
         start_game(room)
+    elif (kind in ("signs", "wire_cut") and room.phase == "playing" and me.role == "defuser"
+          and mission is not None and mission.stage != "modules"):
+        if not handle_gate(room, mission, me, msg):
+            return
     elif kind == "signs" and room.phase == "playing" and me.role == "defuser":
+        if "mission_revision" in msg or msg.get("round_id", room.round_id) != room.round_id:
+            return
         glosses = clean_glosses(msg.get("glosses"))
         if glosses:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses})
+            if not room.solo:
+                signed = set(glosses)
+                room.signed_modules.update(
+                    i for i, m in enumerate(room.modules)
+                    if not m.defused and not signed.isdisjoint(m.widget.items(m.facts))
+                )
             if room.bot is not None:
                 bot = room.bot
                 bot_later(room, lambda: bot.reply(glosses))
@@ -433,7 +548,11 @@ async def handle(room: Room, me: Player, msg: dict):
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
             room.say({"kind": "say", "from": me.name, "text": text})
-    elif kind == "act" and room.phase == "playing" and me.role == "defuser":
+            room.replied_modules.update(room.signed_modules)
+            room.signed_modules.clear()
+    elif (kind == "act" and room.phase == "playing" and me.role == "defuser"
+          and mission is not None and mission.stage == "modules"
+          and msg.get("round_id", room.round_id) == room.round_id):
         i = msg.get("module")
         a = msg.get("action")
         if isinstance(i, int) and 0 <= i < len(room.modules) and isinstance(a, dict):
@@ -551,6 +670,8 @@ async def ws_room(ws: WebSocket, code: str):
     try:
         while True:
             msg = await ws.receive_json()
+            if me.ws is not ws:
+                break
             if isinstance(msg, dict):
                 room.last_seen = time.monotonic()
                 await handle(room, me, msg)

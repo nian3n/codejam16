@@ -9,6 +9,7 @@ import random
 from escape_pod import config
 from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
 from escape_pod.web import server
+from escape_pod.web.mission import POSITIONS
 
 client = TestClient(server.app)
 
@@ -29,15 +30,53 @@ def _drain(ws, until):
     raise AssertionError("expected state never arrived")
 
 
-def _join(code, name):
+def _join(code, name, pid=None):
     ws = client.websocket_connect(f"/ws/{code}")
     ws.__enter__()
-    ws.send_json({"type": "hello", "name": name})
-    assert ws.receive_json()["type"] == "welcome"
+    ws.send_json({"type": "hello", "name": name, "pid": pid})
+    welcome = ws.receive_json()
+    assert welcome["type"] == "welcome"
+    if pid:
+        assert welcome["pid"] == pid
     return ws
 
 
-def _start_game(level="intermediate"):
+def _gate_message(state, kind, **payload):
+    return {"type": kind, "round_id": state["round_id"],
+            "mission_revision": state["mission"]["revision"], **payload}
+
+
+def _gate_action(ws, state, kind, **payload):
+    ws.send_json(_gate_message(state, kind, **payload))
+    return _drain(ws, lambda s: s["mission"]["revision"] > state["mission"]["revision"])
+
+
+def _open_case(ws, state):
+    assert state["armed"]
+    return _gate_action(ws, state, "signs", glosses=list(state["mission"]["case_code"]))
+
+
+def _open_gates(ws, state):
+    state = _open_case(ws, state)
+    order = server.rooms[state["code"]].mission.wire_order
+    for index in order:
+        state = _gate_action(ws, state, "signs", glosses=[state["mission"]["wires"][index]])
+    return state
+
+
+def _solve_module(ws, index, module):
+    for step in module.widget.steps(module.solution())[0]:
+        ws.send_json({"type": "act", "module": index, "action": step.to_json()})
+
+
+def _arm(ws):
+    """The agent's browser is ready: with COUNTDOWN_S = 0 (the test fixture) the clock
+    starts at once, and the mission gates open."""
+    ws.send_json({"type": "ready"})
+    return _drain(ws, lambda s: s["armed"])
+
+
+def _start_game(level="intermediate", *, open_gates=True, arm=True):
     code = client.post("/api/rooms").json()["code"]
     a = _join(code, "Ana")
     _last_state(a)
@@ -49,6 +88,12 @@ def _start_game(level="intermediate"):
     b.send_json({"type": "start"})
     sa = _drain(a, lambda s: s["phase"] == "playing")
     sb = _drain(b, lambda s: s["phase"] == "playing")
+    if arm:
+        sa = _arm(a)
+        sb = _drain(b, lambda s: s["armed"])
+    if open_gates:
+        sa = _open_gates(a, sa)
+        sb = _drain(b, lambda s: s["mission"]["stage"] == "modules")
     return code, a, b, sa, sb
 
 
@@ -99,8 +144,8 @@ def test_full_game_signs_reply_strike_and_escape():
     mods = server.rooms[code].modules
     # Defuser signs, expert sees the signs and replies.
     a.send_json({"type": "signs", "glosses": ["CAT", " dog "]})
-    sb = _drain(b, lambda s: any(m["kind"] == "signs" for m in s["chat"]))
-    assert [m for m in sb["chat"] if m["kind"] == "signs"][0]["glosses"] == ["cat", "dog"]
+    sb = _drain(b, lambda s: s["chat"][-1].get("glosses") == ["cat", "dog"])
+    assert sb["chat"][-1]["kind"] == "signs"
     b.send_json({"type": "say", "text": "Press the dog."})
     _drain(a, lambda s: any(m["kind"] == "say" for m in s["chat"]))
     # The expert cannot act on the bomb.
@@ -113,7 +158,7 @@ def test_full_game_signs_reply_strike_and_escape():
     sa = _drain(a, lambda s: s["strikes"] == 1)
     # Correct actions defuse every module -> escaped.
     for i, m in enumerate(mods):
-        a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
+        _solve_module(a, i, m)
     sa = _drain(a, lambda s: s["phase"] == "escaped")
     assert sa["progress"]["defused"] == 4
     assert sa["chat"][-1]["text"] == "All modules defused. Device neutralized."
@@ -152,6 +197,61 @@ def test_rejoin_with_pid_keeps_the_seat():
         assert s["me"]["role"] == "expert" and len(s["players"]) == 1
 
 
+def test_practice_credit_follows_the_exchange_and_survives_a_reconnect():
+    with client:
+        code, agent, hq, sa, sh = _start_game()
+        room = server.rooms[code]
+        round_id = sa["round_id"]
+        credit = f"{round_id}:0"
+        module = room.modules[0]
+        wrong = {"type": "act", "round_id": round_id, "module": 0, "action": {"verb": "wrong", "target": {}}}
+        hq_online = True
+        try:
+            assert len(sa["practice_credits"]) == 7 and not sh["practice_credits"]
+            agent.send_json({"type": "practice_saved", "credits": sa["practice_credits"]})
+            agent.send_json({"type": "signs", "glosses": module.widget.items(module.facts)})
+            _drain(hq, lambda s: s["chat"][-1]["kind"] == "signs" and "mission_stage" not in s["chat"][-1])
+            hq.send_json({"type": "say", "text": "Try the matching control."})
+            _drain(agent, lambda s: s["chat"][-1]["kind"] == "say")
+            agent.send_json(wrong)
+            assert _drain(agent, lambda s: s["strikes"] == 1)["practice_credits"] == []
+
+            _solve_module(agent, 1, room.modules[1])
+            assert _drain(agent, lambda s: s["progress"]["defused"] == 1)["practice_credits"] == []
+
+            hq.__exit__(None, None, None)
+            hq_online = False
+            _drain(agent, lambda s: not s["players"][1]["online"])
+            _solve_module(agent, 0, module)
+            _solve_module(agent, 0, module)
+            assert _drain(agent, lambda s: s["progress"]["defused"] == 2)["practice_credits"] == [credit]
+
+            with client.websocket_connect(f"/ws/{code}") as returning_hq:
+                returning_hq.send_json({"type": "hello", "name": "Ben", "pid": sh["me"]["pid"]})
+                assert returning_hq.receive_json()["pid"] == sh["me"]["pid"]
+                assert _last_state(returning_hq)["practice_credits"] == [credit]
+                returning_hq.send_json({"type": "practice_saved", "credits": [credit, credit]})
+                returning_hq.send_json({"type": "say", "text": "Back online."})
+                assert _drain(returning_hq, lambda s: s["chat"][-1].get("text") == "Back online.")["practice_credits"] == []
+
+                room.deadline = time.monotonic()
+                assert _drain(agent, lambda s: s["phase"] == "boom")["practice_credits"] == [credit]
+                agent.send_json({"type": "again"})
+                _drain(agent, lambda s: s["phase"] == "lobby")
+                agent.send_json({"type": "start"})
+                new = _drain(agent, lambda s: s["phase"] == "playing")
+                assert new["round_id"] != round_id and new["practice_credits"] == [credit]
+                new = _open_gates(agent, _arm(agent))
+                agent.send_json(wrong)  # Ignore even a strike from the last round.
+                agent.send_json({"type": "signs", "glosses": ["hello"]})
+                check = _drain(agent, lambda s: s["chat"][-1].get("glosses") == ["hello"])
+                assert check["progress"]["defused"] == check["strikes"] == 0
+        finally:
+            if hq_online:
+                hq.__exit__(None, None, None)
+            agent.__exit__(None, None, None)
+
+
 def test_answer_key_needs_debug():
     code, a, b, _, _ = _start_game()
     assert client.get(f"/api/rooms/{code}/answer-key").status_code == 403
@@ -174,31 +274,40 @@ def _next_of(ws, kind):
 
 
 def test_rtc_relay_goes_only_to_the_other_player():
-    code = client.post("/api/rooms").json()["code"]
-    a, b = _join(code, "A"), _join(code, "B")
-    sa = _drain(a, lambda s: len(s["players"]) == 2)
-    sb = _drain(b, lambda s: len(s["players"]) == 2)
-    # Exactly one polite peer, and each player knows which entry is them.
-    assert sa["me"]["polite"] != sb["me"]["polite"]
-    assert [p["you"] for p in sa["players"]].count(True) == 1
-    assert "ice_servers" not in sa  # served by /api/ice now
-    offer = {"sid": "s1", "description": {"type": "offer", "sdp": "v=0..."}}
-    a.send_json({"type": "rtc", "data": offer})
-    assert _next_of(b, "rtc")["data"] == offer
-    # Too large or not an object: dropped. A's next message proves nothing came back to A.
-    a.send_json({"type": "rtc", "data": {"sid": "s1", "junk": "x" * 70_000}})
-    a.send_json({"type": "rtc", "data": "not a dict"})
-    b.send_json({"type": "rtc", "data": {"sid": "s2", "candidate": {"candidate": "c"}}})
-    assert _next_of(a, "rtc")["data"]["sid"] == "s2"
-    a.send_json({"type": "level", "level": "advanced"})
-    m = b.receive_json()
-    assert m["type"] == "state", "the oversized rtc message must not reach B"
-    a.__exit__(None, None, None)
-    b.__exit__(None, None, None)
+    with client:
+        code = client.post("/api/rooms").json()["code"]
+        a, b = _join(code, "A"), _join(code, "B")
+        sa = _drain(a, lambda s: len(s["players"]) == 2)
+        sb = _drain(b, lambda s: len(s["players"]) == 2)
+        # Exactly one polite peer, and each player knows which entry is them.
+        assert sa["me"]["polite"] != sb["me"]["polite"]
+        assert [p["you"] for p in sa["players"]].count(True) == 1
+        assert "ice_servers" not in sa  # served by /api/ice now
+        offer = {"sid": "s1", "description": {"type": "offer", "sdp": "v=0..."}}
+        a.send_json({"type": "rtc", "data": offer})
+        assert _next_of(b, "rtc")["data"] == offer
+        # Too large or not an object: dropped. A's next message proves nothing came back to A.
+        a.send_json({"type": "rtc", "data": {"sid": "s1", "junk": "x" * 70_000}})
+        a.send_json({"type": "rtc", "data": "not a dict"})
+        b.send_json({"type": "rtc", "data": {"sid": "s2", "candidate": {"candidate": "c"}}})
+        assert _next_of(a, "rtc")["data"]["sid"] == "s2"
+        a.send_json({"type": "level", "level": "advanced"})
+        m = b.receive_json()
+        assert m["type"] == "state", "the oversized rtc message must not reach B"
+        a.__exit__(None, None, None)
+        b.__exit__(None, None, None)
 
 
 def test_healthz():
     assert client.get("/healthz").json()["ok"] is True
+
+
+@pytest.fixture(autouse=True)
+def _no_fixed_turn_login(monkeypatch):
+    # etc/.env may hold a real fixed TURN login (config.py loads it at import). The ICE
+    # tests expect none unless they set one.
+    for name in ("TURN_USERNAME", "TURN_CREDENTIAL", "TURN_URLS"):
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_ice_without_metered_is_stun_only(monkeypatch):
@@ -322,16 +431,17 @@ from test_hq_bot import answer  # noqa: E402
 @pytest.fixture(autouse=True)
 def _fast_bot(monkeypatch):
     monkeypatch.setattr(server, "BOT_DELAY_S", 0)  # the 1 s "thinking" pause, off in tests
-    monkeypatch.setattr(server, "COUNTDOWN_S", 0.3)  # the 3-2-1 before the clock, short in tests
+    monkeypatch.setattr(server, "COUNTDOWN_S", 0)  # "ready" starts the clock at once (see _arm)
 
 
-def _start_solo(level="beginner"):
+def _start_solo(level="beginner", *, open_gates=True):
     code = client.post("/api/rooms", json={"solo": True}).json()["code"]
     a = _join(code, "Ana")
     _drain(a, lambda s: s["solo"] and s["me"]["role"] == "defuser" and s["can_start"])
     a.send_json({"type": "level", "level": level})
     a.send_json({"type": "start"})
-    return code, a, _drain(a, lambda s: s["phase"] == "playing")
+    state = _arm(a)
+    return code, a, _open_gates(a, state) if open_gates else state
 
 
 def _bot_said(ws, n_before):
@@ -351,14 +461,15 @@ def _talk(code, ws, s, m):
 
 
 def test_solo_room_starts_with_one_player_and_greets():
-    _, a, s = _start_solo()
+    _, a, s = _start_solo(open_gates=False)
     last = s["chat"][-1]
-    assert (last["kind"], last["from"]) == ("say", BOT_NAME) and HqBot().greeting() in last["text"]
-    assert s["bot_stage"] == "module" and len(s["players"]) == 1
+    assert (last["kind"], last["from"]) == ("say", BOT_NAME) and HqBot().case_lock_prompt() in last["text"]
+    assert s["mission"]["stage"] == "case_lock" and len(s["players"]) == 1
     a.__exit__(None, None, None)
 
 
-def test_solo_bot_answers_signs():
+def test_solo_bot_answers_signs(monkeypatch):
+    monkeypatch.setattr(server.random, "randrange", lambda *_: 1)
     _, a, s = _start_solo()
     first = s["bomb"][0]
     item = server.rooms[s["code"]].modules[0].widget.items(first["facts"])[0]
@@ -370,13 +481,45 @@ def test_solo_bot_answers_signs():
     a.__exit__(None, None, None)
 
 
-def test_solo_full_game_reaches_escaped():
-    code, a, s = _start_solo()
+def test_solo_full_game_reaches_escaped(monkeypatch):
+    seeds = iter((1, 2))
+    monkeypatch.setattr(server.random, "randrange", lambda *_: next(seeds))
+    code, a, s = _start_solo(open_gates=False)
+    original = s
+    round_id = s["round_id"]
+    assert HqBot().case_lock_prompt() in s["chat"][-1]["text"]
+    s = _open_case(a, s)
+    assert len(set(s["mission"]["wires"])) == 4
+    for _ in range(4):
+        # The solo player uses only the bot's positional prompt and the visible tray.
+        prompt = s["chat"][-1]["text"]
+        index = next(i for i, position in enumerate(POSITIONS) if f"the {position} wire" in prompt)
+        s = _gate_action(a, s, "signs", glosses=[s["mission"]["wires"][index]])
+    assert s["mission"]["stage"] == "modules" and HqBot().greeting() in s["chat"][-1]["text"]
+    gate_credits = s["practice_credits"]
+    assert len(gate_credits) == 7
     for i, m in enumerate(server.rooms[code].modules):
         s = _talk(code, a, s, m)
-        a.send_json({"type": "act", "module": i, "action": m.solution().to_json()})
+        _solve_module(a, i, m)
         s = _drain(a, lambda s, i=i: s["progress"]["defused"] == i + 1)
-    assert s["phase"] == "escaped"
+    assert s["phase"] == "escaped" and not s["timed_out"]
+    assert s["practice_credits"] == sorted(
+        gate_credits + [f"{round_id}:{i}" for i in range(len(server.rooms[code].modules))]
+    )
+    a.send_json({"type": "again"})
+    assert "mission" not in _drain(a, lambda s: s["phase"] == "lobby")
+    a.send_json({"type": "start"})
+    _drain(a, lambda s: s["phase"] == "playing")
+    replay = _arm(a)
+    assert replay["round_id"] != round_id
+    assert replay["mission"]["case_code"] != original["mission"]["case_code"]
+    assert replay["mission"]["stage"] == "case_lock"
+    assert replay["mission"]["lock_confirmed"] == replay["mission"]["cut_count"] == 0
+    a.send_json(_gate_message(original, "signs", glosses=list(original["mission"]["case_code"])))
+    # A current-round password attempt is a barrier after the ignored old round input.
+    replay = _gate_action(a, replay, "signs", glosses=["no"])
+    assert replay["mission"]["revision"] == 1
+    assert replay["mission"]["lock_confirmed"] == 0
     a.__exit__(None, None, None)
 
 
@@ -410,7 +553,8 @@ def test_solo_ignores_role_and_say():
     a.__exit__(None, None, None)
 
 
-def test_solo_again_starts_a_fresh_bot():
+def test_solo_again_starts_a_fresh_bot(monkeypatch):
+    monkeypatch.setattr(server.random, "randrange", lambda *_: 1)
     code, a, s = _start_solo()
     m = server.rooms[code].modules[0]
     a.send_json({"type": "signs", "glosses": [m.widget.items(m.facts)[0]]})
@@ -420,15 +564,144 @@ def test_solo_again_starts_a_fresh_bot():
     assert "bot_stage" not in s and s["can_start"]
     a.send_json({"type": "start"})
     s = _drain(a, lambda s: s["phase"] == "playing")
-    assert s["bot_stage"] == "module" and HqBot().greeting() in s["chat"][-1]["text"]
+    assert s["mission"]["stage"] == "case_lock" and HqBot().case_lock_prompt() in s["chat"][-1]["text"]
+    assert server.rooms[code].bot.page is None
     a.__exit__(None, None, None)
 
 
-def test_two_player_rooms_are_unchanged():
+def test_two_player_rooms_have_no_bot():
     _, a, b, sa, sb = _start_game()
     assert sa["solo"] is False and "bot_stage" not in sa and "bot_stage" not in sb
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_two_player_gates_use_the_manual_and_restore_the_agent_seat(monkeypatch):
+    # The level draw and both gates share this RNG seed. This draw includes a leading zero and a repeat.
+    monkeypatch.setattr(server.random, "randrange", lambda *_: 1302)  # 1302: the code "007" (no 2 since Nov 2026)
+    with client:
+        code, agent, hq, start, hq_start = _start_game(open_gates=False)
+        pid = start["me"]["pid"]
+        try:
+            assert start["mission"]["case_code"] == "007"
+            assert start["mission"]["lock_confirmed"] == 0 and "bomb" not in start
+            assert set(hq_start["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count"}
+            assert "bomb" not in hq_start
+            agent.send_json({"type": "act", "module": 0, "action": {"verb": "wrong", "target": {}}})
+            state = start
+            assert state["mission"]["lock_confirmed"] == state["strikes"] == 0
+            deadline = server.rooms[code].deadline
+
+            hq.send_json(_gate_message(state, "signs", glosses=["0"]))
+            hq.send_json({"type": "say", "text": "Read the tag left to right."})
+            responded = _drain(hq, lambda s: s["chat"][-1].get("text") == "Read the tag left to right.")
+            assert responded["mission"]["lock_confirmed"] == 0
+            state = _gate_action(agent, state, "signs", glosses=["9"])
+            assert state["mission"]["lock_confirmed"] == state["strikes"] == 0
+            assert not state["practice_credits"]
+            assert "retry" in state["mission"]["feedback"]
+            first_zero = _gate_message(state, "signs", glosses=["0"])
+            state = _gate_action(agent, state, "signs", glosses=["0"])
+            assert state["practice_credits"] == [f"{start['round_id']}:case_lock:0"]
+            agent.send_json(first_zero)
+            state = _gate_action(agent, state, "signs", glosses=["cat"])
+            assert state["mission"]["lock_confirmed"] == 1
+            agent.__exit__(None, None, None)
+            agent = None
+            agent = _join(code, "Ana", pid)
+            resumed = _last_state(agent)
+            assert resumed["mission"] == state["mission"]
+            assert resumed["mission"]["lock_confirmed"] == 1
+            assert resumed["practice_credits"] == state["practice_credits"]
+            state = _gate_action(agent, resumed, "signs", glosses=["0"])
+            assert state["mission"]["lock_confirmed"] == 2
+            state = _gate_action(agent, state, "signs", glosses=["7"])
+            manual = _drain(hq, lambda s: s["mission"]["stage"] == "wire_tray")
+            assert set(manual["mission"]) == {"stage", "revision", "lock_confirmed", "cut_count", "wire_rule"}
+            assert "bomb" not in manual and "bomb" not in state
+            assert "wire_rule" not in state["mission"]
+            assert sorted(manual["mission"]["wire_rule"]) == sorted(POSITIONS)
+            order = [POSITIONS.index(position) for position in manual["mission"]["wire_rule"]]
+            wires = state["mission"]["wires"]
+            assert len(set(wires)) == 4 and set(wires) <= set(load_pool()["colors"].pool)
+
+            state = _gate_action(agent, state, "wire_cut", wire=order[0])
+            assert state["mission"]["feedback"] == "Sign the wire color first" and state["strikes"] == 0
+            state = _gate_action(agent, state, "signs", glosses=["cat"])
+            assert state["mission"]["confirmed_color"] is None and state["strikes"] == 0
+            assert len(state["practice_credits"]) == 3
+            state = _gate_action(agent, state, "signs", glosses=[wires[order[1]]])
+            assert "does not match" in state["mission"]["feedback"] and state["strikes"] == 1
+            assert state["mission"]["cuts"] == [] and len(state["practice_credits"]) == 3
+
+            first_cut = _gate_message(state, "signs", glosses=[wires[order[0]]])
+            state = _gate_action(agent, state, "signs", glosses=[wires[order[0]]])
+            assert state["mission"]["cuts"] == order[:1] and len(state["practice_credits"]) == 4
+            shared = _drain(hq, lambda s: s["mission"]["cut_count"] == 1)
+            assert shared["strikes"] == 1 and not shared["practice_credits"]
+            agent.send_json(first_cut)
+            agent.send_json(_gate_message(state, "wire_cut", wire=order[0]))
+            state = _gate_action(agent, state, "signs", glosses=[wires[order[2]]])
+            assert state["strikes"] == 2 and state["mission"]["cuts"] == order[:1]
+            agent.__exit__(None, None, None)
+            agent = None
+            agent = _join(code, "Ana", pid)
+            resumed = _last_state(agent)
+            assert resumed["mission"] == state["mission"]
+            assert resumed["practice_credits"] == state["practice_credits"]
+            state = resumed
+            for index in order[1:]:
+                state = _gate_action(agent, state, "signs", glosses=[wires[index]])
+            assert state["mission"]["stage"] == "modules" and "bomb" in state
+            assert state["mission"]["cut_count"] == 4 and state["strikes"] == 2
+            assert state["progress"] == {"total": 4, "defused": 0}
+            assert len(state["practice_credits"]) == 7
+            assert server.rooms[code].deadline == deadline
+            # HQ's last view keeps only the public stage counts and the confirmed chat.
+            public = _drain(hq, lambda s: s["mission"]["stage"] == "modules")
+            assert set(public["mission"]) == set(hq_start["mission"]) and "bomb" not in public
+        finally:
+            if agent is not None:
+                agent.__exit__(None, None, None)
+            hq.__exit__(None, None, None)
+
+
+@pytest.mark.parametrize("stage", ["case_lock", "wire_tray", "modules"])
+@pytest.mark.parametrize("solo", [True, False])
+def test_timeout_blocks_input_and_reports_the_same_outcome(stage, solo):
+    with client:
+        if solo:
+            code, agent, start = _start_solo(open_gates=False)
+            hq = None
+        else:
+            code, agent, hq, start, _ = _start_game(open_gates=False)
+        try:
+            if stage == "case_lock":
+                state = start
+                pending = _gate_message(state, "signs", glosses=list(state["mission"]["case_code"]))
+            elif stage == "wire_tray":
+                state = _open_case(agent, start)
+                index = server.rooms[code].mission.wire_order[0]
+                pending = _gate_message(state, "signs", glosses=[state["mission"]["wires"][index]])
+            else:
+                state = _open_gates(agent, start)
+                module = server.rooms[code].modules[0]
+                step = module.widget.steps(module.solution())[0][0]
+                pending = {"type": "act", "module": 0, "action": step.to_json(), "round_id": state["round_id"]}
+            server.rooms[code].deadline = time.monotonic() - 1
+            agent.send_json(pending)
+            ended = _drain(agent, lambda s: s["phase"] == "boom")
+            assert ended["timed_out"] and ended["practice_credits"] == state["practice_credits"]
+            assert ended["remaining_s"] == 0 and ended["mission"] == state["mission"]
+            assert ended["progress"] == state["progress"]
+            assert ended["chat"][-1]["text"] == "Time ran out. Detonation!"
+            if hq:
+                shared = _drain(hq, lambda s: s["phase"] == "boom")
+                assert shared["timed_out"] and shared["round_id"] == ended["round_id"]
+        finally:
+            agent.__exit__(None, None, None)
+            if hq:
+                hq.__exit__(None, None, None)
 
 
 def test_static_files_are_revalidated():
@@ -456,18 +729,24 @@ def test_solo_bot_thinks_before_it_replies(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Initializing: the timer waits until the agent's tracker and the sign model are ready
+# Initializing: the timer waits until the agent's tracker and the sign model are ready.
+# Then a 3-2-1, then the clock and the mission's case lock.
 # ---------------------------------------------------------------------------
-def test_the_timer_waits_for_the_agent_to_be_ready():
-    code, a, b, sa, sb = _start_game()
+def test_the_timer_waits_for_the_agent_to_be_ready(monkeypatch):
+    monkeypatch.setattr(server, "COUNTDOWN_S", 0.3)
+    code, a, b, sa, sb = _start_game(open_gates=False, arm=False)
     full = config.LEVELS["intermediate"].timer_s
+    assert sa["round_id"] == sb["round_id"] and sa["mission"]["stage"] == "case_lock"
     assert sa["armed"] is False and sa["remaining_s"] == full
     time.sleep(0.3)
     assert server.rooms[code].remaining() == full  # frozen while initializing
+    # The case lock waits for the clock too.
+    a.send_json(_gate_message(sa, "signs", glosses=[sa["mission"]["case_code"][0]]))
     b.send_json({"type": "ready"})  # the handler cannot start the clock
     b.send_json({"type": "say", "text": "ping"})
     s = _drain(b, lambda s: s["chat"][-1].get("text") == "ping")
     assert server.rooms[code].armed is False and "countdown_s" not in s
+    assert server.rooms[code].mission.lock_confirmed == 0
     a.send_json({"type": "ready"})
     # Ready starts a 3-2-1 that both players see. The clock holds until it ends.
     s = _drain(a, lambda s: "countdown_s" in s)
@@ -482,12 +761,19 @@ def test_the_timer_waits_for_the_agent_to_be_ready():
 
 def test_the_timer_starts_anyway_after_a_while(monkeypatch):
     monkeypatch.setattr(server, "ARM_TIMEOUT_S", 0.3)
-    code, a, b, sa, sb = _start_game()
+    monkeypatch.setattr(server, "COUNTDOWN_S", 0.3)
+    code, a, b, sa, sb = _start_game(open_gates=False, arm=False)
     # b sent "start", so the timer task runs on b's TestClient loop; only b's socket can
     # receive that task's broadcast here (the real server has one loop for every socket).
     _drain(b, lambda s: s["armed"])
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
+
+
+def test_the_case_code_never_uses_2():
+    from escape_pod.web.mission import Mission
+    for seed in range(500):
+        assert "2" not in Mission.draw(random.Random(seed)).code
 
 
 def test_a_defused_switch_shows_its_new_position():
@@ -498,6 +784,8 @@ def test_a_defused_switch_shows_its_new_position():
     while True:  # a module whose answer sets a switch to the other state
         m = Module(spec, WIDGETS["switches"].generate(spec, rng))
         sol = m.solution()
+        if "switch" not in sol.target:
+            continue
         before = next(s["state"] for s in m.facts["switches"] if s["label"] == sol.target["switch"])
         if before != sol.target["state"]:
             break
@@ -550,5 +838,6 @@ def test_custom_level_sets_modules_and_time():
     assert s["levels"]["custom"]["timer_s"] == 420
     a.send_json({"type": "start"})
     s = _drain(a, lambda s: s["phase"] == "playing")
-    assert len(s["bomb"]) == 5 and s["remaining_s"] == 420
+    assert s["mission"]["stage"] == "case_lock" and s["progress"]["total"] == 5
+    assert 419 < s["remaining_s"] <= 420
     a.__exit__(None, None, None)

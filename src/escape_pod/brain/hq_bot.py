@@ -82,6 +82,12 @@ class HqBot:
     def greeting(self) -> str:
         return GREETING
 
+    def case_lock_prompt(self) -> str:
+        return "Read the three digits on the luggage tag. Sign them one at a time, left to right, and confirm each chip."
+
+    def wire_tray_prompt(self, position: str) -> str:
+        return f"Find the {position} wire from the top. Sign and confirm its color, then select that wire."
+
     # -- questions -----------------------------------------------------------------
     def _question(self, key: str) -> str:
         spec = self.page

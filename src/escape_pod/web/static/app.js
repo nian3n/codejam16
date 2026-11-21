@@ -8,21 +8,28 @@
 //   bomb.js         defuser view; widgets/*.js draw each module type
 //   manual_view.js  expert view
 //   feed.js         messages, sign composer, reply box
-import { $, el, fmt, resetLocal, send, store } from "./core.js";
+import { $, el, fmt, gameplayOpen, resetLocal, secondsLeft, send, store } from "./core.js";
 import { bindLobby, renderLobby } from "./lobby.js";
 import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
+import { clearSignDraft, preloadGameSigns } from "./game_signs.js";
+import { liftMissionLayer, renderMission } from "./mission.js";
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
-import { renderInit } from "./init.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
+import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
+import { renderInit } from "./init.js";
 
-let code = null;
-let closedOnPurpose = false;
+let activeSeatKey = null;
+let activeScreen = "home";
+let lobbyCamera = true;
+const DETONATION_MS = 950;
+let detonationTimer = null;
 
 async function boot() {
+  const legacyProfile = bindProfiles();
   const [icons, pages] = await Promise.all([
     fetch("/api/icons").then((r) => r.json()),
     fetch("/api/manual").then((r) => r.json()),
@@ -30,80 +37,140 @@ async function boot() {
   store.icons = icons;
   store.pages = pages;
   store.pageById = Object.fromEntries(pages.map((p) => [p.id, p]));
-  $("#name").value = localStorage.getItem("ep:name") || "";
   const q = new URLSearchParams(location.search).get("room");
   if (q) $("#code").value = q.toUpperCase();
-  $("#create").onclick = async () => {
-    if (!saveName()) return;
-    const r = await fetch("/api/rooms", { method: "POST" }).then((r) => r.json());
-    connect(r.code);
+  $("#create").onclick = () => void createRoom(false);
+  $("#create-solo").onclick = () => void createRoom(true);
+  $("#join").onclick = () => {
+    const profile = requireProfile();
+    if (profile) connect($("#code").value.trim().toUpperCase(), profile);
   };
-  $("#create-solo").onclick = async () => {
-    if (!saveName()) return;
-    const r = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ solo: true }) }).then((r) => r.json());
-    connect(r.code);
-  };
-  $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
   $("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#join").click(); });
   $("#again").onclick = () => send({ type: "again" });
   $("#leave").onclick = leaveRoom;
   $("#exit-game").onclick = exitGame;
   bindLobby();
   bindGlossary();
-  $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
+  $("#open-practice").onclick = () => {
+    if (!requireProfile()) return;
+    showScreen("practice");
+    void enterPractice();
+  };
   // Start loading MediaPipe as soon as the player points at the button.
   for (const ev of ["pointerenter", "focus", "touchstart"]) $("#open-practice").addEventListener(ev, preloadMediaPipe, { once: true, passive: true });
   $("#close-practice").onclick = () => showScreen("home");
+  window.addEventListener("pagehide", stopVideo);
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && store.state) onState(store.state);
+  });
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
-  // Reloading the page with ?room=CODE and a saved player id rejoins the same seat.
-  if (q && localStorage.getItem(`ep:pid:${q.toUpperCase()}`)) connect(q.toUpperCase());
+  // Keep room seats in each tab so a fresh invite can be opened by another profile.
+  const profile = currentProfile();
+  if (q && profile) {
+    const room = q.toUpperCase();
+    const key = seatKey(profile, room);
+    const oldKey = `ep:pid:${room}`;
+    const legacySeat = legacyProfile?.id === profile.id && localStorage.getItem(oldKey);
+    if (legacySeat) {
+      sessionStorage.setItem(key, legacySeat);
+      localStorage.removeItem(oldKey);
+    }
+    if (sessionStorage.getItem(key)) connect(room, profile);
+  }
 }
 
-function saveName() {
-  const n = $("#name").value.trim();
-  if (!n) { $("#home-error").textContent = "Type your name first."; return false; }
-  localStorage.setItem("ep:name", n);
-  return true;
+function requireProfile() {
+  const profile = saveProfile();
+  $("#home-error").textContent = profile ? "" : "Choose a profile or type your name first.";
+  if (!profile) $("#name").focus();
+  return profile;
 }
 
-function connect(c) {
+function setConnecting(connecting) {
+  for (const field of ["#profile", "#name", "#create", "#create-solo", "#join", "#open-practice"]) {
+    $(field).disabled = connecting;
+  }
+}
+
+async function createRoom(solo) {
+  const profile = requireProfile();
+  if (!profile) return;
+  setConnecting(true);
+  try {
+    const response = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ solo }) });
+    if (!response.ok) throw new Error();
+    const room = await response.json();
+    connect(room.code, profile);
+  } catch {
+    setConnecting(false);
+    $("#home-error").textContent = "Couldn’t create a room. Try again.";
+  }
+}
+
+function seatKey(profile, room) {
+  return `ep:pid:${profile.id}:${room}`;
+}
+
+function connect(c, profile) {
   if (!/^[A-Z]{4}$/.test(c)) { $("#home-error").textContent = "A room code has 4 letters."; return; }
-  code = c;
-  closedOnPurpose = false;
+  setConnecting(true);
+  const key = seatKey(profile, c);
+  activeSeatKey = key;
+  let rejected = false;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/${c}`);
   store.ws = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: localStorage.getItem(`ep:pid:${c}`), name: localStorage.getItem("ep:name") }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", pid: sessionStorage.getItem(key), name: profile.name }));
   ws.onmessage = (e) => {
+    if (store.ws !== ws) return;
     const m = JSON.parse(e.data);
     if (m.type === "welcome") {
-      localStorage.setItem(`ep:pid:${c}`, m.pid);
+      sessionStorage.setItem(key, m.pid);
       history.replaceState(null, "", `/?room=${c}`);
     } else if (m.type === "error") {
-      closedOnPurpose = true;
+      rejected = true;
+      stopVideo();
+      clearSignDraft();
+      lobbyCamera = true;
+      store.state = null;
+      renderOutcome();
+      setConnecting(false);
       showScreen("home");
       $("#home-error").textContent = m.text;
-    } else if (m.type === "state") onState(m);
-    else if (m.type === "rtc") onRtc(m.data);
+    } else if (m.type === "state") {
+      const credits = savePracticeCredits(profile, m.practice_credits ?? []);
+      if (credits.length) send({ type: "practice_saved", credits });
+      setConnecting(false);
+      onState(m);
+    } else if (m.type === "rtc") onRtc(m.data);
   };
-  ws.onclose = () => { if (!closedOnPurpose && store.state) setTimeout(() => connect(code), 1500); };
+  ws.onclose = () => {
+    if (rejected || store.ws !== ws) return;
+    if (store.state) setTimeout(() => { if (store.ws === ws) connect(c, profile); }, 1500);
+    else {
+      setConnecting(false);
+      $("#home-error").textContent = "Couldn’t reach the room. Try again.";
+    }
+  };
 }
 
 /** Lobby "Leave room": give up the seat and go back to the home screen. */
 function leaveRoom() {
   send({ type: "leave" });
-  closedOnPurpose = true;
-  store.ws?.close();
+  const ws = store.ws;
   store.ws = null;
   store.state = null;
-  localStorage.removeItem(`ep:pid:${code}`);  // a reload must not rejoin the old seat
+  ws?.close();
+  sessionStorage.removeItem(activeSeatKey);  // a reload must not rejoin the old seat
   history.replaceState(null, "", "/");
   $("#code").value = "";
   $("#home-error").textContent = "";
   stopVideo();
+  lobbyCamera = true;
   closeGlossary();
+  setConnecting(false);
   showScreen("home");
 }
 
@@ -132,28 +199,53 @@ function disarmExit() {
 function showScreen(id) {
   if (id !== "practice" && !$("#practice").classList.contains("hidden")) leavePractice();
   for (const s of ["home", "lobby", "game", "practice"]) $("#" + s).classList.toggle("hidden", s !== id);
+  if (activeScreen !== id) {
+    activeScreen = id;
+    moveProgress(id);
+  }
 }
 
 function onState(s) {
   const prev = store.state;
   store.state = s;
-  store.deadlineAt = performance.now() + s.remaining_s * 1000;
+  const playing = s.phase === "playing";
+  if (playing) {
+    const deadline = performance.now() + s.remaining_s * 1000;
+    // A delayed snapshot cannot add time to a round that is already underway.
+    store.deadlineAt = prev?.round_id === s.round_id && prev.phase === "playing" && prev.armed && s.armed
+      ? Math.min(store.deadlineAt, deadline) : deadline;
+  } else {
+    store.deadlineAt = 0;
+  }
+  const over = s.phase === "escaped" || s.phase === "boom";
   if (s.phase === "lobby") {
     if (exitArmed) disarmExit();
     closeGlossary();  // the glossary is for games only
+    if (prev && prev.phase !== "lobby") {
+      clearSignDraft();
+      stopVideo();
+      lobbyCamera = false;
+    }
+    $("#stage-effect").replaceChildren();
     showScreen("lobby");
     renderLobby();
     placeDock($("#lobby-video"));
+    onRoomState(s, lobbyCamera);
+    if (s.me.role === "defuser" && prev?.me.role !== "defuser") void preloadGameSigns();
   } else {
     showScreen("game");
-    if (!prev || prev.phase === "lobby" || prev.me.role !== s.me.role) setupGame();
-    renderGame();
-    placeDock($(".side"));
+    if (playing) {
+      placeDock($(".side"));
+      onRoomState(s, true);
+    } else if (prev?.phase === "playing") {
+      stopVideo();
+      closeGlossary();
+    }
+    if (!prev || prev.phase === "lobby" || prev.round_id !== s.round_id || prev.me.role !== s.me.role) setupGame();
+    else if (s.me.role === "defuser" && (prev.mission?.stage !== s.mission?.stage || (over && prev.phase === "playing"))) clearSignDraft();
+    renderGame(prev);
   }
-  onRoomState(s);
-  const over = s.phase === "escaped" || s.phase === "boom";
-  $("#end").classList.toggle("hidden", !over);
-  if (over) renderEnd();
+  renderOutcome(prev);
   if (prev && prev.phase === "playing" && s.strikes > prev.strikes) flashStrike();
   renderInit();
   tickTimer();
@@ -183,12 +275,15 @@ function setupGame() {
   if (s.debug) bar.append(el("a", { class: "btn small dbg", href: `/api/rooms/${s.code}/answer-key`, target: "_blank", text: "Answer key (debug)" }));
 }
 
-function renderGame() {
+function renderGame(previous) {
   const s = store.state;
+  $("#game").classList.toggle("mission-gate-active", !!s.mission && s.mission.stage !== "modules");
   $("#top-strikes").replaceChildren(...Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") })));
   $("#top-progress").textContent = s.progress ? `Defused ${s.progress.defused} / ${s.progress.total}` : "";
   $("#exit-game").classList.toggle("hidden", s.phase !== "playing");
-  if (s.me.role === "defuser") renderBomb();
+  liftMissionLayer(previous, s);
+  if (s.mission && s.mission.stage !== "modules") renderMission(s);
+  else if (s.me.role === "defuser") renderBomb();
   // Re-render the manual only when new messages arrive, so the page keeps its scroll.
   else if (store.local.chatSeen !== s.chat.length || !$("#stage .manual")) renderManual();
   renderFeed();
@@ -198,14 +293,49 @@ function renderGame() {
 function tickTimer() {
   const s = store.state;
   if (!s) { document.body.classList.remove("critical"); return; }
-  // Before the clock starts (the Initializing screen), the server sends the full time: hold it.
-  const left = s.phase === "playing" && s.armed ? Math.max(0, (store.deadlineAt - performance.now()) / 1000) : s.remaining_s;
+  const left = secondsLeft();
+  const game = $("#game");
+  const locked = !gameplayOpen();
+  if (locked && !game.inert && s.phase === "playing" && s.me.role === "defuser") {
+    clearSignDraft();
+    renderSignChips();
+  }
+  game.inert = locked;
   // The alarm speeds up in the last 30 s of a running game only, so it never leaks into the lobby or end screen.
   document.body.classList.toggle("critical", s.phase === "playing" && left < 30);
   const t = fmt(Math.ceil(left));
   $("#top-timer").textContent = t;
   const seg = $(".seg");
   if (seg) seg.textContent = t;
+}
+
+function renderOutcome(previous) {
+  const s = store.state;
+  const end = $("#end");
+  const detonation = $("#detonation");
+  if (s?.phase !== "escaped" && s?.phase !== "boom") {
+    clearTimeout(detonationTimer);
+    detonationTimer = null;
+    end.classList.add("hidden");
+    detonation.classList.add("hidden");
+    return;
+  }
+  renderEnd();
+  if (s.timed_out && previous?.round_id === s.round_id && previous.phase === "playing") {
+    end.classList.add("hidden");
+    detonation.style.setProperty("--detonation-duration", `${DETONATION_MS}ms`);
+    detonation.classList.remove("hidden");
+    // The report must open even if a background tab never paints the animation.
+    detonationTimer = setTimeout(() => {
+      detonationTimer = null;
+      if (store.state?.round_id !== s.round_id || !store.state.timed_out) return;
+      detonation.classList.add("hidden");
+      end.classList.remove("hidden");
+      $("#again").focus();
+    }, DETONATION_MS);
+  } else if (detonation.classList.contains("hidden")) {
+    end.classList.remove("hidden");
+  }
 }
 
 function renderEnd() {

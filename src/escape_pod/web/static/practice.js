@@ -3,6 +3,7 @@ import { $, el, wordOf } from "./core.js";
 import { cameraError, cameraUnavailable, openCamera, stopCamera } from "./camera.js";
 import { drawLandmarks } from "./landmark_overlay.js";
 import { packLandmarks as packedLandmarks, startTracker, track, trackerLoaded } from "./tracker.js";
+import { approvedWordsKey, currentProfile, newPracticeId, savePracticeCredits } from "./progress.js";
 
 const CAPTURE_MS = 2_500;
 const MAX_FRAMES = 75;
@@ -15,16 +16,16 @@ const captureButton = $("#capture-sign");
 const status = $("#practice-status");
 const result = $("#practice-result");
 const reset = $("#reset-practice");
-const progressKey = "ep:approved-words";
 let visit = null;
 let camera = null;
 let words = [];
 let approved = new Set();
+let practiceProfile = null;
 
 
 function loadProgress() {
   try {
-    const saved = JSON.parse(localStorage.getItem(progressKey) || "[]");
+    const saved = JSON.parse(localStorage.getItem(approvedWordsKey(practiceProfile)) || "[]");
     return new Set(Array.isArray(saved) ? saved.filter((value) => typeof value === "string") : []);
   } catch {
     return new Set();
@@ -33,7 +34,7 @@ function loadProgress() {
 
 function saveProgress() {
   try {
-    localStorage.setItem(progressKey, JSON.stringify([...approved]));
+    localStorage.setItem(approvedWordsKey(practiceProfile), JSON.stringify([...approved]));
   } catch {
     // Progress still works for this visit when browser storage is unavailable.
   }
@@ -100,6 +101,9 @@ async function json(response) {
 
 export async function enterPractice() {
   preloadMediaPipe();  // load it while the player reads the page, not after the camera click
+  const profile = currentProfile();
+  if (profile.id !== practiceProfile?.id) approved = new Set();
+  practiceProfile = profile;
   const controller = new AbortController();
   visit = controller;
   word.disabled = cameraButton.disabled = captureButton.disabled = true;
@@ -209,6 +213,8 @@ async function trackPreview(session) {
 async function captureSign() {
   const session = camera;
   const target = word.value;
+  const profile = practiceProfile;
+  const captureId = newPracticeId();
   const { abort } = session;
   const frames = [];
   captureButton.disabled = word.disabled = true;
@@ -242,6 +248,7 @@ async function captureSign() {
     result.classList.toggle("approved", score.approved);
     result.classList.remove("hidden");
     if (score.approved) {
+      savePracticeCredits(profile, [`${captureId}:0`]);
       approved.add(target);
       saveProgress();
       const remaining = renderWords(target);

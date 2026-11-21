@@ -15,7 +15,7 @@ export function openPage(id) {
 
 export function renderManual() {
   const { state, local, pages, pageById } = store;
-  const lastSigns = [...state.chat].reverse().find((m) => m.kind === "signs");
+  const lastSigns = [...state.chat].reverse().find((m) => m.kind === "signs" && !m.mission_stage);
   const matches = new Set(lastSigns ? pagesFor(lastSigns.glosses).map((p) => p.id) : []);
   const q = local.search.toLowerCase();
   const shown = pages.filter((p) => !q || [p.title, p.topic, ...p.words, ...p.glosses].some((x) => x.toLowerCase().includes(q)));

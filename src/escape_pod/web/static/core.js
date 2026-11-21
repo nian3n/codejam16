@@ -44,7 +44,19 @@ export function resetLocal() {
   store.local = { init: null, signs: [], signChips: [], kp: {}, ic: {}, cut: {}, needle: {}, sort: {}, openPage: null, search: store.local.search, chatSeen: -1 };
 }
 
+export function gameplayOpen() {
+  return store.state?.phase === "playing" && store.state.armed && performance.now() < store.deadlineAt;
+}
+
+// Before the clock starts (INITIALIZING and the 3-2-1, init.js), the server sends the
+// full time: hold it instead of counting down.
+export function secondsLeft() {
+  return store.state?.phase === "playing" && store.state.armed ? Math.max(0, (store.deadlineAt - performance.now()) / 1000)
+    : store.state?.remaining_s ?? 0;
+}
+
 export function send(msg) {
+  if (["signs", "say", "act", "exit"].includes(msg.type) && !gameplayOpen()) return;
   if (store.ws && store.ws.readyState === 1) store.ws.send(JSON.stringify(msg));
 }
 
