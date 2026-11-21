@@ -451,6 +451,7 @@ body.critical::before { content: ""; position: fixed; inset: 0; pointer-events: 
 .gl-video { height: min(52vh, 420px); aspect-ratio: 9 / 16; background: #111; border: 4px solid #2a2116; border-radius: 3px; object-fit: contain; }
 .gl-video.missing { display: grid; place-items: center; color: #ccc; font-style: italic; padding: 12px; text-align: center; }
 .gl-how { margin: 0; text-align: center; }
+.gl-picture { object-fit: contain; background: #f4efe4; }
 .gl-credit { margin: 0; font-size: .7rem; color: #7a684a; text-align: center; max-width: 46ch; }
 .glossary-btn.on { border-color: var(--acc); color: var(--acc); }
 

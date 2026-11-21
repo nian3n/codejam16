@@ -37,3 +37,18 @@ def test_server_serves_the_index_and_a_clip():
     assert client.get("/signs/index.json").json()["credit"] == CREDIT
     r = client.get("/signs/cat.mp4")
     assert r.status_code == 200 and r.headers["content-type"] == "video/mp4"
+
+
+PICTURES = config.SIGN_CLIPS_DIR / "pictures"
+
+
+def test_every_glossary_picture_exists_and_has_its_credit():
+    """signs/clips/pictures/index.json: still pictures for the digits (see the README there)."""
+    pics = json.loads((PICTURES / "index.json").read_text(encoding="utf-8"))["pictures"]
+    for gloss, p in pics.items():
+        assert gloss in "0123456789" and len(gloss) == 1, f"{gloss}: pictures are for the digits"
+        assert (PICTURES / p["file"]).is_file(), f"{gloss}: {p['file']} is not in {PICTURES}"
+        assert p["file"].lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+        assert p.get("license") and p.get("source"), f"{gloss}: add the license and the source"
+        assert (PICTURES / p["file"]).stat().st_size < 500_000, f"{gloss}: make the picture smaller"
+    assert TestClient(app).get("/signs/pictures/index.json").status_code == 200

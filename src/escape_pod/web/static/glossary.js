@@ -7,7 +7,10 @@
 // Clips and the credit line come from /signs/index.json (signs/fetch_popsign.py).
 import { $, el, icon, store, wordOf, WIRE_COLORS } from "./core.js";
 
-const HANDSHAPE_PAGES = new Set(["numbers"]);  // digits: not in PopSign (spec 6.4)
+// Digits are not in PopSign (spec 6.4). They show a still picture instead, when the team
+// has added one: signs/clips/pictures/index.json lists each picture with its source and
+// license (see the README there). The digits are still hand shapes, so a picture is enough.
+const HANDSHAPE_PAGES = new Set(["numbers"]);
 // The signs that run the capture (spec 6.2). Not on any manual page, so listed here.
 const CONTROL_SIGNS = { yes: "👍", no: "👎", finish: "🏁", next: "✋" };
 // "next" is our own separator pose (sequence.js), not an ASL word: no clip, a description instead.
@@ -17,6 +20,7 @@ const NOTES = {
     + "Lowering both hands does the same.",
 };
 let clips = null;        // {credit, clips: {gloss: {file, ...}}}, loaded on first open
+let pictures = {};       // {gloss: {file, author, license, source}}: still pictures, for the digits
 let entries = [];        // [{gloss, word, topic}], sorted A to Z
 let query = "";
 let current = null;      // the open gloss
@@ -26,6 +30,7 @@ const root = el("div", { id: "glossary", class: "glossary hidden", role: "dialog
 // Colors have no emoji: show a swatch of the wire color instead.
 function mark(g, cls) {
   if (WIRE_COLORS[g]) return el("span", { class: `${cls} swatch`, style: `background:${WIRE_COLORS[g]}` });
+  if (/^\d$/.test(g)) return el("span", { class: cls, text: g + String.fromCodePoint(0xfe0f, 0x20e3) });  // keycap emoji: the digit in a box
   return el("span", { class: cls, text: CONTROL_SIGNS[g] || icon(g).emoji });
 }
 
@@ -49,10 +54,12 @@ export function bindGlossary() {
 export async function openGlossary(gloss = null) {
   if (!clips) {
     clips = await fetch("/signs/index.json").then((r) => (r.ok ? r.json() : { clips: {} })).catch(() => ({ clips: {} }));
+    pictures = await fetch("/signs/pictures/index.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+      .then((d) => d.pictures || {});
   }
   if (!entries.length) {
-    entries = store.pages.filter((p) => !HANDSHAPE_PAGES.has(p.id))
-      .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic })))
+    entries = store.pages
+      .flatMap((p) => p.glosses.map((g) => ({ gloss: g, word: wordOf(g), topic: p.topic, still: HANDSHAPE_PAGES.has(p.id) })))
       .concat(Object.keys(CONTROL_SIGNS).map((g) => ({ gloss: g, word: g === "next" ? "next (both palms)" : g, topic: "game controls" })))
       .sort((a, b) => a.word.localeCompare(b.word));
   }
@@ -117,17 +124,24 @@ function entryPage() {
       el("p", { text: "Pick a word on the left to see how to sign it." }));
   }
   const clip = clips?.clips?.[e.gloss];
+  const pic = pictures[e.gloss];
   const media = clip
     ? el("video", { class: "gl-video", src: `/signs/${clip.file}`, autoplay: "", loop: "", muted: "", playsinline: "", preload: "auto" })
-    : el("div", { class: "gl-video missing" + (NOTES[e.gloss] ? " pose" : ""),
-      text: NOTES[e.gloss] ? "✋ ✋" : "No clip yet for this word." });
+    : pic
+      ? el("img", { class: "gl-video gl-picture", src: `/signs/pictures/${pic.file}`, alt: `The hand shape for ${e.word}` })
+      : el("div", { class: "gl-video missing" + (NOTES[e.gloss] ? " pose" : ""),
+        text: NOTES[e.gloss] ? "✋ ✋" : e.still ? "No picture yet for this sign." : "No clip yet for this word." });
+  const how = NOTES[e.gloss] || (e.still
+    ? "Make this hand shape with your signing hand. Hold it still, facing the camera."
+    : "Watch the clip. It repeats. Sign it the same way, facing the camera.");
+  const picCredit = pic ? `Picture: ${[pic.author, pic.license, pic.source].filter(Boolean).join(", ")}` : "";
   if (clip) media.muted = true;  // the attribute alone does not satisfy autoplay rules everywhere
   return el("article", { class: "gl-entry" },
     el("div", { class: "gl-word" }, mark(e.gloss, "gl-mark"), el("h3", { text: e.word })),
     el("p", { class: "gl-pos", text: `topic: ${e.topic}` }),
     media,
-    el("p", { class: "gl-how", text: NOTES[e.gloss] || "Watch the clip. It repeats. Sign it the same way, facing the camera." }),
-    el("p", { class: "gl-credit", text: clips?.credit || "" }),
+    el("p", { class: "gl-how", text: how }),
+    el("p", { class: "gl-credit", text: pic ? picCredit : e.still ? "" : clips?.credit || "" }),
     // CC BY-NC 4.0 asks for credit wherever the model is used (vision/digit_mlp.py).
     el("p", { class: "gl-credit", text: "Digit recognition: ASL Landmark MLP by nocontextdoruk (CC BY-NC 4.0), trained on ASL-HG (Pranto et al., 2026)." }));
 }
