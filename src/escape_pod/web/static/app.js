@@ -16,7 +16,7 @@ import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./
 import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
-import { enterPractice, leavePractice } from "./practice.js";
+import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
 import { bindSequence } from "./practice_sequence.js";
 
 let code = null;
@@ -47,6 +47,8 @@ async function boot() {
   bindGlossary();
   bindSequence();
   $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
+  // Start loading MediaPipe as soon as the player points at the button.
+  for (const ev of ["pointerenter", "focus", "touchstart"]) $("#open-practice").addEventListener(ev, preloadMediaPipe, { once: true, passive: true });
   $("#close-practice").onclick = () => showScreen("home");
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);

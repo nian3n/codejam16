@@ -99,6 +99,50 @@ function loadHolistic() {
   return holisticScript;
 }
 
+// One MediaPipe instance for the whole visit. Building one compiles the WASM and loads
+// the models (seconds), so it is made once, ahead of time (preloadMediaPipe), and kept
+// when the camera turns off. Results go to whichever camera session is current.
+// One frame at a time through the shared instance: a frame from the previous camera
+// session may still be in flight when a new session starts.
+let inflight = Promise.resolve();
+let holisticReady = null;
+let holisticLoaded = false;
+let resultsHandler = null;
+
+function getHolistic() {
+  if (!holisticReady) {
+    holisticReady = (async () => {
+      const Holistic = await loadHolistic();
+      const holistic = new Holistic({ locateFile: (file) => HOLISTIC_URL + file });
+      holistic.setOptions({ modelComplexity: 1, refineFaceLandmarks: false, selfieMode: false });
+      holistic.onResults((landmarks) => resultsHandler?.(landmarks));
+      await holistic.initialize();
+      // initialize() does not load the pose, face and hand models: the first frame does.
+      // Send one blank frame now, so that cost is paid in the background too.
+      const blank = el("canvas", { width: 64, height: 64 });
+      blank.getContext("2d").fillRect(0, 0, 64, 64);
+      inflight = inflight.catch(() => {}).then(() => holistic.send({ image: blank }));
+      await inflight;
+      holisticLoaded = true;
+      return holistic;
+    })().catch((error) => {
+      holisticReady = null;
+      throw error;
+    });
+  }
+  return holisticReady;
+}
+
+function sendFrame(holistic) {
+  inflight = inflight.catch(() => {}).then(() => holistic.send({ image: video }));
+  return inflight;
+}
+
+/** Start loading MediaPipe in the background. Safe to call many times. */
+export function preloadMediaPipe() {
+  void getHolistic().catch(() => {});  // a failure shows later, when the camera turns on
+}
+
 async function json(response) {
   const body = await response.json();
   if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Practice is unavailable.");
@@ -106,6 +150,7 @@ async function json(response) {
 }
 
 export async function enterPractice() {
+  preloadMediaPipe();  // load it while the player reads the page, not after the camera click
   const controller = new AbortController();
   visit = controller;
   word.disabled = cameraButton.disabled = captureButton.disabled = true;
@@ -135,8 +180,8 @@ function stopPracticeCamera(message = "Camera off.") {
   if (!session) return;
   session.abort.abort();
   stopCamera(session.stream);
-  // Let the in-flight MediaPipe operation finish before disposing its WASM instance.
-  void Promise.resolve(session.processing).catch(() => {}).then(() => session.holistic?.close()).catch(() => {});
+  // MediaPipe stays alive for the next camera session. Only this session stops listening.
+  if (resultsHandler === session.onResults) resultsHandler = null;
   for (const fn of stopListeners) fn();
   video.srcObject = null;
   preview.classList.add("hidden");
@@ -190,20 +235,19 @@ async function startPracticeCamera() {
     preview.classList.remove("hidden");
     await video.play();
     if (camera !== session) return;
-    status.textContent = "Loading MediaPipe…";
-    const Holistic = await loadHolistic();
+    if (!holisticLoaded) status.textContent = "Loading MediaPipe (only the first time)…";
+    const holistic = await getHolistic();
     if (camera !== session) return;
-    const holistic = new Holistic({ locateFile: (file) => HOLISTIC_URL + file });
     session.holistic = holistic;
-    holistic.onResults((landmarks) => {
+    session.onResults = (landmarks) => {
       if (camera !== session) return;
       drawLandmarks(overlay, video, landmarks);
       if (session.frames && session.frames.length < MAX_FRAMES) session.frames.push(packedLandmarks(landmarks));
       for (const fn of frameListeners) fn(landmarks, packedLandmarks);
-    });
-    holistic.setOptions({ modelComplexity: 1, refineFaceLandmarks: false, selfieMode: false });
+    };
+    resultsHandler = session.onResults;
     // Prime the graph before starting the timed clip. Its first frame can load model assets.
-    session.processing = holistic.send({ image: video });
+    session.processing = sendFrame(holistic);
     await session.processing;
     if (camera !== session) return;
     captureButton.disabled = false;
@@ -225,7 +269,7 @@ async function trackPreview(session) {
       if (camera !== session) break;
       if (video.currentTime === lastTime || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) continue;
       lastTime = video.currentTime;
-      session.processing = session.holistic.send({ image: video });
+      session.processing = sendFrame(session.holistic);
       await session.processing;
     }
   } catch {
