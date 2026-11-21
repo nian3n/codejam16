@@ -49,7 +49,7 @@ const chips = () => (store.local.signChips ??= []);
  */
 function allowedWords() {
   const s = store.state;
-  if (s?.mission?.stage === "case_lock") return LOCK_DIGITS;
+  if (s?.mission?.stage === "case_lock") return LOCK_DIGITS;  // solo only: two players use wheels
   if (s?.mission?.stage === "wire_tray") return store.pageById.colors.glosses;
   if (s?.bot_words) return s.bot_words;  // solo: the bot asked for numbers (server.py view)
   if (!s?.bomb || s.level === "advanced") return null;
@@ -60,8 +60,8 @@ function recording() { return seq.phase !== "idle"; }
 
 function signLimit() {
   const mission = store.state?.mission;
-  if (mission?.stage === "case_lock") return mission.case_code.length - mission.lock_confirmed;
-  return mission?.stage === "wire_tray" ? 1 : MAX_SIGNS;
+  if (mission?.stage === "case_lock") return mission.lock_wheels ? 0 : mission.case_code.length - mission.lock_confirmed;
+  return mission?.stage === "wire_tray" ? 4 : MAX_SIGNS;
 }
 
 export function clearSignDraft() {
@@ -143,7 +143,7 @@ function toggleRecording() {
 async function startRecording() {
   const s = store.state;
   if (recording() || !gameplayOpen()) return;
-  if (s.mission?.stage === "case_lock" && !digitsReady) return;
+  if (s.mission?.stage === "case_lock" && (s.mission.lock_wheels || !digitsReady)) return;
   const video = localCameraVideo();
   if (!video) { setNote("Turn your camera on to sign."); return; }
   const id = ++run;
@@ -280,20 +280,24 @@ export function renderSignChips() {
   const rec = $("#sign-record");
   rec.textContent = recording() ? "Stop signing (Space)" : "Start signing (Space)";
   rec.classList.toggle("rec", recording());
-  rec.disabled = !playing || (lock && !digitsReady);
+  const wheels = lock && !!s.mission.lock_wheels;  // two players: the handler signs the code
+  rec.disabled = !playing || wheels || (lock && !digitsReady);
   if (!recording()) $("#game-banner")?.classList.add("hidden");
   const busy = list.some((c) => c.state === "pending");
   $("#send-signs").disabled = !playing || busy || !list.some((c) => c.state === "done");
   $("#sign-clear").disabled = !list.length;
   $("#sign-note").textContent = note;
-  $("#sign-instructions").textContent = lock
+  $("#sign-instructions").textContent = wheels
+    ? `Watch ${handlerName()} sign the code on the video. Set the wheels on the lock, then press Open.`
+    : lock
     ? digitsReady === false ? "The digit model is not available. Reload the page to try again."
       : digitsReady === null ? "Loading the digit model…"
       : "Sign the digits from the tag in order. Lower your hands between digits and check each chip before confirming."
-    : tray ? "Sign the next wire’s color and press Enter to confirm it."
+    : tray ? `Sign the color of each wire, top to bottom, then send them to ${handlerName()}.`
     : s?.solo ? ""  // solo: the bot's question says what to sign
     : "Sign each item on one module to your camera, one sign at a time. Dial: sign the pictures clockwise from the top, then the one the needle points at.";
-  $("#send-signs").textContent = lock ? "Confirm digits (Enter)" : tray ? "Confirm color (Enter)" : `Send to ${handlerName()} (Enter)`;
+  $("#send-signs").textContent = lock ? "Confirm digits (Enter)" : `Send to ${handlerName()} (Enter)`;
+  $("#send-signs").classList.toggle("hidden", wheels);
   // Solo: the bot's template around the chips. "module": one item names the module.
   // "details": the answer to the bot's last question.
   const frame = $("#sign-frame");

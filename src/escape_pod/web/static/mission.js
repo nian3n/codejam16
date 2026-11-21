@@ -1,5 +1,5 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
-import { $, el, svg, WIRE_COLORS } from "./core.js";
+import { $, el, gameplayOpen, send, store, svg, WIRE_COLORS } from "./core.js";
 
 function lockProgress(confirmed) {
   return `${confirmed} of 3 digits confirmed`;
@@ -9,7 +9,42 @@ function trayProgress(cuts) {
   return `${cuts} of 4 wires cut`;
 }
 
+// Two players: the handler signs the code, the agent sets it on three wheels and
+// presses Open ({"type": "lock"}). The wheel values are local, per round.
+function wheelState() {
+  const round = store.state.round_id;
+  if (store.local.lockWheels?.round !== round) store.local.lockWheels = { round, digits: [0, 0, 0] };
+  return store.local.lockWheels.digits;
+}
+
+function renderWheels(mission) {
+  const mount = $("#case-lock-stage");
+  const digits = wheelState();
+  const key = JSON.stringify(["wheels", digits, mission.revision, mission.feedback]);
+  if (mount.dataset.lock === key) return;
+  mount.dataset.lock = key;
+  const spin = (i, step) => {
+    digits[i] = (digits[i] + step + 10) % 10;
+    renderWheels(mission);
+  };
+  const open = () => {
+    const s = store.state;
+    if (!gameplayOpen() || s.mission?.stage !== "case_lock") return;
+    send({ type: "lock", code: digits.join(""), round_id: s.round_id, mission_revision: s.mission.revision });
+  };
+  mount.replaceChildren(el("section", { class: "mission-case" },
+    el("div", { class: "case-lock wheels" },
+      el("div", { class: "lock-latch", "aria-hidden": "true" }),
+      el("div", { class: "lock-slots", role: "group", "aria-label": "Code wheels" },
+        digits.map((d, i) => el("div", { class: "wheel" },
+          el("button", { class: "wheel-step", type: "button", text: "▲", "aria-label": `Wheel ${i + 1} up`, onclick: () => spin(i, 1) }),
+          el("span", { class: "lock-slot", text: String(d), "aria-live": "polite" }),
+          el("button", { class: "wheel-step", type: "button", text: "▼", "aria-label": `Wheel ${i + 1} down`, onclick: () => spin(i, -1) })))),
+      el("button", { class: "btn primary lock-open", type: "button", text: "Open", onclick: open }))));
+}
+
 export function renderLock(mission) {
+  if (mission?.lock_wheels) { renderWheels(mission); return; }
   if (!mission?.case_code) return;
   const mount = $("#case-lock-stage");
   const key = JSON.stringify([mission.case_code, mission.lock_confirmed, mission.feedback]);
@@ -58,12 +93,25 @@ export function harnessWire(color, cut, fresh = false) {
   return art;
 }
 
+function cutWire(index) {
+  const s = store.state;
+  if (!gameplayOpen() || s.mission?.stage !== "wire_tray") return;
+  send({ type: "wire_cut", wire: index, round_id: s.round_id, mission_revision: s.mission.revision });
+}
+
 function wireRow(mission, color, index, fresh) {
   const cut = mission.cuts.includes(index);
-  return el("li", { class: "mission-wire", "data-wire-index": index },
-    el("span", { class: "wire-position", text: index + 1 }),
-    harnessWire(color, cut, fresh),
-    el("span", { class: "wire-name", text: cut ? `${color} · cut` : color }));
+  // The cuts unlock when the agent has signed all four colors (server: Mission.tray_ready).
+  const ready = !!mission.signed_colors && mission.wires.every((c) => mission.signed_colors.includes(c));
+  const signed = mission.signed_colors?.includes(color);
+  const name = color[0].toUpperCase() + color.slice(1);  // only the color is capitalized
+  const label = cut ? `${name} · cut` : signed ? `${name} · sent` : name;
+  const parts = [el("span", { class: "wire-position", text: index + 1 }), harnessWire(color, cut, fresh),
+    el("span", { class: "wire-name", text: label })];
+  if (cut || !ready) return el("li", { class: "mission-wire", "data-wire-index": index }, ...parts);
+  return el("li", { "data-wire-index": index },
+    el("button", { class: "mission-wire cuttable", type: "button", title: `Cut the ${color} wire`,
+      onclick: () => cutWire(index) }, ...parts));
 }
 
 function wireTray(mission, newlyCut = []) {
@@ -72,20 +120,32 @@ function wireTray(mission, newlyCut = []) {
     el("ol", { class: "tray-wires", "aria-label": "Wires from top to bottom" },
       mission.wires.map((color, index) => wireRow(mission, color, index, newlyCut.includes(index)))),
     el("p", { class: "mission-note", role: "status", text: mission.feedback
-      || "Ask your handler for the next position, then confirm that wire’s color." }));
+      || "Sign the color of each wire, top to bottom." }));
 }
 
 function missionManual(mission) {
-  const lock = mission.stage === "case_lock";
+  if (mission.stage === "case_lock") {
+    // Only the handler sees the code. The pictures help a handler who does not know the signs.
+    return el("article", { class: "page mission-gate mission-manual" },
+      el("h2", { text: "Case lock" }),
+      el("p", { text: "Sign this code to the agent, one digit at a time, from left to right. "
+        + "The agent reads your signs on the video and sets the code on the lock. Typing is off for this step." }),
+      el("div", { class: "code-card", "aria-label": `Code ${[...(mission.case_code || "")].join(" ")}` },
+        [...(mission.case_code || "")].map((d) => el("figure", { class: "code-digit" },
+          el("img", { src: `/signs/pictures/${d}.png`, alt: `The sign for ${d}`, loading: "lazy" }),
+          el("figcaption", { text: d })))));
+  }
+  const signed = mission.signed_colors || [];
   return el("article", { class: "page mission-gate mission-manual" },
-    el("h2", { text: lock ? "Case lock" : "Wire tray order" }),
-    el("p", { class: "meta", text: lock ? lockProgress(mission.lock_confirmed) : trayProgress(mission.cut_count) }),
-    el("p", { text: lock
-      ? "Ask the agent to sign and confirm the three digits on their luggage tag from left to right."
-      : "Count positions from top to bottom. Tell the agent the next position so they can sign its color." }),
-    lock ? null : el("ol", {}, mission.wire_rule.map((position, index) =>
-      el("li", { "aria-current": index === mission.cut_count ? "step" : null },
-        index < mission.cut_count ? `${position} · accepted` : position))));
+    el("h2", { text: "Wire tray" }),
+    el("p", { class: "meta", text: `${trayProgress(mission.cut_count)} · ${signed.length} of 4 colors received` }),
+    el("p", { text: "The agent signs the colors of the four wires. Cut the wires in this order of colors. "
+      + "Skip the colors that the agent does not have. Tell the agent the order." }),
+    el("ol", { class: "wire-rank" }, mission.wire_rank.map((color) =>
+      el("li", { class: signed.includes(color) ? "signed" : "" },
+        el("span", { class: "rank-swatch", style: `background:${WIRE_COLORS[color]}` }),
+        el("span", { class: "rank-color", text: color }),
+        signed.includes(color) ? el("span", { class: "rank-have", text: " ✓ the agent has it" }) : null))));
 }
 
 function freshCuts(previous, tray) {

@@ -263,7 +263,7 @@ button.chip:hover { border-color: var(--warn); }
 }
 .mission-wire svg { display: block; width: 100%; height: 44px; }
 .mission-wire .wire-position { color: var(--acc); }
-.mission-wire .wire-name { text-transform: capitalize; }
+.mission-wire .wire-name { text-transform: none; }
 .mission-note + .mission-count { margin-top: 8px; }
 .mission-manual.page { padding-top: 64px; }
 .mission-manual li[aria-current="step"] { font-weight: 800; }
@@ -629,3 +629,32 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
 .init-count { display: none; font-family: var(--mono); font-weight: 800; font-size: 5.5rem; line-height: 1; color: var(--acc); margin: 6px 0 14px; }
 #init.counting .init-count { display: block; animation: count-pop 1s ease-out infinite; }
 @keyframes count-pop { from { transform: scale(1.25); opacity: .6; } 30% { transform: scale(1); opacity: 1; } }
+
+/* ---------- two-player gates (mission.js): code wheels, code card, color ranking ---------- */
+.wheel { display: grid; justify-items: center; gap: 2px; }
+.wheel-step {
+  width: 2.6ch; padding: 0; border: 1px solid #111318; border-radius: 3px;
+  background: linear-gradient(#6a717d, #3a3f48); color: #ecebe6; font-size: .7rem; cursor: pointer;
+}
+.wheel-step:hover { background: linear-gradient(#7c8390, #4a505a); }
+.lock-open { min-width: 8ch; }
+.mission-wire.cuttable { cursor: pointer; border-color: var(--acc); }
+.mission-wire.cuttable:hover { background: #2c3442; }
+.code-card { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin: 16px 0; }
+.code-digit { margin: 0; display: grid; justify-items: center; gap: 6px; }
+.code-digit img {
+  width: 120px; height: 120px; object-fit: contain; border-radius: 6px; background: #f3f1ea;
+}
+.code-digit figcaption { font: 800 2rem var(--mono); color: #2b2418; }
+.wire-rank { display: grid; gap: 4px; padding-left: 1.6em; }
+.wire-rank .rank-color { text-transform: capitalize; }
+.wire-rank .rank-have { font-weight: 400; font-style: italic; }
+.wire-rank li.signed { font-weight: 800; }
+.rank-swatch {
+  display: inline-block; width: 1.4em; height: .7em; margin-right: 8px; vertical-align: middle;
+  border: 1px solid #0008; border-radius: 2px;
+}
+/* The lid (workbench.css) ignores the pointer: it was a display before the wheels. The
+   wheels take clicks, and the empty case bay under the closed lid lets them through. */
+#case-lock-stage .case-lock.wheels { pointer-events: auto; }
+[data-stage="case_lock"] .case-bay { pointer-events: none; }

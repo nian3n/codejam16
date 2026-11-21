@@ -37,7 +37,8 @@ export function prepareWorkbench(state, previous) {
   bench.dataset.view = handler ? "manual" : "case";
   bench.dataset.stage = mission.stage;
   $("#case-note").textContent = playing && !handler && mission.stage === "case_lock"
-    ? mission.feedback || "Confirm the digits from left to right." : "";
+    ? mission.feedback || (mission.lock_wheels ? "Set the code that your handler signs, then press Open."
+      : "Confirm the digits from left to right.") : "";
   if (playing && mission.stage === "case_lock" && !handler) renderLock(mission);
   if (playing && mission.stage === "wire_tray" && previous?.mission?.case_code
       && previous.round_id === state.round_id) {

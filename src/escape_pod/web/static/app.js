@@ -12,7 +12,7 @@ import { $, el, fmt, gameplayOpen, resetLocal, secondsLeft, send, store } from "
 import { bindLobby, renderLobby } from "./lobby.js";
 import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
-import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
+import { defuserComposer, expertComposer, lockExpertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { clearSignDraft, preloadGameSigns } from "./game_signs.js";
 import { finishTray, renderMission } from "./mission.js";
 import { prepareWorkbench, renderCaseTime, renderDamageBays, resetWorkbench, setCaseOutcome } from "./workbench.js";
@@ -300,6 +300,7 @@ function renderGame(previous) {
   else if (store.local.chatSeen !== s.chat.length || !$("#stage .manual")) renderManual();
   finishTray(previous, s);
   renderFeed();
+  lockExpertComposer(s);
   renderSignChips();
 }
 
