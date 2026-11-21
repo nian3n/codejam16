@@ -249,3 +249,55 @@ def test_ice_with_a_fixed_turn_login(monkeypatch):
     assert turn["urls"] == server.config.METERED_TURN_URLS
     monkeypatch.setenv("TURN_URLS", "turn:a.example:3478, turns:a.example:5349")
     assert client.get("/api/ice").json()[-1]["urls"] == ["turn:a.example:3478", "turns:a.example:5349"]
+
+
+def test_exit_ends_the_game_for_both_and_keeps_roles():
+    code, a, b, sa, sb = _start_game()
+    b.send_json({"type": "exit"})
+    for ws in (a, b):
+        s = _drain(ws, lambda s: s["phase"] == "lobby")
+        assert "bomb" not in s and s["chat"][-1]["text"] == "Ben ended the game."
+    assert server.rooms[code].timer_task is None
+    assert {p.role for p in server.rooms[code].players.values()} == {"defuser", "expert"}
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_exit_is_ignored_outside_a_game():
+    code = client.post("/api/rooms").json()["code"]
+    a = _join(code, "A")
+    _last_state(a)
+    a.send_json({"type": "exit"})
+    a.send_json({"type": "level", "level": "advanced"})
+    assert _last_state(a)["level"] == "advanced"  # the exit caused no state message
+    a.__exit__(None, None, None)
+
+
+def test_leave_in_the_lobby_frees_the_seat_and_the_role():
+    code = client.post("/api/rooms").json()["code"]
+    a, b = _join(code, "Ana"), _join(code, "Ben")
+    b.send_json({"type": "role", "role": "expert"})
+    _drain(a, lambda s: any(p["role"] == "expert" for p in s["players"]))
+    b.send_json({"type": "leave"})
+    s = _drain(a, lambda s: len(s["players"]) == 1)
+    assert s["chat"][-1]["text"] == "Ben left the room."
+    c = _join(code, "Cy")  # the seat is free again, and so is the expert role
+    c.send_json({"type": "role", "role": "expert"})
+    s = _drain(a, lambda s: any(p["name"] == "Cy" and p["role"] == "expert" for p in s["players"]))
+    b.__exit__(None, None, None)
+    a.__exit__(None, None, None)
+    c.__exit__(None, None, None)
+
+
+def test_leave_during_a_game_ends_it_and_last_one_out_deletes_the_room():
+    code, a, b, sa, sb = _start_game()
+    a.send_json({"type": "leave"})
+    a.send_json({"type": "role", "role": "expert"})  # ignored: Ana is gone
+    s = _drain(b, lambda s: s["phase"] == "lobby")
+    assert [p["name"] for p in s["players"]] == ["Ben"]
+    assert s["chat"][-1]["text"] == "Ana left the room. The game ended."
+    b.send_json({"type": "leave"})
+    b.send_json({"type": "level", "level": "beginner"})
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+    assert code not in server.rooms

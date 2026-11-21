@@ -21,6 +21,9 @@ export function renderLobby() {
   $("#lobby-hint").textContent = s.players.length < 2
     ? "Waiting for a second player. Send them the room code or the invite link."
     : !s.can_start ? "Each player picks one role." : "Ready. Either player can start.";
+  // Why we are here, e.g. "Ana ended the game." or "Ben left the room."
+  const last = s.chat.at(-1);
+  $("#lobby-note").textContent = last?.kind === "event" ? last.text : "";
 }
 
 export function bindLobby() {

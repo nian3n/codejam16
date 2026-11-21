@@ -14,7 +14,7 @@ import { renderBomb } from "./bomb.js";
 import { renderManual } from "./manual_view.js";
 import { defuserComposer, expertComposer, renderFeed, renderSignChips } from "./feed.js";
 import { updateFaces } from "./widgets/big_button.js";
-import { onRoomState, onRtc, placeDock } from "./rtc.js";
+import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -38,6 +38,8 @@ async function boot() {
   $("#join").onclick = () => { if (saveName()) connect($("#code").value.trim().toUpperCase()); };
   $("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#join").click(); });
   $("#again").onclick = () => send({ type: "again" });
+  $("#leave").onclick = leaveRoom;
+  $("#exit-game").onclick = exitGame;
   bindLobby();
   setInterval(tickTimer, 200);
   setInterval(() => { store.faceTick++; updateFaces(); }, 1200);
@@ -75,6 +77,43 @@ function connect(c) {
   ws.onclose = () => { if (!closedOnPurpose && store.state) setTimeout(() => connect(code), 1500); };
 }
 
+/** Lobby "Leave room": give up the seat and go back to the home screen. */
+function leaveRoom() {
+  send({ type: "leave" });
+  closedOnPurpose = true;
+  store.ws?.close();
+  store.ws = null;
+  store.state = null;
+  localStorage.removeItem(`ep:pid:${code}`);  // a reload must not rejoin the old seat
+  history.replaceState(null, "", "/");
+  $("#code").value = "";
+  $("#home-error").textContent = "";
+  stopVideo();
+  showScreen("home");
+}
+
+/** In-game "Exit game": ends the game for both players. Needs a second click, so a
+ *  stray click does not throw away the round. */
+let exitArmed = null;
+function exitGame() {
+  const b = $("#exit-game");
+  if (!exitArmed) {
+    b.classList.add("armed");
+    b.textContent = "Click again to end the game";
+    exitArmed = setTimeout(disarmExit, 3000);
+    return;
+  }
+  disarmExit();
+  send({ type: "exit" });
+}
+function disarmExit() {
+  clearTimeout(exitArmed);
+  exitArmed = null;
+  const b = $("#exit-game");
+  b.classList.remove("armed");
+  b.textContent = "Exit game";
+}
+
 function showScreen(id) {
   for (const s of ["home", "lobby", "game"]) $("#" + s).classList.toggle("hidden", s !== id);
 }
@@ -84,6 +123,7 @@ function onState(s) {
   store.state = s;
   store.deadlineAt = performance.now() + s.remaining_s * 1000;
   if (s.phase === "lobby") {
+    if (exitArmed) disarmExit();
     showScreen("lobby");
     renderLobby();
     placeDock($("#lobby-video"));
@@ -125,6 +165,7 @@ function renderGame() {
   const s = store.state;
   $("#top-strikes").replaceChildren(...Array.from({ length: s.max_strikes }, (_, i) => el("div", { class: "strike-led" + (i < s.strikes ? " on" : "") })));
   $("#top-progress").textContent = s.progress ? `Defused ${s.progress.defused} / ${s.progress.total}` : "";
+  $("#exit-game").classList.toggle("hidden", s.phase !== "playing");
   if (s.me.role === "defuser") renderBomb();
   // Re-render the manual only when new messages arrive, so the page keeps its scroll.
   else if (store.local.chatSeen !== s.chat.length || !$("#stage .manual")) renderManual();

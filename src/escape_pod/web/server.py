@@ -182,6 +182,31 @@ def start_game(room: Room):
     room.timer_task = asyncio.create_task(watch_timer(room))
 
 
+def back_to_lobby(room: Room, why: str | None = None):
+    """Stop any game and return the room to the lobby. Roles stay as they are."""
+    if room.timer_task:
+        room.timer_task.cancel()
+    room.timer_task = None
+    room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+    if why:
+        room.say({"kind": "event", "text": why})
+
+
+def leave(room: Room, me: Player):
+    """The player clicked "Leave room": free the seat and the role.
+
+    A game in progress cannot go on with one player, so it ends. A room with nobody
+    left is deleted at once (no reload can rejoin a seat the player gave up).
+    """
+    room.players.pop(me.pid, None)
+    if room.phase == "playing":
+        back_to_lobby(room, f"{me.name} left the room. The game ended.")
+    else:
+        back_to_lobby(room, f"{me.name} left the room.")
+    if not room.players:
+        rooms.pop(room.code, None)
+
+
 def act(room: Room, index: int, action: Action):
     m = room.modules[index]
     if m.defused:
@@ -223,10 +248,14 @@ async def relay_rtc(room: Room, me: Player, data) -> None:
 
 async def handle(room: Room, me: Player, msg: dict):
     kind = msg.get("type")
-    if kind == "rtc":
+    if me.pid not in room.players:
+        return  # this player left; ignore what the closing socket still sends
+    if kind == "leave":
+        leave(room, me)
+    elif kind == "rtc":
         await relay_rtc(room, me, msg.get("data"))
         return  # no state change, so no broadcast
-    if kind == "role" and room.phase == "lobby":
+    elif kind == "role" and room.phase == "lobby":
         role = msg.get("role")
         if role in ROLES and not room.role_taken(role, me.pid):
             me.role = role
@@ -252,7 +281,9 @@ async def handle(room: Room, me: Player, msg: dict):
                 return
             act(room, i, action)
     elif kind == "again" and room.phase in ("escaped", "boom"):
-        room.phase, room.modules, room.chat, room.strikes = "lobby", [], [], 0
+        back_to_lobby(room)
+    elif kind == "exit" and room.phase == "playing":
+        back_to_lobby(room, f"{me.name} ended the game.")
     else:
         return
     await broadcast(room)
@@ -333,6 +364,8 @@ async def ws_room(ws: WebSocket, code: str):
             await ws.send_json({"type": "error", "text": "This room already has two players."})
             await ws.close()
             return
+        if room.players:  # replaces an old "... left the room." note in the lobby
+            room.say({"kind": "event", "text": f"{name} joined."})
         me = Player(uuid.uuid4().hex, name)
         room.players[me.pid] = me
     elif me.ws is not None:

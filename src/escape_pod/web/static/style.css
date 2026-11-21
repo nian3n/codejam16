@@ -37,6 +37,7 @@ body {
 .btn.primary { background: var(--acc); color: #062a24; border-color: var(--acc); }
 .btn.big { padding: 14px 28px; font-size: 1.1rem; width: 100%; }
 .btn.small { padding: 4px 10px; font-size: .8rem; }
+.btn.danger:hover:not(:disabled), .btn.danger.armed { border-color: var(--warn); color: var(--warn); }
 input {
   background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
   padding: 10px 12px; font: inherit; width: 100%;
@@ -46,6 +47,8 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .row { display: flex; gap: 8px; }
 .error { color: var(--warn); min-height: 1.2em; margin: 0; }
 .hint { color: var(--dim); text-align: center; margin: 0; }
+.hint.note { color: var(--acc); margin-top: -12px; }
+.hint.note:empty { display: none; }
 
 /* ---------- home ---------- */
 .home-card { width: min(420px, 100%); display: grid; gap: 16px; }
@@ -57,6 +60,7 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 
 /* ---------- lobby ---------- */
 .lobby-card { width: min(760px, 100%); display: grid; gap: 22px; }
+.lobby-top { display: flex; justify-content: flex-start; margin: -10px 0 -18px; }
 .room-code { display: flex; align-items: center; gap: 14px; justify-content: center; font-size: 1.2rem; }
 .room-code b { font-size: 2rem; letter-spacing: .3em; color: var(--acc); }
 .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -77,6 +81,7 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 10px 20px; background: var(--bg2); border-bottom: 1px solid var(--line);
 }
+.top-right { display: flex; align-items: center; gap: 14px; }
 .top-timer { font-family: Consolas, monospace; font-size: 1.6rem; color: var(--warn); text-shadow: 0 0 8px #ff3b2b88; }
 .strikes { display: flex; gap: 6px; }
 .strike-led { width: 16px; height: 16px; border-radius: 50%; background: #3a1a1a; border: 1px solid #000; }

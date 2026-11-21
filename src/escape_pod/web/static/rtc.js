@@ -21,6 +21,10 @@ let makingOffer = false;
 let ignoreOffer = false;
 let wanted = false;          // true once two players are in the room
 let cameraError = "";
+// Resolves when the camera request has finished (granted or not). onRtc waits for it:
+// otherwise an offer from a player whose camera is already on makes us build the
+// connection before our camera is ready, and we would only receive, never send.
+let cameraStarting = Promise.resolve();
 
 // STUN/TURN servers come from /api/ice: the server holds the TURN API key and hands
 // out only short-lived logins. Fetched once per page load, before the first connection.
@@ -52,6 +56,12 @@ export function placeDock(parent) {
 // ---------------------------------------------------------------- state from the server
 export function onRoomState(s) {
   const other = s.players.find((p) => !p.you) || null;
+  if (!other && wanted) {
+    // The other player left the room. Drop the old connection; when someone new joins,
+    // the block below starts a fresh one.
+    dropPeer();
+    wanted = false;
+  }
   remoteName.textContent = other ? `${other.name}${other.role ? " · " + other.role : ""}` : "";
   if (!other) {
     setStatus("Waiting for the other player...");
@@ -73,7 +83,24 @@ function setStatus(text) {
 
 // ---------------------------------------------------------------- camera
 async function startCamera(retry) {
-  await iceReady;
+  let done;
+  cameraStarting = new Promise((r) => (done = r));
+  try {
+    await iceReady;
+    await openCamera();
+  } finally {
+    done();
+  }
+  retryBtn.classList.toggle("hidden", !cameraError);
+  camBtn.classList.toggle("hidden", !localStream);
+  localVideo.classList.toggle("hidden", !localStream);
+  if (cameraError) setStatus(cameraError);
+  // Without a camera we still connect, to receive the other player's video.
+  if (retry && pc) resetPc();
+  else ensurePc();
+}
+
+async function openCamera() {
   if (!localStream) {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       cameraError = "This page is not secure, so the browser blocks the camera. Ask the host to start the server with --https.";
@@ -92,13 +119,6 @@ async function startCamera(retry) {
       }
     }
   }
-  retryBtn.classList.toggle("hidden", !cameraError);
-  camBtn.classList.toggle("hidden", !localStream);
-  localVideo.classList.toggle("hidden", !localStream);
-  if (cameraError) setStatus(cameraError);
-  // Without a camera we still connect, to receive the other player's video.
-  if (retry && pc) resetPc();
-  else ensurePc();
 }
 
 function toggleCamera() {
@@ -145,18 +165,40 @@ function ensurePc() {
   return pc;
 }
 
-function resetPc() {
+function dropPeer() {
   if (pc) { pc.ontrack = pc.onicecandidate = pc.onnegotiationneeded = pc.onconnectionstatechange = null; pc.close(); }
   pc = null;
+  remoteSid = null;
   remoteVideo.srcObject = null;
   makingOffer = ignoreOffer = false;
+}
+
+function resetPc() {
+  const sid = remoteSid;  // keep it: resetPc runs because this sid is new
+  dropPeer();
+  remoteSid = sid;
   ensurePc();
+}
+
+/** We left the room: close the connection, turn the camera off and hide the dock. */
+export function stopVideo() {
+  dropPeer();
+  wanted = false;
+  cameraError = "";
+  for (const t of localStream?.getTracks() || []) t.stop();  // turns the camera light off
+  localStream = null;
+  localVideo.srcObject = null;
+  localVideo.classList.remove("off");
+  camBtn.textContent = "Camera off";
+  setStatus("Waiting for the other player...");
+  dock.remove();
 }
 
 /** A set-up message from the other player, relayed by the server. */
 export async function onRtc(data) {
   if (!data || typeof data !== "object") return;
   await iceReady;
+  await cameraStarting;
   if (data.sid !== remoteSid) {
     // The other player has a new page (first contact or a reload): start over.
     const fresh = remoteSid !== null;

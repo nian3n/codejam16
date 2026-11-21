@@ -172,6 +172,8 @@ The client sends `{"type": "hello", "name": ..., "pid": ...}` first. The server 
 | `{"type": "say", "text": "Press the dog."}` | expert | playing |
 | `{"type": "act", "module": 0, "action": {"verb": "press", "target": {"icon": "dog"}}}` | defuser | playing |
 | `{"type": "again"}` | anyone | escaped or boom |
+| `{"type": "exit"}`: ends the game for both players. Both go back to the lobby with their roles | anyone | playing |
+| `{"type": "leave"}`: frees the seat and the role. A running game ends. The last player out deletes the room | anyone | any |
 | `{"type": "rtc", "data": {"sid": ..., "description" \| "candidate": ...}}` | anyone | any |
 
 The server forwards an `rtc` message to the other player as `{"type": "rtc", "data": ...}`, without a state broadcast. It drops messages over 64 KB. The state has `me.polite` (exactly one player is polite, for WebRTC "perfect negotiation") and `you: true` on the player's own entry in `players`.
@@ -445,11 +447,11 @@ The expert's manual already highlights the pages that contain the signed words (
 `HOME → LOBBY → GAME → END → LOBBY`
 
 - **Home:** the player types a name, then creates a room or types a 4-letter code to join one. An invite link `/?room=CODE` fills in the code.
-- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role.
+- **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
 - **Game, defuser:** a metal bomb case with a timer module (red digits, strike lights) and one slot per module. Each module has a status light that turns green when it is defused. The side panel has the video, the typed signs not sent yet (until recognition is in), "Send to expert" and the message feed.
 - **Game, expert:** the manual. It has an index of the 20 pages with search on the left and the open page on the right. Pages that match the last signs light up. The side panel has the video, the message feed, a reply box and quick replies ("Which module?", "Sign that again, please.").
-- **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red.
+- **Both:** the top bar shows the room, the role, the timer, the strikes and "Defused n / m". A strike flashes the screen red. "Exit game" ends the game for both players after a second click, and both go back to the lobby.
 - **End:** "POD LAUNCHED!" or "BOOM", the stats, and "Back to the lobby". At the end, the server also sends the bomb to the expert, for a debrief.
 - Art: every gloss in an icon, dial or switch pool needs an entry in `assets/icons.json` (later, `assets/icons/<gloss>.png`).
 
