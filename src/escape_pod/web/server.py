@@ -177,8 +177,18 @@ def view(room: Room, me: Player) -> dict:
     if room.modules and (me.role == "defuser" or room.phase in ("escaped", "boom")):
         v["bomb"] = [{"id": m.spec.id, "title": m.spec.title, "widget": m.spec.widget,
                       "target_words": m.spec.target_words, "pool": m.spec.pool,
-                      "facts": m.facts, "defused": m.defused} for m in room.modules]
+                      "facts": shown_facts(m), "defused": m.defused} for m in room.modules]
     return v
+
+
+def shown_facts(m) -> dict:
+    """The facts the bomb draws. A defused switch board shows the lever where the agent
+    put it. m.facts keep the start state, because the answer key and solution() read it."""
+    if not (m.defused and m.spec.widget == "switches"):
+        return m.facts
+    sol = m.solution()  # a correct action equals the solution, so this is what was set
+    return {**m.facts, "switches": [{**s, "state": sol.target["state"]} if s["label"] == sol.target["switch"] else s
+                                    for s in m.facts["switches"]]}
 
 
 async def broadcast(room: Room):

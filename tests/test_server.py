@@ -4,7 +4,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+import random
+
 from escape_pod import config
+from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
 from escape_pod.web import server
 
 client = TestClient(server.app)
@@ -475,5 +478,26 @@ def test_the_timer_starts_anyway_after_a_while(monkeypatch):
     # b sent "start", so the timer task runs on b's TestClient loop; only b's socket can
     # receive that task's broadcast here (the real server has one loop for every socket).
     _drain(b, lambda s: s["armed"])
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)
+
+
+def test_a_defused_switch_shows_its_new_position():
+    code, a, b, sa, sb = _start_game()
+    room = server.rooms[code]
+    spec = load_pool()["home_things"]
+    rng = random.Random(1)
+    while True:  # a module whose answer sets a switch to the other state
+        m = Module(spec, WIDGETS["switches"].generate(spec, rng))
+        sol = m.solution()
+        before = next(s["state"] for s in m.facts["switches"] if s["label"] == sol.target["switch"])
+        if before != sol.target["state"]:
+            break
+    room.modules[0] = m
+    a.send_json({"type": "act", "module": 0, "action": {"verb": sol.verb, "target": sol.target}})
+    s = _drain(a, lambda s: s["bomb"][0]["defused"])
+    shown = next(x["state"] for x in s["bomb"][0]["facts"]["switches"] if x["label"] == sol.target["switch"])
+    assert shown == sol.target["state"]
+    assert next(x["state"] for x in m.facts["switches"] if x["label"] == sol.target["switch"]) == before  # the engine's facts stay
     a.__exit__(None, None, None)
     b.__exit__(None, None, None)
