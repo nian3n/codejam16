@@ -198,7 +198,7 @@ class Action:
 class PuzzleSpec(BaseModel):
     id: str
     title: str
-    widget: Literal["wires", "keypad", "icons", "dial", "switches", "big_button"]
+    widget: Literal["wires", "keypad", "icons", "dial", "switches", "big_button", "sorter"]
     topic: str                       # unique across the pool
     hard: bool = False
     looks_like: str                  # 1-2 sentences for the manual and the index
@@ -241,7 +241,7 @@ All 20 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the
 | `family` | Family | icons | mom, dad, grandma, grandpa, brother, aunt, uncle |
 | `people_jobs` | People and jobs | icons | fireman, police, cowboy, clown, boy, girl, man, child |
 | `body` | Body parts | icons | ear, eye, nose, mouth, tooth, tongue, hair, arm, finger, feet |
-| `food` | Food | dial | apple, carrot, cereal, pizza, frenchfries, icecream, chocolate, nuts |
+| `food` | Food | sorter | apple, carrot, cereal, pizza, frenchfries, icecream, chocolate, nuts |
 | `clothes` | Clothes | icons | hat, shirt, shoe, jacket, jeans, mitten, pajamas, zipper |
 | `weather_sky` | Weather and sky | dial | sun, moon, cloud, rain, snow |
 | `transport` | Transport | dial | car, boat, airplane, helicopter |
@@ -271,6 +271,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 | dial | `options: [..]`, `needle: g` | `needle`, `has:<g>`, `first`, `last` | `turn {to: g\|"first"\|"last"\|"alpha_first"\|"alpha_last"}` (the picture that comes first or last in the alphabet) |
 | switches | `switches: [{label, state}]` | `count_on`, `state_of:<label>`, `has:<label>` | `set {switch: label\|"first"\|"last", state: "on"\|"off"\|"flip"}`, or `set {all: "on"\|"off"\|"flip"}` (every switch, in any order; resolved with `flips: {label: state}`) |
 | big_button | `faces: [..]` | `faces`, `first`, `last`, `has:<g>` | `hold {release_on: g\|"first"\|"last"}` |
+| sorter | `items: [4 glosses]` (left to right on the tray) | `first`, `last`, `has:<g>` | `sort {left: <group key>}`: that group goes in the left box, the other group in the right box. Resolved to `{left: [..], right: [..]}`. Each drag is one step, `sort {item: g, box: "left"\|"right"}`, in any order. The groups are in the puzzle's `setup.groups`, and the manual lists them. The facts never hold them, so the agent has to ask |
 
 - Rules are data: `[derived_key, op, value]` conditions with the ops `== != < <= > >= in`. The conditions in one rule are ANDed. The first rule that matches wins. The last rule is `else`. **No `eval`.** One action per puzzle.
 - **Steps:** some actions take several clicks (the lists above). `Widget.steps()` splits the resolved action into clicks. The server checks each click with `Module.apply()`: a right click counts (the state lists them in `done`), a wrong click is a strike and keeps the progress. Order matters for wires and pictures, not for switches.
@@ -314,7 +315,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 **Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
-**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the same sequence capture as solo practice (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
+**In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the sequence capture (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). When the bomb has a keypad, the server mixes in the digit model (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
 
 ### 6.1 Pipeline
 
@@ -333,7 +334,7 @@ Show the camera mirrored with the hand skeleton drawn on it, so players see what
 
 The player needs both hands to sign, so **do not use hold-to-sign**.
 
-**Sequence capture (built, `static/sequence.js`, practice "Sequence" mode):** one recording holds many signs.
+**Sequence capture (built, `static/sequence.js`, used by the game):** one recording holds many signs. The practice page had a "Sequence" mode to test it. The team removed it in November 2026, because the game now uses the capture. Solo practice has the one-word mode only.
 
 1. Space starts a recording. For 1 s, a banner says "GET YOUR HANDS READY". Then recording starts.
 2. The player signs a word, then makes a **separator**. The separator ends the clip and adds no word:

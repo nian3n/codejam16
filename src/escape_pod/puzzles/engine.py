@@ -258,7 +258,56 @@ class BigButton(Widget):
         return super().known_keys(spec) | {"faces"}
 
 
-WIDGETS: dict[str, Widget] = {w.name: w for w in (Wires(), Keypad(), Icons(), Dial(), Switches(), BigButton())}
+def group_of(g: str) -> str | None:
+    """The sorter group a gloss belongs to ("healthy"), from the puzzle's setup.groups.
+
+    Widgets get only the facts, never the spec, so the groups are looked up by gloss.
+    That works because no gloss is in two pools (test_no_gloss_in_two_pools).
+    """
+    for spec in load_pool().values():
+        for grp in spec.setup.get("groups", []):
+            if g in grp["items"]:
+                return grp["key"]
+    return None
+
+
+class Sorter(Widget):
+    """Pictures on a tray, two boxes below. The player drags each picture into a box.
+
+    The rules say which group goes in the left box ({"left": "treats"}); the other group
+    goes right. Each drop is one step, in any order. The facts hold only the pictures:
+    the groups stay in the manual, so the agent has to ask which food is which.
+    """
+    name, noun = "sorter", "picture"
+    reading_order = "Pictures on the tray are counted left to right."
+
+    def generate(self, spec, rng):
+        groups = [set(g["items"]) for g in spec.setup["groups"]]
+        while True:  # both groups on the tray, so both boxes get something
+            items = rng.sample(spec.pool, spec.setup["shown"])
+            if all(g & set(items) for g in groups):
+                return {"items": items}
+
+    def items(self, facts):
+        return facts["items"]
+
+    def resolve(self, action, facts):
+        left = action.target.get("left")
+        if not isinstance(left, str):
+            return action  # already resolved, or one drop
+        items = facts["items"]
+        return Action("sort", {"left": [g for g in items if group_of(g) == left],
+                               "right": [g for g in items if group_of(g) != left]})
+
+    def steps(self, solution):
+        t = solution.target
+        if isinstance(t.get("left"), list):
+            return ([Action("sort", {"item": g, "box": "left"}) for g in t["left"]]
+                    + [Action("sort", {"item": g, "box": "right"}) for g in t["right"]]), False
+        return [solution], True
+
+
+WIDGETS: dict[str, Widget] = {w.name: w for w in (Wires(), Keypad(), Icons(), Dial(), Switches(), BigButton(), Sorter())}
 
 
 # ---------------------------------------------------------------------------

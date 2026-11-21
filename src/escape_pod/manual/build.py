@@ -14,7 +14,17 @@ from escape_pod.puzzles.models import PuzzleSpec
 from escape_pod.puzzles.phrase import condition, phrase, word
 
 WIDGET_NAMES = {"wires": "Wires", "keypad": "Keypad", "icons": "Picture buttons",
-                "dial": "Dial", "switches": "Switches", "big_button": "Big button"}
+                "dial": "Dial", "switches": "Switches", "big_button": "Big button",
+                "sorter": "Sorter"}
+
+
+def reading_order(spec: PuzzleSpec) -> str:
+    """The widget's reading order. A sorter page also lists its groups here: the handler
+    needs them to tell which picture is which, and the web page shows this line as is."""
+    text = WIDGETS[spec.widget].reading_order
+    for g in spec.setup.get("groups", []):
+        text += f" {g['name']}: {', '.join(word(x, spec) for x in g['items'])}."
+    return text
 
 
 def page(spec: PuzzleSpec, number: int | None = None) -> dict:
@@ -37,7 +47,7 @@ def page(spec: PuzzleSpec, number: int | None = None) -> dict:
         "looks_like": spec.looks_like,
         "words": [word(g, spec) for g in spec.pool],
         "glosses": list(spec.pool),
-        "reading_order": WIDGETS[spec.widget].reading_order,
+        "reading_order": reading_order(spec),
         "rules": rules,
     }
 

@@ -223,6 +223,31 @@ button.chip:hover { border-color: var(--warn); }
 .icon-btn .emoji { font-size: clamp(1.6rem, 3.4vw, 2.6rem); line-height: 1; }
 .cap { font-size: .65rem; font-weight: 800; color: #333; text-transform: uppercase; letter-spacing: .04em; }
 
+/* sorter: a tray of 4 pictures, two boxes below (widgets/sorter.js) */
+.sorter { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; width: 100%; height: 100%; }
+.sort-tray { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sort-item { aspect-ratio: 1 / 1; min-width: 0; }
+.sort-item[draggable] { cursor: grab; }
+.sort-item .emoji { font-size: clamp(1.1rem, 2.4vw, 2rem); }
+.sort-item .cap { font-size: .5rem; }
+.sort-item.done { outline: 3px solid var(--ok); outline-offset: -3px; cursor: default; }
+.sort-item.done .pick-n { background: var(--ok); }
+.sort-slot { aspect-ratio: 1 / 1; border: 2px dashed #ffffff22; border-radius: 10px; }
+.sort-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 0; }
+.sort-box {
+  display: grid; grid-template-rows: auto 1fr; gap: 4px; padding: 6px; border-radius: 8px; min-height: 0;
+  background: repeating-linear-gradient(45deg, #2a2f3a, #2a2f3a 8px, #252a34 8px, #252a34 16px);
+  border: 2px solid #0b0d12; box-shadow: inset 0 3px 8px #0009;
+}
+.sort-box.ready { border-color: var(--acc); cursor: pointer; }
+.sort-box.over { border-color: var(--acc); background: var(--acc-bg); }
+.sort-label { font: 700 .6rem var(--mono); letter-spacing: .12em; color: var(--dim); text-align: center; }
+.sort-in { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-content: start; }
+.sort-in .sort-item { padding: 0; border-radius: 7px; }
+.sort-in .sort-item .emoji { font-size: clamp(.8rem, 1.5vw, 1.3rem); }
+.sort-in .sort-item .cap { display: none; }
+.sort-in .pick-n { top: 1px; right: 1px; font-size: .6rem; padding: 0 2px; }
+
 /* dial */
 .dial { position: relative; width: 92%; aspect-ratio: 1 / 1; border-radius: 50%; background: radial-gradient(circle, #3b4150, #1a1d24 70%); border: 3px solid #0b0d12; }
 .dial-opt {
@@ -484,11 +509,6 @@ body.critical::before { content: ""; position: fixed; inset: 0; pointer-events: 
 .practice-result.approved { border-color: var(--ok); }
 
 /* ---------- practice: sequence mode ---------- */
-.practice-modes { display: flex; gap: 6px; }
-.practice-modes .btn.on { background: var(--acc); color: #141204; border-color: #000; }
-.seq-targets { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink) !important; }
-.seq-targets b { font-family: var(--mono); color: var(--acc); letter-spacing: .08em; font-size: 1.1rem; }
-.seq-help { margin: 0; padding-left: 20px; color: var(--dim); font-size: .9rem; display: grid; gap: 2px; }
 kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: #0c0d0e; color: var(--ink); }
 .practice-stage { position: relative; }
 /* The banner sits over the camera but outside the mirrored preview, so its text reads normally. */
@@ -502,7 +522,6 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
 .seq-banner[data-phase="signing"] b { color: var(--warn); }
 .seq-banner[data-phase="cooldown"] { border-color: var(--ok); }
 .seq-banner[data-phase="cooldown"] b { color: var(--ok); }
-#seq-record.rec { background: var(--warn); color: #fff; }
 .seq-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; }
 .seq-empty { color: var(--dim); font-size: .85rem; margin: 0; }
 .chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg2); }

@@ -18,7 +18,6 @@ import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { renderInit } from "./init.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
-import { bindSequence } from "./practice_sequence.js";
 
 let code = null;
 let closedOnPurpose = false;
@@ -52,7 +51,6 @@ async function boot() {
   $("#exit-game").onclick = exitGame;
   bindLobby();
   bindGlossary();
-  bindSequence();
   $("#open-practice").onclick = () => { showScreen("practice"); void enterPractice(); };
   // Start loading MediaPipe as soon as the player points at the button.
   for (const ev of ["pointerenter", "focus", "touchstart"]) $("#open-practice").addEventListener(ev, preloadMediaPipe, { once: true, passive: true });

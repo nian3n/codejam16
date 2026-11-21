@@ -21,14 +21,6 @@ let camera = null;
 let words = [];
 let approved = new Set();
 
-// Hooks for the sequence mode (practice_sequence.js): it gets every landmark frame
-// and hears when the camera stops, without owning the camera itself.
-const frameListeners = new Set();
-const stopListeners = new Set();
-export function onPracticeFrame(fn) { frameListeners.add(fn); }
-export function onPracticeStop(fn) { stopListeners.add(fn); }
-export function practiceCameraReady() { return !!camera?.ready; }
-export function practiceWords() { return words; }
 
 function loadProgress() {
   try {
@@ -140,7 +132,6 @@ function stopPracticeCamera(message = "Camera off.") {
   stopCamera(session.stream);
   // MediaPipe stays alive for the next camera session. Only this session stops listening.
   if (resultsHandler === session.onResults) resultsHandler = null;
-  for (const fn of stopListeners) fn();
   video.srcObject = null;
   preview.classList.add("hidden");
   overlay.width = 0;
@@ -183,7 +174,6 @@ async function startPracticeCamera() {
       if (camera !== session) return;
       drawLandmarks(overlay, video, landmarks);
       if (session.frames && session.frames.length < MAX_FRAMES) session.frames.push(packedLandmarks(landmarks));
-      for (const fn of frameListeners) fn(landmarks, packedLandmarks);
     };
     resultsHandler = session.onResults;
     // Prime the graph before starting the timed clip. Its first frame can load model assets.
@@ -192,7 +182,6 @@ async function startPracticeCamera() {
     if (camera !== session) return;
     captureButton.disabled = false;
     session.ready = true;
-    for (const fn of frameListeners) fn(null);  // tell the sequence mode that the camera is ready
     status.textContent = "Keep your hands and upper body in view.";
     void trackPreview(session);
   } catch (error) {

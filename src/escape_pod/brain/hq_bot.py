@@ -49,9 +49,10 @@ PLACES = {
     "dial": ("the picture at the top of the dial", "the last picture, going clockwise from the top"),
     "switches": ("the label of the leftmost switch", "the label of the rightmost switch"),
     "big_button": ("the face marked 1", "the face marked {n}"),
+    "sorter": ("the picture on the far left of the tray", "the picture on the far right of the tray"),
 }
 NOUNS = {"wires": "wire color", "keypad": "number", "icons": "picture", "dial": "picture",
-         "switches": "switch label", "big_button": "face"}
+         "switches": "switch label", "big_button": "face", "sorter": "picture"}
 TARGET_SLOTS = ("icon", "wire", "to", "release_on", "switch")
 
 
@@ -106,6 +107,8 @@ class HqBot:
             return "Tell me which switches are on. Tell me NO if none is on."
         if key == "display":
             return f"Tell me the {spec.setup['shown']} numbers on the display, left to right."
+        if key == "items" and w == "sorter":  # one question answers every sorter rule
+            return f"Tell me the {spec.setup['shown']} {spec.setup.get('noun', 'pictures')} on the tray, from left to right."
         if key == "items":  # for an alphabet rule: the order does not matter
             where = " on the dial" if w == "dial" else ""
             return f"Tell me the {spec.setup['shown']} pictures{where}, in any order."
@@ -114,6 +117,8 @@ class HqBot:
     def _ask(self, key: str) -> str:
         if self.page is not None and self.page.widget == "keypad" and key in POSITIONS:
             key = "display"  # 3 numbers answer first, last and every has: at once
+        if self.page is not None and self.page.widget == "sorter":
+            key = "items"  # the sort needs every picture anyway, so ask for all of them at once
         self.pending = key
         return self._question(key)
 
@@ -166,6 +171,10 @@ class HqBot:
                 t = {"icons": sorted(items, reverse=ORDERS[t["order"]])}
             else:
                 t = {"to": (min if t["to"] == "alpha_first" else max)(items)}
+        if action.verb == "sort":
+            if "items" not in self.known:
+                return self._ask("items")
+            t = WIDGETS["sorter"].resolve(action, {"items": self.known["items"]}).target
         if "keys_from" in t:
             if "display" not in self.known:
                 return self._ask("display")
@@ -268,6 +277,8 @@ class HqBot:
                 return f"I need {n} different pictures. You told me {len(got)}. {self._question(key)}"
             self.known["items"] = got
             self.known.update({f"has:{g}": g in got for g in page.pool})
+            if page.widget == "sorter":  # signed left to right
+                self.known.update(first=got[0], last=got[-1])
             return None
         if key == "display":
             n = page.setup["shown"]

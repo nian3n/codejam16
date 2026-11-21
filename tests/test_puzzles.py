@@ -30,7 +30,7 @@ def test_no_gloss_in_two_pools():
 
 def test_every_picture_gloss_has_an_icon():
     for s in POOL.values():
-        if s.widget in ("icons", "dial", "switches", "big_button"):
+        if s.widget in ("icons", "dial", "switches", "big_button", "sorter"):
             missing = [g for g in s.pool if g not in ICONS]
             assert not missing, f"{s.id} has no icon for {missing}"
 
@@ -158,16 +158,16 @@ def test_order_rules():
     assert phrase(m.solution(), m) == "Press the buttons in this order: duck, hen, horse, pig."
     m = Module(POOL["clothes"], {"icons": ["hat", "shoe", "jeans", "zipper"]})
     assert m.solution().target["icons"] == ["zipper", "shoe", "jeans", "hat"]
-    m = Module(POOL["food"], {"options": ["pizza", "nuts", "carrot", "apple", "cereal"], "needle": "pizza"})
-    assert phrase(m.solution(), m) == "Turn the dial to the apple."
+    m = Module(POOL["senses"], {"options": ["think", "smile", "hear", "look"], "needle": "look"})
+    assert phrase(m.solution(), m) == "Turn the dial to the hear picture."
     m = Module(POOL["weather_sky"], {"options": ["moon", "sun", "cloud", "rain", "snow"], "needle": "cloud"})
     assert phrase(m.solution(), m) == "Turn the dial to the sun."
     spec = POOL["pets_farm"]
     assert phrase(spec.rules[2].action(), spec=spec) == "Press all the buttons in alphabetical order (A to Z)."
     spec = POOL["clothes"]
     assert phrase(spec.rules[2].action(), spec=spec) == "Press all the buttons in reverse alphabetical order (Z to A)."
-    spec = POOL["food"]
-    assert phrase(spec.rules[2].action(), spec=spec) == "Turn the dial to the picture that comes first in the alphabet."
+    spec = POOL["senses"]
+    assert phrase(spec.rules[3].action(), spec=spec) == "Turn the dial to the picture that comes first in the alphabet."
 
 
 def test_alphabet_order_of_glosses_matches_the_english_words():
@@ -253,3 +253,48 @@ def test_custom_levels_draw_1_to_5_modules(n):
         mods = draw(random.Random(seed), lv)
         assert len(mods) == n and len({m.spec.id for m in mods}) == n
         assert len({m.spec.widget for m in mods}) >= min(3, n)
+
+
+# ---------------------------------------------------------------------------
+# Sorter: drag each picture into the left or the right box (food: healthy or treats)
+# ---------------------------------------------------------------------------
+def _food(items):
+    return Module(POOL["food"], {"items": items})
+
+
+def test_the_sorter_shows_both_groups_every_time():
+    spec = POOL["food"]
+    groups = [set(g["items"]) for g in spec.setup["groups"]]
+    for seed in range(500):
+        items = WIDGETS["sorter"].generate(spec, random.Random(seed))["items"]
+        assert len(items) == 4 == len(set(items))
+        assert all(g & set(items) for g in groups)
+
+
+def test_the_sorter_resolves_each_group_to_a_box():
+    m = _food(["pizza", "apple", "carrot", "chocolate"])  # pizza: the treats go left
+    assert m.solution() == Action("sort", {"left": ["pizza", "chocolate"], "right": ["apple", "carrot"]})
+    assert phrase(m.solution(), m) == ("Put the pizza and the chocolate in the left box. "
+                                       "Put the apple and the carrot in the right box.")
+
+
+def test_the_sorter_takes_one_drop_at_a_time_in_any_order():
+    m = _food(["pizza", "apple", "carrot", "chocolate"])
+
+    def drop(g, box):
+        return m.apply(Action("sort", {"item": g, "box": box}))
+
+    assert drop("carrot", "right") == "step"
+    assert drop("apple", "left") == "strike"      # wrong box: a strike, the progress stays
+    assert drop("chocolate", "left") == "step"
+    assert drop("apple", "right") == "step"
+    assert drop("pizza", "left") == "defused"
+
+
+def test_the_sorter_manual_lists_the_groups():
+    p = next(p for p in all_pages() if p["id"] == "food")
+    assert "Healthy food: apple, carrot, cereal, nuts." in p["reading_order"]
+    assert "Treats: pizza, french fries, ice cream, chocolate." in p["reading_order"]
+    assert p["rules"][0] == {"if": "pizza is shown",
+                             "then": "Put the treats in the left box and the healthy food in the right box."}
+    assert p["rules"][1]["if"] == "the first picture is a healthy food"

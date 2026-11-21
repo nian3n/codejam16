@@ -33,12 +33,8 @@
     <div class="card practice-card" aria-labelledby="practice-title">
       <button id="close-practice" class="btn small" type="button">&larr; Back to home</button>
       <h1 id="practice-title">Field training</h1>
-      <div class="practice-modes" role="group" aria-label="Practice mode">
-        <button id="mode-one" class="btn small on" type="button" aria-pressed="true">One word</button>
-        <button id="mode-seq" class="btn small" type="button" aria-pressed="false">Sequence</button>
-      </div>
       <p id="practice-instructions">Choose one word and sign it after the countdown.</p>
-      <div id="one-panel" class="one-only">
+      <div id="one-panel">
         <label for="practice-word">Word to sign
           <select id="practice-word" disabled></select>
         </label>
@@ -47,31 +43,15 @@
           <figcaption id="practice-credit"></figcaption>
         </figure>
       </div>
-      <div id="seq-panel" class="seq-only hidden">
-        <p class="seq-targets">Sign these in order: <b id="seq-targets"></b>
-          <button id="seq-new" class="btn small" type="button">New words</button></p>
-        <ol class="seq-help">
-          <li>Turn on the camera. Press <kbd>Space</kbd> to start recording.</li>
-          <li>Sign one word. Then lower your hands, or hold both palms up &#x270B;&#x270B; for half a second.</li>
-          <li>Sign the next word. Repeat. Press <kbd>Space</kbd> again to stop.</li>
-        </ol>
-      </div>
       <div class="practice-stage">
         <div id="practice-preview" class="practice-preview hidden">
           <video id="practice-camera" class="camera-video" autoplay muted playsinline aria-label="Your practice camera"></video>
           <canvas id="practice-landmarks" aria-hidden="true"></canvas>
         </div>
-        <div id="seq-banner" class="seq-banner hidden" role="status" aria-live="assertive"></div>
       </div>
       <div class="row practice-actions">
         <button id="practice-camera-toggle" class="btn" type="button" disabled>Turn on camera</button>
-        <button id="capture-sign" class="btn primary one-only" type="button" disabled>Capture sign</button>
-        <button id="seq-record" class="btn primary seq-only hidden" type="button" disabled>Start recording (Space)</button>
-      </div>
-      <div id="seq-chips" class="seq-chips seq-only hidden" aria-label="Your signs"></div>
-      <div class="row seq-only hidden" id="seq-actions">
-        <button id="seq-check" class="btn primary" type="button" disabled>Check</button>
-        <button id="seq-clear" class="btn" type="button" disabled>Clear</button>
+        <button id="capture-sign" class="btn primary" type="button" disabled>Capture sign</button>
       </div>
       <p id="practice-status" class="camera-status" role="status"></p>
       <output id="practice-result" class="practice-result hidden" aria-live="polite"></output>

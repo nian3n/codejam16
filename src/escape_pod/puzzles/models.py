@@ -52,7 +52,7 @@ class Rule(BaseModel):
 class PuzzleSpec(BaseModel):
     id: str
     title: str
-    widget: Literal["wires", "keypad", "icons", "dial", "switches", "big_button"]
+    widget: Literal["wires", "keypad", "icons", "dial", "switches", "big_button", "sorter"]
     topic: str
     hard: bool = False
     looks_like: str

@@ -42,6 +42,15 @@ def _keys(keys: list[str]) -> str:
     return ", ".join(k.upper() for k in keys)
 
 
+def _and(things: list[str]) -> str:
+    """'the apple', 'the apple and the carrot', 'the apple, the carrot and the nuts'."""
+    return things[0] if len(things) == 1 else f"{', '.join(things[:-1])} and {things[-1]}"
+
+
+def _group(spec: PuzzleSpec | None, key: str) -> dict:
+    return next(g for g in (spec.setup.get("groups", []) if spec else []) if g["key"] == key)
+
+
 def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None = None) -> str:
     if module is not None:
         spec = module.spec
@@ -91,6 +100,15 @@ def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None
             name = f"the {label} switch" if label in POSITIONS else f"the {word(label)} switch"
             return f"Flip {name}."
         return f"Turn the {word(label)} switch {state}."
+    if v == "sort":
+        if isinstance(t.get("left"), str):  # the manual: name the groups
+            left = _group(spec, t["left"])
+            right = next(g for g in spec.setup["groups"] if g is not left)
+            return f"Put {left['all']} in the left box and {right['all']} in the right box."
+        if "item" in t:  # one drop
+            return f"Put {the(t['item'], spec)} in the {t['box']} box."
+        return " ".join(f"Put {_and([the(g, spec) for g in t[box]])} in the {box} box."
+                        for box in ("left", "right") if t[box])
     if v == "hold":
         g = t["release_on"]
         when = f"the {g} face shows" if g in POSITIONS else f"the face is {word(g)}"
@@ -131,6 +149,9 @@ def condition(cond: list, spec: PuzzleSpec) -> str:
             return f"{val} or more switches are on"
         return f"the number of switches that are on is {op} {val}"
     if key in POSITIONS:
+        groups = spec.setup.get("groups", [])
+        if op == "in" and (grp := next((g for g in groups if sorted(g["items"]) == sorted(val)), None)):
+            return f"the {key} {noun} is {grp['one']}"
         if op == "in":
             return f"the {key} {noun} is one of {', '.join(word(x, spec) for x in val)}"
         if isinstance(val, str) and val in POSITIONS:  # e.g. first > last

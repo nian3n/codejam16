@@ -30,6 +30,8 @@ def answer(key: str, module) -> list[str]:
     if key == "display":
         return list(f["display"])
     if key == "items":
+        if module.spec.widget == "sorter":
+            return list(items)  # the sorter asks left to right: it needs the first one too
         return list(reversed(items))  # any order: the bot sorts them
     raise ValueError(key)
 
@@ -192,7 +194,18 @@ def test_alphabet_rules_ask_for_every_picture():
     assert bot.reply(["pig", "horse"]) == "I need 4 different pictures. You told me 2. Tell me the 4 pictures, in any order."
     assert bot.reply(["pig", "horse", "hen", "duck"]) == "Press the buttons in this order: duck, hen, horse, pig."
     bot = HqBot()
-    bot.reply(["nuts"])
+    bot.reply(["think"])
     assert bot.reply(["no"]) == "Tell me the picture that the needle points at."
-    assert bot.reply(["nuts"]) == "Tell me the 5 pictures on the dial, in any order."
-    assert bot.reply(["chocolate", "nuts", "carrot", "apple", "cereal"]) == "Turn the dial to the apple."
+    assert bot.reply(["look"]) == "Do you see TASTE?"
+    assert bot.reply(["no"]) == "Tell me the 4 pictures on the dial, in any order."
+    assert bot.reply(["look", "think", "smile", "hear"]) == "Turn the dial to the hear picture."
+
+
+def test_the_sorter_asks_for_the_foods_left_to_right():
+    m = Module(POOL["food"], {"items": ["chocolate", "apple", "carrot", "nuts"]})
+    bot = HqBot()
+    ask = bot.reply(["apple"])
+    assert "4 foods" in ask and "left to right" in ask
+    said = bot.reply(["chocolate", "apple", "carrot", "nuts"])
+    assert said == phrase(m.solution(), m)
+    assert said == "Put the chocolate in the left box. Put the apple, the carrot and the nuts in the right box."

@@ -1,23 +1,50 @@
 {
   "id": "food",
-  "title": "Snack dial",
-  "widget": "dial",
+  "title": "Snack sorter",
+  "widget": "sorter",
   "topic": "food",
   "hard": false,
-  "looks_like": "A dial with five foods around it and a needle pointing at one.",
+  "looks_like": "A tray with four foods and two empty boxes below it, one on the left and one on the right.",
   "pool": [
     "apple",
     "carrot",
     "cereal",
+    "nuts",
     "pizza",
     "frenchfries",
     "icecream",
-    "chocolate",
-    "nuts"
+    "chocolate"
   ],
   "target_words": "name",
   "setup": {
-    "shown": 5
+    "shown": 4,
+    "noun": "foods",
+    "groups": [
+      {
+        "key": "healthy",
+        "name": "Healthy food",
+        "one": "a healthy food",
+        "all": "the healthy food",
+        "items": [
+          "apple",
+          "carrot",
+          "cereal",
+          "nuts"
+        ]
+      },
+      {
+        "key": "treats",
+        "name": "Treats",
+        "one": "a treat",
+        "all": "the treats",
+        "items": [
+          "pizza",
+          "frenchfries",
+          "icecream",
+          "chocolate"
+        ]
+      }
+    ]
   },
   "rules": [
     {
@@ -26,55 +53,55 @@
           "has:pizza",
           "==",
           true
-        ],
-        [
-          "needle",
-          "!=",
-          "pizza"
         ]
       ],
       "then": {
-        "verb": "turn",
+        "verb": "sort",
         "target": {
-          "to": "pizza"
+          "left": "treats"
         }
       }
     },
     {
       "if": [
         [
-          "needle",
-          "==",
-          "apple"
+          "first",
+          "in",
+          [
+            "apple",
+            "carrot",
+            "cereal",
+            "nuts"
+          ]
         ]
       ],
       "then": {
-        "verb": "turn",
+        "verb": "sort",
         "target": {
-          "to": "last"
+          "left": "healthy"
         }
       }
     },
     {
       "if": [
         [
-          "has:nuts",
+          "has:icecream",
           "==",
           true
         ]
       ],
       "then": {
-        "verb": "turn",
+        "verb": "sort",
         "target": {
-          "to": "alpha_first"
+          "left": "healthy"
         }
       }
     },
     {
       "else": {
-        "verb": "turn",
+        "verb": "sort",
         "target": {
-          "to": "first"
+          "left": "treats"
         }
       }
     }

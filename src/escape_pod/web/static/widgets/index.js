@@ -8,5 +8,6 @@ import { icons } from "./icons.js";
 import { dial } from "./dial.js";
 import { switches } from "./switches.js";
 import { big_button } from "./big_button.js";
+import { sorter } from "./sorter.js";
 
-export const WIDGETS = { wires, keypad, icons, dial, switches, big_button };
+export const WIDGETS = { wires, keypad, icons, dial, switches, big_button, sorter };
