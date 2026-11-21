@@ -73,6 +73,10 @@
 }
 [data-stage="case_lock"] .case-rig { --lid-angle: 0deg; --case-scale: .94; margin-top: min(9cqh, 82px); }
 [data-stage="wire_tray"] .case-rig { --case-scale: 1.04; }
+/* The module board needs more height than the bay gives the gates: 2 rows of modules in
+   about 300 px cut off the order bars, dial pictures and switch labels. The lid leans
+   further back, so the taller bay still fits on the bench. */
+[data-stage="modules"] .case-rig { --bay-height: clamp(300px, 60cqh, 560px); --lid-angle: 122deg; margin-top: min(7cqh, 60px); }
 .case-shadow {
   position: absolute;
   inset: 44% -7% -14% -3%;
@@ -423,7 +427,11 @@
 #game .mod-body { container-type: size; }
 #game .mod-body .dial { width: min(95cqw, 96cqh); }
 #game .mod-body :is(.hub, .needle) { pointer-events: none; }
-#game .mod-body .icon-mod { height: 100%; }
+#game .mod-body .icon-mod { height: 100cqh; }  /* 100%: the auto grid row gives no height to resolve against */
+/* The 2x2 picture buttons share the module's height. Sized by their emoji, two rows plus
+   the ORDER bar ran past the bottom of a short module (the case bay is a fixed height). */
+#game .mod-body .icon-grid { grid-auto-rows: minmax(0, 1fr); }
+#game .mod-body .icon-grid .icon-btn { min-height: 0; overflow: hidden; }
 #game .mod-body .key, #game .mod-body .icon-btn, #game .mod-body .dial-opt {
   box-shadow: inset 1px 1px 0 #fff8, 2px 3px 2px #111b;
 }
