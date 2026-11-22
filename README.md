@@ -1,11 +1,11 @@
 # codejam16: Keep Signing and Nobody Explodes
 
-Source code for CodeJam 16. Keep Signing and Nobody Explodes is a two-player bomb-defusal game for ASL vocabulary practice. The game recognizes single signs. It does not translate ASL.
+Source code for CodeJam 16. Keep Signing and Nobody Explodes is a two-player bomb-defusal game for ASL vocabulary practice.
 
 - The **field agent** (the defuser) is on site with the bomb and signs what they see.
 - The **HQ handler** (the expert) sees only the field manual and tells the agent what to do.
 
-They talk only through a silent video link, so the agent signs. The name is a play on words: the players move their hands instead of talking. The code name is `ksne`. The Python code sits directly in `src/`.
+They talk only through a silent video link, so the agent signs. The name is a play on words: the players move their hands instead of talking. 
 
 **Play it online:** https://keep-signing-and-nobody-explodes.onrender.com. Open it in two browsers with cameras, or click **Play solo** to play with the bot handler, Rob.
 
