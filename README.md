@@ -9,8 +9,6 @@ They talk only through a silent video link, so the agent signs. The name is a pl
 
 **Play it online:** https://keep-signing-and-nobody-explodes.onrender.com. Open it in two browsers with cameras, or click **Play solo** to play with the bot handler, Rob.
 
-For now, the defuser types each sign. Webcam sign recognition and the LLM alien come later. The full spec is in `CLAUDE.md`.
-
 ## Set up
 
 1. Install [uv](https://docs.astral.sh/uv/).
