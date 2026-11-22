@@ -20,7 +20,7 @@ import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
-import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
+import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile, saveRoundXp } from "./progress.js";
 import { renderInit } from "./init.js";
 import { playClockTick, playStrike, playSuccess, playVictory, unlockAudio, wireControlSounds } from "./sfx.js";
 import { launchConfetti } from "./confetti.js";
@@ -30,6 +30,7 @@ let activeScreen = "home";
 let lobbyCamera = true;
 const DETONATION_MS = 1500;
 let detonationTimer = null;
+let lastRoundXp = null;  // {round_id, before, after}: the end card shows the level change
 
 async function boot() {
   unlockAudio();
@@ -151,6 +152,10 @@ function connect(c, profile) {
     } else if (m.type === "state") {
       const credits = savePracticeCredits(profile, m.practice_credits ?? []);
       if (credits.length) send({ type: "practice_saved", credits });
+      // The round's credits are saved above, so `before` is the total just before the end bonus.
+      if (m.round_xp && profile && lastRoundXp?.round_id !== m.round_xp.round_id) {
+        lastRoundXp = { round_id: m.round_xp.round_id, ...saveRoundXp(profile, m.round_xp) };
+      }
       setConnecting(false);
       onState(m);
     } else if (m.type === "rtc") onRtc(m.data);

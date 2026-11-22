@@ -1,10 +1,12 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 import { $, el } from "./core.js";
+import { levelFor, SIGN_XP } from "./xp_levels.js";
 
-const PRACTICE_TARGET_POINTS = 50;
 const PROFILE_PREFIX = "ep:profile:";
 const SELECTED_PROFILE_KEY = "ep:selected-profile";
 const CREDIT_PREFIX = "ep:practice-credit:";
+// One key per finished round: its XP minus the sign part, which the credits already count.
+const ROUND_XP_PREFIX = "ep:round-xp:";
 const LEGACY_WORDS_KEY = "ep:approved-words";
 const picker = $("#profile");
 const nameInput = $("#name");
@@ -64,7 +66,7 @@ export function bindProfiles() {
   };
   window.addEventListener("storage", ({ key }) => {
     if (!key || key.startsWith(PROFILE_PREFIX)) renderPicker();
-    if (!key || key.startsWith(CREDIT_PREFIX)) renderProgress();
+    if (!key || key.startsWith(CREDIT_PREFIX) || key.startsWith(ROUND_XP_PREFIX)) renderProgress();
   });
   return legacyProfile;
 }
@@ -91,23 +93,46 @@ export function moveProgress(screen) {
   }
 }
 
-export function practiceSummary(points) {
-  const percent = Math.min(100, points * 100 / PRACTICE_TARGET_POINTS);
-  const level = percent < 20 ? "Beginner" : percent < 40 ? "Developing"
-    : percent < 60 ? "Practiced" : percent < 80 ? "Skilled" : "Accomplished";
-  return { percent, label: `${Math.floor(percent)}% · ${level}` };
-}
-
 function creditPrefix(profile) {
   return `${CREDIT_PREFIX}${profile.id}:`;
+}
+
+function roundPrefix(profile) {
+  return `${ROUND_XP_PREFIX}${profile.id}:`;
+}
+
+/** Sign XP from the saved credits plus every saved round. Old credits count, so no player starts at zero. */
+export function totalXp(profile) {
+  let xp = 0;
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith(creditPrefix(profile))) xp += SIGN_XP;
+    else if (key.startsWith(roundPrefix(profile))) xp += Math.max(0, Number(localStorage.getItem(key)) || 0);
+  }
+  return xp;
+}
+
+/** Saves one round's XP (state.round_xp) once. A reload sends the same round again: same key, same value. */
+export function saveRoundXp(profile, round) {
+  const after = totalXp(profile);
+  const key = roundPrefix(profile) + round.round_id;
+  const value = Math.max(0, round.total - round.signs_xp);
+  if (localStorage.getItem(key) !== null) return { before: after - value, after, saved: false };
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    return { before: after, after, saved: false };
+  }
+  if (profile.id === activeProfile?.id) renderProgress();
+  return { before: after, after: after + value, saved: true };
 }
 
 function renderProgress() {
   panel.classList.toggle("hidden", !activeProfile);
   if (!activeProfile) return;
-  const points = Object.keys(localStorage).filter((key) => key.startsWith(creditPrefix(activeProfile))).length;
-  const { percent, label } = practiceSummary(points);
-  $("#practice-progress-bar").value = percent;
+  const { level, title, into, need } = levelFor(totalXp(activeProfile));
+  const label = `Level ${level} · ${title} · ${into} / ${need} XP`;
+  $("#practice-progress-bar").max = need;
+  $("#practice-progress-bar").value = into;
   const text = $("#practice-progress-text");
   if (text.textContent !== label) text.textContent = label;
 }
