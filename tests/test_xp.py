@@ -80,3 +80,24 @@ def test_again_clears_round_xp():
     a.send_json({"type": "again"})
     assert "round_xp" not in _drain(a, lambda s: s["phase"] == "lobby")
     a.__exit__(None, None, None)
+
+
+def test_two_players_each_get_round_xp():
+    from test_server import _start_game
+    code, a, b, sa, sb = _start_game()  # the gates are open: the handler signed the code, the agent the colors
+    room = server.rooms[code]
+    for i, m in enumerate(room.modules):
+        a.send_json({"type": "signs", "glosses": [m.widget.items(m.facts)[0]]})
+        b.send_json({"type": "say", "text": f"Module {i + 1}: do it."})
+        _drain(b, lambda s, i=i: s["chat"][-1].get("text") == f"Module {i + 1}: do it.")
+        _solve_module(a, i, m)
+        sa = _drain(a, lambda s, i=i: s["progress"]["defused"] == i + 1)
+    sb = _drain(b, lambda s: s["phase"] == "escaped")
+    modules = len(room.modules)
+    lock, tray = len(room.mission.code), len(room.mission.colors)
+    assert f"Signs confirmed ({tray + modules})" in _labels(sa)
+    assert f"Signs confirmed ({lock + modules})" in _labels(sb)
+    for s in (sa, sb):
+        assert "Bomb defused" in _labels(s) and f"Modules defused ({modules})" in _labels(s)
+    a.__exit__(None, None, None)
+    b.__exit__(None, None, None)

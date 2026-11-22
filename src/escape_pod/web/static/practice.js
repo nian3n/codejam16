@@ -3,7 +3,8 @@ import { $, el, wordOf } from "./core.js";
 import { cameraError, cameraUnavailable, openCamera, stopCamera } from "./camera.js";
 import { drawLandmarks } from "./landmark_overlay.js";
 import { packLandmarks as packedLandmarks, startTracker, track, trackerLoaded } from "./tracker.js";
-import { approvedWordsKey, currentProfile, newPracticeId, savePracticeCredits } from "./progress.js";
+import { approvedWordsKey, currentProfile, savePracticeCredits } from "./progress.js";
+import { practiceCredit } from "./xp_store.js";
 
 const CAPTURE_MS = 2_500;
 const MAX_FRAMES = 75;
@@ -214,7 +215,6 @@ async function captureSign() {
   const session = camera;
   const target = word.value;
   const profile = practiceProfile;
-  const captureId = newPracticeId();
   const { abort } = session;
   const frames = [];
   captureButton.disabled = word.disabled = true;
@@ -248,7 +248,7 @@ async function captureSign() {
     result.classList.toggle("approved", score.approved);
     result.classList.remove("hidden");
     if (score.approved) {
-      savePracticeCredits(profile, [`${captureId}:0`]);
+      savePracticeCredits(profile, [practiceCredit(target)]);  // once per word: no XP from repeats
       approved.add(target);
       saveProgress();
       const remaining = renderWords(target);

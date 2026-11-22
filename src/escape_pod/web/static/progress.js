@@ -1,12 +1,10 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 import { $, el } from "./core.js";
-import { levelFor, SIGN_XP } from "./xp_levels.js";
+import { levelFor } from "./xp_levels.js";
+import * as xpStore from "./xp_store.js";
 
 const PROFILE_PREFIX = "ep:profile:";
 const SELECTED_PROFILE_KEY = "ep:selected-profile";
-const CREDIT_PREFIX = "ep:practice-credit:";
-// One key per finished round: its XP minus the sign part, which the credits already count.
-const ROUND_XP_PREFIX = "ep:round-xp:";
 const LEGACY_WORDS_KEY = "ep:approved-words";
 const picker = $("#profile");
 const nameInput = $("#name");
@@ -66,7 +64,7 @@ export function bindProfiles() {
   };
   window.addEventListener("storage", ({ key }) => {
     if (!key || key.startsWith(PROFILE_PREFIX)) renderPicker();
-    if (!key || key.startsWith(CREDIT_PREFIX) || key.startsWith(ROUND_XP_PREFIX)) renderProgress();
+    if (!key || xpStore.isXpKey(key)) renderProgress();
   });
   return legacyProfile;
 }
@@ -93,37 +91,15 @@ export function moveProgress(screen) {
   }
 }
 
-function creditPrefix(profile) {
-  return `${CREDIT_PREFIX}${profile.id}:`;
-}
-
-function roundPrefix(profile) {
-  return `${ROUND_XP_PREFIX}${profile.id}:`;
-}
-
-/** Sign XP from the saved credits plus every saved round. Old credits count, so no player starts at zero. */
+/** This profile's XP total (xp_store.js). */
 export function totalXp(profile) {
-  let xp = 0;
-  for (const key of Object.keys(localStorage)) {
-    if (key.startsWith(creditPrefix(profile))) xp += SIGN_XP;
-    else if (key.startsWith(roundPrefix(profile))) xp += Math.max(0, Number(localStorage.getItem(key)) || 0);
-  }
-  return xp;
+  return xpStore.totalXp(localStorage, profile.id);
 }
 
-/** Saves one round's XP (state.round_xp) once. A reload sends the same round again: same key, same value. */
 export function saveRoundXp(profile, round) {
-  const after = totalXp(profile);
-  const key = roundPrefix(profile) + round.round_id;
-  const value = Math.max(0, round.total - round.signs_xp);
-  if (localStorage.getItem(key) !== null) return { before: after - value, after, saved: false };
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    return { before: after, after, saved: false };
-  }
-  if (profile.id === activeProfile?.id) renderProgress();
-  return { before: after, after: after + value, saved: true };
+  const result = xpStore.saveRoundXp(localStorage, profile.id, round);
+  if (result.saved && profile.id === activeProfile?.id) renderProgress();
+  return result;
 }
 
 function renderProgress() {
@@ -138,16 +114,7 @@ function renderProgress() {
 }
 
 export function savePracticeCredits(profile, credits) {
-  const saved = [];
-  for (const credit of credits) {
-    try {
-      // Independent keys let two tabs save different clues, and replaying a clue writes the same key.
-      localStorage.setItem(creditPrefix(profile) + credit, "1");
-      saved.push(credit);
-    } catch {
-      break;
-    }
-  }
+  const saved = xpStore.saveCredits(localStorage, profile.id, credits);
   if (saved.length && profile.id === activeProfile?.id) renderProgress();
   return saved;
 }
