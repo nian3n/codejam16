@@ -2,6 +2,7 @@
 import { $, el } from "./core.js";
 import { levelFor } from "./xp_levels.js";
 import * as xpStore from "./xp_store.js";
+import { renderXpHistory } from "./xp_chart.js";
 
 const PROFILE_PREFIX = "ep:profile:";
 const SELECTED_PROFILE_KEY = "ep:selected-profile";
@@ -111,6 +112,7 @@ function renderProgress() {
   $("#practice-progress-bar").value = into;
   const text = $("#practice-progress-text");
   if (text.textContent !== label) text.textContent = label;
+  renderXpHistory($("#xp-history"), xpStore.history(localStorage, activeProfile.id));
 }
 
 export function savePracticeCredits(profile, credits) {
