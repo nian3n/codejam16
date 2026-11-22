@@ -79,3 +79,53 @@ def test_a_practice_word_counts_once():
       S.saveCredits(mem, "p1", [S.practiceCredit("dog")]);
       return S.totalXp(mem, "p1");''')
     assert got == 10
+
+
+WIN = '{ label: "Bomb defused", xp: 50 }'
+
+
+def _round(rid: str, total: int, signs: int, won: bool) -> str:
+    parts = f"[{WIN}]" if won else "[]"
+    return f'{{ round_id: "{rid}", total: {total}, signs_xp: {signs}, parts: {parts} }}'
+
+
+def test_history_orders_rounds_by_time():
+    got = _store(f'''
+      S.saveRoundXp(mem, "p", {_round("b", 200, 0, True)}, 2000);
+      S.saveRoundXp(mem, "p", {_round("a", 60, 0, False)}, 1000);
+      return [S.history(mem, "p"), S.totalXp(mem, "p")];''')
+    hist, total = got
+    assert hist["start"] == 0
+    assert hist["rounds"] == [{"at": 1000, "gain": 60, "total": 60, "won": False},
+                              {"at": 2000, "gain": 200, "total": 260, "won": True}]
+    assert total == 260
+
+
+def test_history_mixes_old_and_new_rounds():
+    got = _store(f'''
+      mem.setItem("ep:round-xp:p:old", "100");             // a round saved before the history
+      S.saveCredits(mem, "p", ["r1:0", "r1:1"]);           // the new round's 2 sign credits (10 XP)
+      S.saveRoundXp(mem, "p", {_round("r1", 70, 10, True)}, 5000);
+      return [S.history(mem, "p"), S.totalXp(mem, "p")];''')
+    hist, total = got
+    assert total == 100 + 10 + 60
+    assert hist["start"] == 100 and hist["rounds"][-1]["total"] == total and hist["rounds"][0]["gain"] == 70
+
+
+def test_history_keeps_the_last_30():
+    got = _store(f'''
+      for (let i = 0; i < 35; i++) S.saveRoundXp(mem, "p", {{ round_id: "r" + i, total: 10, signs_xp: 0, parts: [] }}, 1000 + i);
+      return [S.history(mem, "p"), S.totalXp(mem, "p")];''')
+    hist, total = got
+    assert len(hist["rounds"]) == 30 and hist["start"] == 50
+    assert hist["rounds"][0]["at"] == 1005 and hist["rounds"][-1]["total"] == total == 350
+
+
+def test_corrupt_round_counts_as_zero():
+    got = _store('''mem.setItem("ep:round-xp:p:x", "{oops"); mem.setItem("ep:round-xp:p:y", "abc");
+      return [S.totalXp(mem, "p"), S.history(mem, "p")];''')
+    assert got == [0, {"start": 0, "rounds": []}]
+
+
+def test_empty_profile_has_no_rounds():
+    assert _store('return S.history(mem, "nobody");') == {"start": 0, "rounds": []}

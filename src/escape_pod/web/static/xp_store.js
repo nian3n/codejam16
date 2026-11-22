@@ -18,16 +18,47 @@ function keys(storage) {
   return out;
 }
 
+/** A saved round: JSON {xp, signs, won, at}, or a bare number from before the history (no time). */
+function readRound(raw) {
+  if (raw === null) return null;
+  const n = Number(raw);
+  if (raw.trim() !== "" && Number.isFinite(n)) return { xp: Math.max(0, n), signs: 0, won: false, at: null };
+  try {
+    const r = JSON.parse(raw);
+    const xp = Math.max(0, Number(r.xp) || 0);
+    return { xp, signs: Math.max(0, Number(r.signs) || 0), won: !!r.won, at: Number.isFinite(r.at) ? r.at : null };
+  } catch {
+    return { xp: 0, signs: 0, won: false, at: null };  // a damaged value counts as nothing
+  }
+}
+
+function savedRounds(storage, profileId) {
+  const prefix = `${ROUND_XP_PREFIX}${profileId}:`;
+  return keys(storage).filter((key) => key.startsWith(prefix)).map((key) => readRound(storage.getItem(key)));
+}
+
 /** Sign XP from the saved credits plus every saved round. Old credits count, so no player starts at zero. */
 export function totalXp(storage, profileId) {
   const credits = `${CREDIT_PREFIX}${profileId}:`;
-  const rounds = `${ROUND_XP_PREFIX}${profileId}:`;
-  let xp = 0;
-  for (const key of keys(storage)) {
-    if (key.startsWith(credits)) xp += SIGN_XP;
-    else if (key.startsWith(rounds)) xp += Math.max(0, Number(storage.getItem(key)) || 0);
-  }
-  return xp;
+  const signs = keys(storage).filter((key) => key.startsWith(credits)).length * SIGN_XP;
+  return signs + savedRounds(storage, profileId).reduce((sum, r) => sum + r.xp, 0);
+}
+
+/**
+ * The XP total over time: a start point ("earlier progress": rounds without a time, practice
+ * credits, rounds past the limit) plus one point per timed round, oldest first. The last point
+ * is the current total. A round's gain includes its signs, whose credits are saved separately.
+ */
+export function history(storage, profileId, limit = 30) {
+  const timed = savedRounds(storage, profileId).filter((r) => r.at !== null).sort((a, b) => a.at - b.at).slice(-limit);
+  const total = totalXp(storage, profileId);
+  let running = Math.max(0, total - timed.reduce((sum, r) => sum + r.xp + r.signs, 0));
+  const start = running;
+  const rounds = timed.map((r) => {
+    running += r.xp + r.signs;
+    return { at: r.at, gain: r.xp + r.signs, total: running, won: r.won };
+  });
+  return { start, rounds };
 }
 
 /** Saves credits. Each is its own key, so two tabs never clash, and a replayed credit writes the same key. */
@@ -45,13 +76,14 @@ export function saveCredits(storage, profileId, credits) {
 }
 
 /** Saves one round's XP (state.round_xp) once. A reload sends the same round again: same key, no change. */
-export function saveRoundXp(storage, profileId, round) {
+export function saveRoundXp(storage, profileId, round, now = Date.now()) {
   const after = totalXp(storage, profileId);
   const key = `${ROUND_XP_PREFIX}${profileId}:${round.round_id}`;
   const value = Math.max(0, round.total - round.signs_xp);
   if (storage.getItem(key) !== null) return { before: after - value, after, saved: false };
+  const won = (round.parts ?? []).some((p) => p.label === "Bomb defused");
   try {
-    storage.setItem(key, String(value));
+    storage.setItem(key, JSON.stringify({ xp: value, signs: Math.max(0, round.signs_xp), won, at: now }));
   } catch {
     return { before: after, after, saved: false };
   }
