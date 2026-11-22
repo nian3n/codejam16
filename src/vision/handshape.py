@@ -19,8 +19,8 @@ from pathlib import Path
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.vision.landmarks import LEFT, RIGHT
+import config
+from vision.landmarks import LEFT, RIGHT
 
 DIGITS = tuple("0123456789")
 WRIST, MIDDLE_MCP = 0, 9

@@ -4,9 +4,9 @@ import random
 
 import pytest
 
-from escape_pod.brain.hq_bot import BOT_NAME, HqBot
-from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
-from escape_pod.puzzles.phrase import phrase
+from brain.hq_bot import BOT_NAME, HqBot
+from puzzles.engine import WIDGETS, Module, load_pool
+from puzzles.phrase import phrase
 
 POOL = load_pool()
 

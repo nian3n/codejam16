@@ -8,8 +8,8 @@ helpers, so the manual and the answer key never disagree on wording.
 """
 from __future__ import annotations
 
-from escape_pod.puzzles.engine import WIDGETS, Module
-from escape_pod.puzzles.models import Action, PuzzleSpec
+from puzzles.engine import WIDGETS, Module
+from puzzles.models import Action, PuzzleSpec
 
 POSITIONS = ("first", "last")
 

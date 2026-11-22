@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-# Code and the data the game loads at runtime live in the package (src/escape_pod/).
+# Code and the data the game loads at runtime live in src/.
 # Things people read or keep private live at the repo root (docs/, etc/).
 PACKAGE_DIR = Path(__file__).resolve().parent
-ROOT = PACKAGE_DIR.parent.parent
+ROOT = PACKAGE_DIR.parent
 PUZZLE_DIR = PACKAGE_DIR / "puzzles" / "data"
 ICONS_FILE = PACKAGE_DIR / "assets" / "icons.json"
 STATIC_DIR = PACKAGE_DIR / "web" / "static"

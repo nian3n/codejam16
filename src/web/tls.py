@@ -3,7 +3,7 @@
 
 Browsers allow getUserMedia (the camera) only on https:// or http://localhost. A
 second laptop opens http://<your-ip>:8000, which is neither, so its camera is blocked.
-`uv run escape-pod --host 0.0.0.0 --https` serves the game over HTTPS with a
+`uv run ksne --host 0.0.0.0 --https` serves the game over HTTPS with a
 certificate made here. Each browser shows a warning once ("Advanced" -> "Proceed").
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ import datetime
 import ipaddress
 import socket
 
-from escape_pod import config
+import config
 
 
 def lan_ips() -> list[str]:

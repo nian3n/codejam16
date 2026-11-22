@@ -103,7 +103,7 @@ The strike and defuse events name a module number, but the bot does not know whi
 
 ## Where it lives
 
-- **`src/escape_pod/brain/hq_bot.py` (new, Teammate 4).** A pure class `HqBot` with no I/O: `reply(glosses: list[str]) -> str` and a `stage` property ("module" or "details"). It holds the open page and the facts so far. It uses `load_pool()`, `Module` and `phrase()`. Tests call it directly.
+- **`src/brain/hq_bot.py` (new, Teammate 4).** A pure class `HqBot` with no I/O: `reply(glosses: list[str]) -> str` and a `stage` property ("module" or "details"). It holds the open page and the facts so far. It uses `load_pool()`, `Module` and `phrase()`. Tests call it directly.
 - **`web/server.py`.** `Room` gets `solo: bool` and `bot: HqBot | None`. In a solo room:
   - The bot is not an entry in `room.players`. This keeps the WebRTC code from waiting for a second player.
   - The one human is the defuser. `can_start()` needs only the defuser.

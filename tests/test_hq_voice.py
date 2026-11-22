@@ -3,8 +3,8 @@ import random
 
 import pytest
 
-from escape_pod.brain.hq_bot import BOT_NAME
-from escape_pod.brain.hq_voice import CALM, PANIC, SHAKY, mood, nervous
+from brain.hq_bot import BOT_NAME
+from brain.hq_voice import CALM, PANIC, SHAKY, mood, nervous
 
 LINES = [
     f"{BOT_NAME} here. Which module do you need help with? Tell me one thing you see on it.",

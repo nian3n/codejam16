@@ -5,7 +5,7 @@ You help a team of 4 build a hackathon game. In the game, two players practice *
 - **Change, November 2026:** the game is now a **two-player web app**. The earlier version was a pygame window with one player and an LLM alien. That version is gone. The LLM alien comes back in a later phase (§8).
 - Build in the milestone order in §15. Keep the game runnable at every milestone. Keep `uv run pytest` passing.
 - Each teammate owns an area (§14). Unless told otherwise, ask which teammate you help. Then edit only that area's files.
-- Shared files change only with a heads-up to the team. Add fields, never rename them. The shared files are `src/escape_pod/config.py`, `src/escape_pod/puzzles/models.py`, `src/escape_pod/signs/vocab.json` and the WebSocket messages in §4.2.
+- Shared files change only with a heads-up to the team. Add fields, never rename them. The shared files are `src/config.py`, `src/puzzles/models.py`, `src/signs/vocab.json` and the WebSocket messages in §4.2.
 - Every source file starts with a `# Owner: Teammate N (Area)` line, or `// Owner: ...` in JavaScript.
 - If something here is ambiguous, pick the simplest option that keeps the interfaces in §4. Note it in a code comment, and tell the human.
 - Never put API keys in code or in git. They go in `etc/.env` (§12).
@@ -85,7 +85,7 @@ etc/                        secrets. Git ignores everything here except .env.exa
 docs/
   manual/                   generated manual pages (uv run build-manual), committed
 tests/                      pytest tests
-src/escape_pod/
+src/
   config.py                 shared: paths, levels, limits, loads etc/.env
   puzzles/                  T4
     models.py               Action, Rule, PuzzleSpec (shared)
@@ -115,7 +115,7 @@ models/                     downloaded or trained models, git-ignored
 logs/                       session logs, git-ignored
 ```
 
-Rule of thumb: Python code and the data that the game loads go in `src/escape_pod/`. Files that people read go in `docs/`. Secrets go in `etc/`.
+Rule of thumb: Python code and the data that the game loads go in `src/`. Files that people read go in `docs/`. Secrets go in `etc/`.
 
 ---
 
@@ -124,7 +124,7 @@ Rule of thumb: Python code and the data that the game loads go in `src/escape_po
 ### 4.1 Python
 
 ```python
-# escape_pod.puzzles.engine
+# puzzles.engine
 def load_pool() -> dict[str, PuzzleSpec]: ...
 def draw(rng: random.Random, level: Level, weak_topics: set[str] = frozenset()) -> list[Module]: ...
 
@@ -137,11 +137,11 @@ class Module:
     def apply(self, action: Action) -> str: ...   # one click: "step", "defused" or "strike" (the server uses this)
     def fired_rule(self) -> int: ...           # index of the rule that fires
 
-# escape_pod.puzzles.phrase
+# puzzles.phrase
 def phrase(action: Action, module: Module | None = None, spec: PuzzleSpec | None = None) -> str: ...
 #   with module: "Press the cow."   without: "Press the last button." (manual wording)
 
-# escape_pod.manual
+# manual
 def build.all_pages() -> list[dict]: ...      # what /api/manual serves
 def solve.sheet_markdown(modules) -> str: ... # answer key
 
@@ -203,7 +203,7 @@ HTTP: `GET /api/manual`, `GET /api/icons`, `POST /api/rooms` → `{"code"}`, `GE
 ### 4.3 Shared models
 
 ```python
-# escape_pod.puzzles.models
+# puzzles.models
 @dataclass(frozen=True)
 class Action:
     verb: str            # see the widget table in §5.2
@@ -221,7 +221,7 @@ class PuzzleSpec(BaseModel):
     setup: dict                      # {"shown": 4}
     rules: list[Rule]                # last rule must be an "else"
 
-# escape_pod.brain.models (phase 2)
+# brain.models (phase 2)
 class Answer(BaseModel):
     page_id: str
     facts: dict
@@ -243,7 +243,7 @@ class Verdict(BaseModel):
 
 ### 5.1 The pool: 19 puzzles, 19 topics
 
-All 19 puzzles exist in `src/escape_pod/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map. In November 2026, the `senses` puzzle replaced the `alphabet` (fingerspelling) puzzle. Later that month, the `numbers` keypad puzzle left the pool: when a bomb had a keypad, the digits in the allowed words pulled the scores away from the other modules' signs. The digits are now signed only at the case lock (§4.2), with the digit model alone. The keypad widget code stays, and its tests use the old puzzle file in `tests/fixtures/numbers.json`. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
+All 19 puzzles exist in `src/puzzles/data/`. Every word is one of the 250 glosses in the sign model's label map. In November 2026, the `senses` puzzle replaced the `alphabet` (fingerspelling) puzzle. Later that month, the `numbers` keypad puzzle left the pool: when a bomb had a keypad, the digits in the allowed words pulled the scores away from the other modules' signs. The digits are now signed only at the case lock (§4.2), with the digit model alone. The keypad widget code stays, and its tests use the old puzzle file in `tests/fixtures/numbers.json`. Gloss spellings follow the label map (for example `icecream`, `frenchfries`, `tv`). **Nobody has checked the pools against `sign_to_prediction_index_map.json` yet.** Do that when the model is downloaded.
 
 | id | Topic | Widget | Pool (glosses) |
 |---|---|---|---|
@@ -326,7 +326,7 @@ The Python side of a widget (`puzzles/engine.py`) has the logic hooks: `generate
 
 ### 6.0 Decision: where recognition runs
 
-**Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/escape_pod/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
+**Split.** The browser runs MediaPipe (`static/tracker_worker.js`, a Web Worker) and sends only landmarks to the server. The Python server runs the word model (`src/vision/`, `POST /api/practice/guess`). No video frame leaves the laptop, so rule 8 holds.
 
 **In the game:** `static/game_signs.js` reads frames from the camera that the video call already opened (`rtc.js` `localCameraVideo()`). It uses the sequence capture (§6.2). Each clip goes to `/api/practice/guess?words=<this bomb's words>`. Each clip becomes a chip with the top 3 guesses. The agent picks the right guess or deletes the chip, then presses "Send to <handler name>". That press confirms the signs (rule 4). At the case lock, the allowed words are digits only, and the server reads them with the digit model alone (§6.4). The game has no typed fallback: the team removed it in November 2026. Signs come from the camera only.
 
@@ -480,7 +480,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 `HOME → LOBBY → GAME → END → LOBBY`
 
-- **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`, and the package name `escape_pod`.
+- **Theme:** a tactical bomb operation. The field agent is on site with the bomb. The handler is far away with the field manual. The only link is a silent video channel. The look is a dark concrete room, a red alarm light, hazard stripes and monospace mission text. The design is in `docs/superpowers/specs/2026-11-21-tactical-theme-design.md`. The code keeps the role values `defuser` and `expert`. The code name is `ksne`: the project, the server command and the Docker image. The Python code sits directly in `src/`, with no package folder, so imports are bare (`import config`, `from web import server`).
 - **Home:** the player types a name, then creates a room or types a 4-letter code to join one. **Play solo** makes a solo room (§4.2). The bot is named Rob (`hq_bot.BOT_NAME`, sent as `bot_name` in the state). Its lobby shows the level picker, Start and the player's own camera, so they can frame their hands. The game also shows the own camera full size. Above the sign chips, a line shows the bot's template: "I need help with:" (name a module with one item) or "My answer:" (the answer to the bot's question). **Practice signs solo** opens solo practice (`practice.js`, `web/practice.py`): pick a game word, watch its glossary clip, sign it, and see the model's confidence. Approved words keep a ✓ in the list. The progress lives in this browser only, and "Reset progress" clears it. The browser runs MediaPipe and sends only landmarks to `POST /api/practice/score`. An invite link `/?room=CODE` fills in the code.
 - **Lobby:** the room code, a "Copy invite link" button, two role cards (Defuser, Expert), the level picker and Start. Start works only when two players are in the room and each has a role (in a solo room, at once). No hint line sits under Start. A solo lobby shows no room code and no invite link. "Leave room" goes back to the home screen. A note tells the other player who joined or left.
 - **Video (lobby and game):** when two players are in the room, each sees the other's live video, with a small mirrored self-view in the corner. The other player's video is not mirrored, so the signs read as they do face to face. "Camera off" sends black frames. In the lobby, the video sits under the role cards. In the game, it sits at the top of the side panel.
@@ -496,7 +496,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 ## 11. Sign vocabulary and media (Teammate 2)
 
-`src/escape_pod/signs/vocab.json` lists every gloss the game uses:
+`src/signs/vocab.json` lists every gloss the game uses:
 
 ```json
 {
@@ -518,7 +518,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 ## 12. Config, commands and secrets
 
-`src/escape_pod/config.py` holds the paths, `LEVELS`, `MAX_STRIKES` and `LLM_API_KEY_ENV`. Later fields: `HELP_COSTS_S`, `SIGN_BONUS_S`, segmenter thresholds, `MIRROR_INPUT`, `LEFT_HANDED`, `RETRIEVAL_MIN_SCORE`, `RETRIEVAL_MARGIN`, `EMBED_MODEL`, `LLM_MODEL`.
+`src/config.py` holds the paths, `LEVELS`, `MAX_STRIKES` and `LLM_API_KEY_ENV`. Later fields: `HELP_COSTS_S`, `SIGN_BONUS_S`, segmenter thresholds, `MIRROR_INPUT`, `LEFT_HANDED`, `RETRIEVAL_MIN_SCORE`, `RETRIEVAL_MARGIN`, `EMBED_MODEL`, `LLM_MODEL`.
 
 **Secrets:** copy `etc/.env.example` to `etc/.env` and fill it in. `config.py` loads `etc/.env` at import. A real environment variable wins over the file. Git ignores everything in `etc/` except `.env.example`. On Render, set the same variables in the service's Environment tab.
 
@@ -531,7 +531,7 @@ The expert's manual already highlights the pages that contain the signed words (
 
 ```
 uv sync                                   # install everything (first time, and after a pull)
-uv run escape-pod [--host 0.0.0.0] [--port 8000] [--debug]
+uv run ksne [--host 0.0.0.0] [--port 8000] [--debug]
 uv run build-manual                       # rebuild docs/manual/ after a rule change
 uv run answer-key --seed 7 --level intermediate
 uv run pytest
@@ -567,10 +567,10 @@ Later tests for T3: `to_array` returns `(543, 3)` with NaN blocks in the order i
 
 | Teammate | Area | Owns |
 |---|---|---|
-| 1 | Web app, screens, widgets | `src/escape_pod/web/` (server and client), `src/escape_pod/assets/` |
-| 2 | Sign vocabulary and media | `src/escape_pod/signs/`, the signer recording session, sound effects and music |
+| 1 | Web app, screens, widgets | `src/web/` (server and client), `src/assets/` |
+| 2 | Sign vocabulary and media | `src/signs/`, the signer recording session, sound effects and music |
 | 3 | Vision and retrieval | the recognizer (§6.0 decides the folder), `brain/retriever.py`, `tools/download_models.py`, `tools/record_samples.py`, `tools/train_handshape.py`, `tools/eval_*.py` |
-| 4 | Puzzles, manuals and brain | `src/escape_pod/puzzles/`, `src/escape_pod/manual/`, `docs/manual/`, `brain/` (except the retriever), `tools/check_puzzles.py` |
+| 4 | Puzzles, manuals and brain | `src/puzzles/`, `src/manual/`, `docs/manual/`, `brain/` (except the retriever), `tools/check_puzzles.py` |
 
 Shared: `config.py`, `puzzles/models.py`, `signs/vocab.json`, the WebSocket messages (§4.2), `pyproject.toml`. Anybody can edit a puzzle file, but tell Teammate 4 and run `uv run build-manual`.
 

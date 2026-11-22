@@ -11,8 +11,8 @@ from collections import deque
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.vision.landmarks import LEFT, POSE, RIGHT
+import config
+from vision.landmarks import LEFT, POSE, RIGHT
 
 HIP_ROWS = (POSE.start + 23, POSE.start + 24)
 NO_HIPS_WAIST_Y = 0.95   # hips are often off-screen at a desk: then "above the waist" = on screen

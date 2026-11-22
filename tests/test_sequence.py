@@ -10,7 +10,7 @@ import subprocess
 
 import pytest
 
-from escape_pod import config
+import config
 
 NODE = shutil.which("node")
 pytestmark = pytest.mark.skipif(NODE is None, reason="Node.js is not installed")

@@ -12,9 +12,9 @@ from __future__ import annotations
 import argparse
 import random
 
-from escape_pod import config
-from escape_pod.puzzles.engine import Module, cond_holds, draw
-from escape_pod.puzzles.phrase import condition, phrase, word
+import config
+from puzzles.engine import Module, cond_holds, draw
+from puzzles.phrase import condition, phrase, word
 
 
 def facts_text(m: Module) -> str:

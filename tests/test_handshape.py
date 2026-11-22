@@ -2,10 +2,10 @@
 """Digit model (spec §6.4): features, nearest neighbours, and routing in the recognizer."""
 import numpy as np
 
-from escape_pod.vision import handshape as hs
-from escape_pod.vision.handshape import DIGITS, HandshapeModel, features, features_from_hands
-from escape_pod.vision.landmarks import LEFT, RIGHT
-from escape_pod.vision.recognizer import rank_mixed
+from vision import handshape as hs
+from vision.handshape import DIGITS, HandshapeModel, features, features_from_hands
+from vision.landmarks import LEFT, RIGHT
+from vision.recognizer import rank_mixed
 
 RNG = np.random.default_rng(0)
 # One made-up "hand shape" per digit: 21 points around a wrist at 0 with a middle knuckle at (0, -1).
@@ -117,8 +117,8 @@ def test_digits_only_and_no_hand_seen():
 
 
 def test_train_digits_reads_recordings_scores_each_person_on_the_others_and_saves(tmp_path, monkeypatch, capsys):
-    from escape_pod import config
-    from escape_pod.vision import train_digits
+    import config
+    from vision import train_digits
 
     rng = np.random.default_rng(4)
     for person in ("ana", "ben"):
@@ -144,9 +144,9 @@ def test_train_digits_reads_recordings_scores_each_person_on_the_others_and_save
 
 
 def test_allowed_sets_by_level_use_only_game_words():
-    from escape_pod import config
-    from escape_pod.puzzles.engine import draw
-    from escape_pod.vision.recognizer import allowed_for, game_words
+    import config
+    from puzzles.engine import draw
+    from vision.recognizer import allowed_for, game_words
     import random
 
     words = game_words()

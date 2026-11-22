@@ -16,7 +16,7 @@
 
 ### Task 1: History data
 
-**Files:** modify `src/escape_pod/web/static/xp_store.js`, `src/escape_pod/web/static/app.js` (pass `won`). Test: `tests/test_xp_levels.py`.
+**Files:** modify `src/web/static/xp_store.js`, `src/web/static/app.js` (pass `won`). Test: `tests/test_xp_levels.py`.
 
 **Produces:** `saveRoundXp(storage, profileId, round, now = Date.now())` saving `{xp, signs, won, at}`, where `won` is true when a part is labeled "Bomb defused". `history(storage, profileId, limit = 30) -> {start: number, rounds: [{at, gain, total, won}]}`. `totalXp` reads both formats.
 
@@ -26,7 +26,7 @@
 
 ### Task 2: Lobby graph
 
-**Files:** create `src/escape_pod/web/static/xp_chart.js` (`renderXpHistory(box, hist)`). Modify `index.html` (`<div id="xp-history" class="xp-history"></div>` in the lobby card, after `.lobby-top`), `progress.js` (render the graph in `renderProgress` while the lobby shows), `style.css`.
+**Files:** create `src/web/static/xp_chart.js` (`renderXpHistory(box, hist)`). Modify `index.html` (`<div id="xp-history" class="xp-history"></div>` in the lobby card, after `.lobby-top`), `progress.js` (render the graph in `renderProgress` while the lobby shows), `style.css`.
 
 - [ ] Draw: a polyline of the totals, a dot per point with a `<title>` tooltip ("21 Nov · Defused · +183 XP"), dashed level lines with labels (`levelFor` thresholds), and the empty text.
 - [ ] Check in the browser: a new profile shows the empty text. After two solo rounds, the graph shows two points. A profile switch on the home screen changes the graph.

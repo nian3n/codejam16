@@ -29,9 +29,9 @@ from __future__ import annotations
 from collections import Counter
 from typing import Literal
 
-from escape_pod.puzzles.engine import ALPHA, ORDERS, WIDGETS, cond_holds, load_pool
-from escape_pod.puzzles.models import Action, PuzzleSpec
-from escape_pod.puzzles.phrase import phrase, word
+from puzzles.engine import ALPHA, ORDERS, WIDGETS, cond_holds, load_pool
+from puzzles.models import Action, PuzzleSpec
+from puzzles.phrase import phrase, word
 
 BOT_NAME = "Rob"  # the solo handler. Players found "HQ" unclear, so the bot has a name
 CORE = {"yes", "no", "finish"}

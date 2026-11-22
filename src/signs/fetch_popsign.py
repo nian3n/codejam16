@@ -27,9 +27,9 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from escape_pod.puzzles.engine import load_pool
+from puzzles.engine import load_pool
 
-from escape_pod import config
+import config
 
 CLIPS_DIR = config.SIGN_CLIPS_DIR
 INDEX_FILE = CLIPS_DIR / "index.json"

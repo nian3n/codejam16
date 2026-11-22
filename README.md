@@ -5,7 +5,7 @@ Source code for CodeJam 16. Keep Signing and Nobody Explodes is a two-player bom
 - The **field agent** (the defuser) is on site with the bomb and signs what they see.
 - The **HQ handler** (the expert) sees only the field manual and tells the agent what to do.
 
-They talk only through a silent video link, so the agent signs. The name is a play on words: the players move their hands instead of talking. The Python package keeps its old name, `escape_pod`.
+They talk only through a silent video link, so the agent signs. The name is a play on words: the players move their hands instead of talking. The code name is `ksne`. The Python code sits directly in `src/`.
 
 For now, the defuser types each sign. Webcam sign recognition and the LLM alien come later. The full spec is in `CLAUDE.md`.
 
@@ -17,7 +17,7 @@ For now, the defuser types each sign. Webcam sign recognition and the LLM alien 
 
 ## Run the game
 
-1. Start the server: `uv run escape-pod`
+1. Start the server: `uv run ksne`
 2. Open `http://localhost:8000` in two browser tabs, one for each player.
 3. In the first tab, type a name and click **Create a room**.
 4. In the second tab, type the 4-letter room code and click **Join**.
@@ -28,7 +28,7 @@ For now, the defuser types each sign. Webcam sign recognition and the LLM alien 
 
 Browsers allow the camera only on `localhost` or on HTTPS. For video between two laptops, use HTTPS:
 
-1. Start the server: `uv run escape-pod --host 0.0.0.0 --https`
+1. Start the server: `uv run ksne --host 0.0.0.0 --https`
 2. The server prints the address for the other players, for example `https://192.168.1.20:8000`.
 3. Each player opens that address. The browser shows a certificate warning, because the certificate is self-signed. Click **Advanced**, then **Continue**.
 
@@ -54,18 +54,18 @@ The TURN relay forwards the video only when the two browsers cannot connect dire
 If you set up Render with the **Python** runtime instead of the Blueprint, set these commands in the service settings. They install the TFLite runtime and download the sign model, which solo practice needs:
 
 - **Build command:** `pip install uv && uv sync --locked --no-dev --extra model && uv run --no-dev --extra model download-models`
-- **Start command:** `uv run --no-dev --extra model escape-pod --host 0.0.0.0`
+- **Start command:** `uv run --no-dev --extra model ksne --host 0.0.0.0`
 
-To test the image on your laptop: `docker build -t escape-pod .` and then `docker run -p 8000:8000 escape-pod`.
+To test the image on your laptop: `docker build -t ksne .` and then `docker run -p 8000:8000 ksne`.
 
-To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then click **Answer key (debug)** in the top bar.
+To see the answer key for a live bomb, run `uv run ksne --debug`. Then click **Answer key (debug)** in the top bar.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `uv sync` | installs the packages (first time, and after each pull) |
-| `uv run escape-pod` | starts the game server |
+| `uv run ksne` | starts the game server |
 | `uv sync --extra model` and `uv run download-models` | install the TFLite runtime and download the word model, for solo practice |
 | `uv run build-manual` | rebuilds `docs/manual/` after a rule change |
 | `uv run answer-key --seed 7` | prints the answer key for one bomb |
@@ -76,12 +76,12 @@ To see the answer key for a live bomb, run `uv run escape-pod --debug`. Then cli
 
 | Path | What it holds | Owner |
 |---|---|---|
-| `src/escape_pod/config.py` | paths, levels, limits. Loads `etc/.env` | shared |
-| `src/escape_pod/puzzles/` | the 20 puzzle files, the rule engine and the English wording | Teammate 4 |
-| `src/escape_pod/manual/` | the static manual builder and the answer-key builder | Teammate 4 |
-| `src/escape_pod/web/server.py` | rooms, roles and game state (FastAPI and WebSockets) | Teammate 1 |
-| `src/escape_pod/web/static/` | the browser client. One file per screen, one file per widget in `widgets/` | Teammate 1 |
-| `src/escape_pod/assets/` | `icons.json`: placeholder emoji for each word | Teammate 1 |
+| `src/config.py` | paths, levels, limits. Loads `etc/.env` | shared |
+| `src/puzzles/` | the 20 puzzle files, the rule engine and the English wording | Teammate 4 |
+| `src/manual/` | the static manual builder and the answer-key builder | Teammate 4 |
+| `src/web/server.py` | rooms, roles and game state (FastAPI and WebSockets) | Teammate 1 |
+| `src/web/static/` | the browser client. One file per screen, one file per widget in `widgets/` | Teammate 1 |
+| `src/assets/` | `icons.json`: placeholder emoji for each word | Teammate 1 |
 | `docs/manual/` | the generated manual pages (committed) | Teammate 4 |
 | `etc/` | secrets. Only `.env.example` is in git | everyone |
 | `tests/` | pytest tests | everyone |
@@ -98,7 +98,7 @@ The server needs the model for this: run `uv sync --extra model` and `uv run dow
 
 ## Sign clips for the glossary
 
-During a game, click **📖 Glossary** to see how to sign each word. The clips are in `src/escape_pod/signs/clips/`, about 30 KB each, and git keeps them. To fetch a clip for a new word, install `ffmpeg` and run:
+During a game, click **📖 Glossary** to see how to sign each word. The clips are in `src/signs/clips/`, about 30 KB each, and git keeps them. To fetch a clip for a new word, install `ffmpeg` and run:
 
 ```
 uv run fetch-signs            # every game word that has no clip yet

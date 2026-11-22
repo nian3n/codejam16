@@ -12,9 +12,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from escape_pod.vision.digit_mlp import DigitMLP
-from escape_pod.vision.handshape import DIGITS, HandshapeModel
-from escape_pod.vision.word_model import WordModel
+from vision.digit_mlp import DigitMLP
+from vision.handshape import DIGITS, HandshapeModel
+from vision.word_model import WordModel
 
 
 @dataclass
@@ -111,8 +111,8 @@ def game_words(model_glosses: set[str] | None = None) -> set[str]:
     accepts. Letter puzzles and pool words that the model does not know are left out.
     Pass the word model's glosses to check against them; None trusts the pools.
     """
-    from escape_pod import config
-    from escape_pod.puzzles.engine import load_pool
+    import config
+    from puzzles.engine import load_pool
 
     # Letter puzzles are skipped: the game reads digits, not fingerspelling.
     pools = [spec.pool for spec in load_pool().values() if spec.target_words != "letters"]
@@ -127,7 +127,7 @@ def allowed_for(level, module=None, modules=None, model_glosses: set[str] | None
     "all" means every game word, not all 250 model glosses: a shorter list is more
     accurate, and every sign the game accepts has a glossary clip.
     """
-    from escape_pod import config
+    import config
 
     core = set(config.CORE_SIGNS)
     if level.allowed_scope == "module" and module is not None:

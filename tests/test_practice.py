@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from escape_pod.vision.handshape import DIGITS
-from escape_pod.vision.landmarks import LEFT, N_POINTS
-from escape_pod.web import practice, server
+from vision.handshape import DIGITS
+from vision.landmarks import LEFT, N_POINTS
+from web import practice, server
 
 client = TestClient(server.app)
 

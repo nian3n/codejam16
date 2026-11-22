@@ -35,8 +35,8 @@
 ### Task 1: The bot (`HqBot`)
 
 **Files:**
-- Create: `src/escape_pod/brain/__init__.py` (Owner line only)
-- Create: `src/escape_pod/brain/hq_bot.py`
+- Create: `src/brain/__init__.py` (Owner line only)
+- Create: `src/brain/hq_bot.py`
 - Test: `tests/test_hq_bot.py`
 
 **Interfaces:**
@@ -145,9 +145,9 @@ def test_result_without_an_instruction_is_silent():
 
 - [ ] **Step 2: Run the tests and make sure they fail.**
 Run: `uv run pytest tests/test_hq_bot.py -q`
-Expected: FAIL with `ModuleNotFoundError: escape_pod.brain`.
+Expected: FAIL with `ModuleNotFoundError: brain`.
 
-- [ ] **Step 3: Implement `HqBot` in `src/escape_pod/brain/hq_bot.py`.** Follow the algorithm and the copy above. Put the per-widget questions, the `{items}` nouns and the fact builders in one dict keyed by widget, not in an if-chain. The engine keeps the fact keys.
+- [ ] **Step 3: Implement `HqBot` in `src/brain/hq_bot.py`.** Follow the algorithm and the copy above. Put the per-widget questions, the `{items}` nouns and the fact builders in one dict keyed by widget, not in an if-chain. The engine keeps the fact keys.
 
 - [ ] **Step 4: Run the tests and make sure they pass.**
 Run: `uv run pytest tests/test_hq_bot.py -q`
@@ -155,14 +155,14 @@ Expected: all pass. Then run `uv run pytest -q`. Expected: no failures.
 
 - [ ] **Step 5: Commit.**
 ```bash
-git add src/escape_pod/brain tests/test_hq_bot.py docs/superpowers
+git add src/brain tests/test_hq_bot.py docs/superpowers
 git commit -m "Bot HQ: a scripted HQ that reads the signs and gives the instruction"
 ```
 
 ### Task 2: Solo rooms on the server
 
 **Files:**
-- Modify: `src/escape_pod/web/server.py` (`Room`, `view`, `start_game`, `handle`, `act` callers, `create_room`, `ws_room`)
+- Modify: `src/web/server.py` (`Room`, `view`, `start_game`, `handle`, `act` callers, `create_room`, `ws_room`)
 - Modify: `CLAUDE.md` §4.2 (new fields)
 - Test: `tests/test_server.py`
 
@@ -235,19 +235,19 @@ Expected: no failures.
 
 - [ ] **Step 6: Commit.**
 ```bash
-git add src/escape_pod/web/server.py tests/test_server.py CLAUDE.md
+git add src/web/server.py tests/test_server.py CLAUDE.md
 git commit -m "Server: solo rooms with the bot in the HQ seat"
 ```
 
 ### Task 3: The solo game in the browser
 
 **Files:**
-- Modify: `src/escape_pod/web/static/index.html` (home button)
-- Modify: `src/escape_pod/web/static/app.js` (button handler)
-- Modify: `src/escape_pod/web/static/lobby.js` (solo lobby)
-- Modify: `src/escape_pod/web/static/rtc.js` (camera with no peer)
-- Modify: `src/escape_pod/web/static/game_signs.js` (frame line)
-- Modify: `src/escape_pod/web/static/style.css` (frame line style)
+- Modify: `src/web/static/index.html` (home button)
+- Modify: `src/web/static/app.js` (button handler)
+- Modify: `src/web/static/lobby.js` (solo lobby)
+- Modify: `src/web/static/rtc.js` (camera with no peer)
+- Modify: `src/web/static/game_signs.js` (frame line)
+- Modify: `src/web/static/style.css` (frame line style)
 - Modify: `CLAUDE.md` §8 and §10
 - Test: `C:\Users\dty47\AppData\Local\Temp\claude\081b90d764f0526e\8f231284-7ed7-457c-be0f-ac8a16b2483e\scratchpad\solo_e2e.py` (Playwright, not committed)
 
@@ -273,7 +273,7 @@ git commit -m "Server: solo rooms with the bot in the HQ seat"
 - [ ] **Step 1: Make the changes above.** Then run `node --check --input-type=module < <file>` for each changed JS file.
 Expected: no output from any of them.
 
-- [ ] **Step 2: Write `solo_e2e.py` in the scratchpad.** Use Playwright with msedge headless and a fake camera (`--use-fake-device-for-media-stream`). Start `uv run escape-pod --port 8099` first. The script does these steps:
+- [ ] **Step 2: Write `solo_e2e.py` in the scratchpad.** Use Playwright with msedge headless and a fake camera (`--use-fake-device-for-media-stream`). Start `uv run ksne --port 8099` first. The script does these steps:
   1. Click `#create-solo`.
   2. Check that `.roles` is hidden.
   3. Click `#start`.
@@ -296,6 +296,6 @@ Expected: it prints `OK`, and the console shows no page errors.
 
 - [ ] **Step 6: Commit.**
 ```bash
-git add src/escape_pod/web/static CLAUDE.md
+git add src/web/static CLAUDE.md
 git commit -m "Solo game in the browser: Play solo button, solo lobby, sign frames"
 ```

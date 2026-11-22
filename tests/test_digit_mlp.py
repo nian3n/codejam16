@@ -4,10 +4,10 @@ import math
 import numpy as np
 import pytest
 
-from escape_pod.vision import digit_mlp, recognizer
-from escape_pod.vision.digit_mlp import CLASSES, DigitMLP, fold_batchnorm, hand_features
-from escape_pod.vision.handshape import DIGITS
-from escape_pod.vision.landmarks import LEFT, N_POINTS, RIGHT
+from vision import digit_mlp, recognizer
+from vision.digit_mlp import CLASSES, DigitMLP, fold_batchnorm, hand_features
+from vision.handshape import DIGITS
+from vision.landmarks import LEFT, N_POINTS, RIGHT
 
 rng = np.random.default_rng(0)
 

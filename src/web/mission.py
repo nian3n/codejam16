@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from random import Random
 from typing import Literal
 
-from escape_pod.puzzles.engine import WIDGETS, load_pool
-from escape_pod.vision.handshape import DIGITS
+from puzzles.engine import WIDGETS, load_pool
+from vision.handshape import DIGITS
 
 LOCK_LENGTH = 3
 # The case code never uses 2: the digit model rarely reads a signed 2 (playtest, Nov 2026).

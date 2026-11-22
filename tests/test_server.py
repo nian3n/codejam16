@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 
 import random
 
-from escape_pod import config
-from escape_pod.puzzles.engine import WIDGETS, Module, load_pool
-from escape_pod.web import server
+import config
+from puzzles.engine import WIDGETS, Module, load_pool
+from web import server
 
 client = TestClient(server.app)
 
@@ -324,7 +324,7 @@ def test_ice_without_metered_is_stun_only(monkeypatch):
 
 
 def test_ice_with_metered_hides_the_key(monkeypatch):
-    from escape_pod.web import ice
+    from web import ice
 
     turn = [{"urls": "stun:stun.relay.metered.ca:80"},
             {"urls": "turn:global.relay.metered.ca:80", "username": "u", "credential": "c"}]
@@ -340,7 +340,7 @@ def test_ice_with_metered_hides_the_key(monkeypatch):
 
 
 def test_ice_falls_back_when_metered_fails(monkeypatch):
-    from escape_pod.web import ice
+    from web import ice
 
     def boom(app, key):
         raise OSError("network down")
@@ -431,7 +431,7 @@ def test_leave_during_a_game_ends_it_and_last_one_out_deletes_the_room():
 # ---------------------------------------------------------------------------
 # Solo rooms: one field agent, the scripted bot in the HQ seat
 # ---------------------------------------------------------------------------
-from escape_pod.brain.hq_bot import BOT_NAME, HqBot  # noqa: E402
+from brain.hq_bot import BOT_NAME, HqBot  # noqa: E402
 from test_hq_bot import answer  # noqa: E402
 
 
@@ -735,7 +735,7 @@ def test_the_timer_starts_anyway_after_a_while(monkeypatch):
 
 
 def test_the_case_code_never_uses_2():
-    from escape_pod.web.mission import Mission
+    from web.mission import Mission
     for seed in range(500):
         assert "2" not in Mission.draw(random.Random(seed)).code
 

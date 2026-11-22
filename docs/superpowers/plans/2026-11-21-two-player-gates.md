@@ -32,7 +32,7 @@
 ### Task 1: Mission rules
 
 **Files:**
-- Modify: `src/escape_pod/web/mission.py`
+- Modify: `src/web/mission.py`
 - Test: `tests/test_mission.py` (new)
 
 **Interfaces:**
@@ -53,8 +53,8 @@
 ### Task 2: Server and Rob
 
 **Files:**
-- Modify: `src/escape_pod/web/server.py` (`start_game`, `handle_gate`, `handle`)
-- Modify: `src/escape_pod/brain/hq_bot.py` (`wire_tray_prompt()`, new `wire_order_prompt(colors)`)
+- Modify: `src/web/server.py` (`start_game`, `handle_gate`, `handle`)
+- Modify: `src/brain/hq_bot.py` (`wire_tray_prompt()`, new `wire_order_prompt(colors)`)
 - Modify: `tests/test_server.py`, `tests/test_hq_bot.py` if it calls `wire_tray_prompt`
 - Modify: `CLAUDE.md` §4.2 Mission paragraph and the `lock` row
 
@@ -75,9 +75,9 @@
 ### Task 3: Client
 
 **Files:**
-- Modify: `src/escape_pod/web/static/mission.js` (wheels, clickable wires, handler's code card and ranking page)
-- Modify: `src/escape_pod/web/static/game_signs.js` (tray: up to 4 signs, sent to the handler. Wheels lock: no signing)
-- Modify: `src/escape_pod/web/static/workbench.js` (case note), `feed.js` (reply box off at the case lock), `style.css` (wheels, code card)
+- Modify: `src/web/static/mission.js` (wheels, clickable wires, handler's code card and ranking page)
+- Modify: `src/web/static/game_signs.js` (tray: up to 4 signs, sent to the handler. Wheels lock: no signing)
+- Modify: `src/web/static/workbench.js` (case note), `feed.js` (reply box off at the case lock), `style.css` (wheels, code card)
 
 - [ ] **Step 1:** Build it. The wheel values live in `store.local.lockWheels`, which resets per `round_id`. The digit pictures come from `/signs/pictures/<d>.png`.
 - [ ] **Step 2:** Browser check with two players: the handler sees the code and the pictures, and cannot type. The agent sets the wheels and opens the case. A wrong code is a strike. The agent signs 4 colors (sent as chat glosses through the test socket, because the fake camera has no hands). The handler sees the ranking. The cuts unlock, and the right order reaches the modules. Run a solo check too.

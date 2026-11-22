@@ -13,7 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
-from escape_pod import config
+import config
 
 MIN_FRAMES = 3
 

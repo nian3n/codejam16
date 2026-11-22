@@ -2,7 +2,7 @@
 
 Chrome at 1440 × 900. The camera in the active capture replays a demonstration from the PopSign ASL v1.0 dataset. The browser test uses controlled landmark inputs so the same round can be reproduced. [PopSign ASL v1.0](https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/)
 
-The backdrop was generated with the built-in ImageGen tool and saved as `src/escape_pod/web/static/workshop.jpg`. The case, controls, and damage are rendered in the browser.
+The backdrop was generated with the built-in ImageGen tool and saved as `src/web/static/workshop.jpg`. The case, controls, and damage are rendered in the browser.
 
 ## Backdrop prompt
 

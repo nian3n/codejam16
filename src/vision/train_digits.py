@@ -18,8 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.vision.handshape import DIGITS, HandshapeModel, features_from_hands
+import config
+from vision.handshape import DIGITS, HandshapeModel, features_from_hands
 
 
 def load_samples(root: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:

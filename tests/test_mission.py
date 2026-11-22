@@ -4,8 +4,8 @@ import random
 
 import pytest
 
-from escape_pod.puzzles.engine import load_pool
-from escape_pod.web.mission import Mission
+from puzzles.engine import load_pool
+from web.mission import Mission
 
 COLORS = load_pool()["colors"].pool
 

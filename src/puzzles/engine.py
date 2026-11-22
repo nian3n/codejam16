@@ -12,8 +12,8 @@ import json
 import random
 from dataclasses import dataclass, field
 
-from escape_pod import config
-from escape_pod.puzzles.models import Action, PuzzleSpec
+import config
+from puzzles.models import Action, PuzzleSpec
 
 OPS = {
     "==": lambda a, b: a == b,

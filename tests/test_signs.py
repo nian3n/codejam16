@@ -4,9 +4,9 @@ import json
 
 from fastapi.testclient import TestClient
 
-from escape_pod import config
-from escape_pod.signs.fetch_popsign import CREDIT, game_glosses
-from escape_pod.web.server import app
+import config
+from signs.fetch_popsign import CREDIT, game_glosses
+from web.server import app
 
 client = TestClient(app)
 INDEX = json.loads((config.SIGN_CLIPS_DIR / "index.json").read_text(encoding="utf-8"))

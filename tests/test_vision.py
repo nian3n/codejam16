@@ -6,11 +6,11 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from escape_pod import config
-from escape_pod.puzzles.engine import load_pool
-from escape_pod.vision.landmarks import LEFT, POSE, RIGHT, left_handed, to_array
-from escape_pod.vision.recognizer import rank
-from escape_pod.vision.segmenter import Segmenter
+import config
+from puzzles.engine import load_pool
+from vision.landmarks import LEFT, POSE, RIGHT, left_handed, to_array
+from vision.recognizer import rank
+from vision.segmenter import Segmenter
 
 HAVE_MODEL = (config.ISLR_DIR / "model.tflite").exists()
 
@@ -93,7 +93,7 @@ def test_every_word_model_gloss_is_in_the_label_map():
 @pytest.mark.skipif(not HAVE_MODEL, reason="run: uv run download-models")
 def test_word_model_returns_250_scores():
     pytest.importorskip("mediapipe")  # stands in for "the vision extra is installed"
-    from escape_pod.vision.word_model import WordModel
+    from vision.word_model import WordModel
 
     m = WordModel()
     clip = np.random.default_rng(0).random((20, 543, 3)).astype(np.float32)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import random
 import re
 
-from escape_pod.brain.hq_bot import GREETING
+from brain.hq_bot import GREETING
 
 CALM, SHAKY, PANIC = 0, 1, 2
 

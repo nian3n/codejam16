@@ -1,6 +1,6 @@
-# Escape Pod game server. Used by render.yaml; works on any Docker host.
-#   docker build -t escape-pod .
-#   docker run -p 8000:8000 -e METERED_APP=... -e METERED_API_KEY=... escape-pod
+# Keep Signing and Nobody Explodes game server. Used by render.yaml; works on any Docker host.
+#   docker build -t ksne .
+#   docker run -p 8000:8000 -e METERED_APP=... -e METERED_API_KEY=... ksne
 # The host's proxy adds HTTPS, which browsers need for the camera.
 FROM python:3.12-slim
 
@@ -27,4 +27,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 EXPOSE 8000
 
 # Rooms live in memory: run exactly one instance.
-CMD ["escape-pod"]
+CMD ["ksne"]

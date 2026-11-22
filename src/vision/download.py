@@ -9,8 +9,8 @@ import urllib.request
 
 import json
 
-from escape_pod import config
-from escape_pod.vision import digit_mlp
+import config
+from vision import digit_mlp
 
 REPO = "https://huggingface.co/sign/kaggle-asl-signs-1st-place/resolve/main"
 FILES = {"model.tflite": 11_242_036, "sign_to_prediction_index_map.json": None}

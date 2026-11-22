@@ -28,9 +28,9 @@ from pathlib import Path
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.vision.handshape import DIGITS, normalize, pick_hand
-from escape_pod.vision.landmarks import LEFT, RIGHT, Extractor, left_handed
+import config
+from vision.handshape import DIGITS, normalize, pick_hand
+from vision.landmarks import LEFT, RIGHT, Extractor, left_handed
 
 HOLD_S = 0.6        # hold the shape this long to save a sample
 STILL = 0.035       # mean movement of the normalized hand per frame that still counts as still

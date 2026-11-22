@@ -20,9 +20,9 @@ from pathlib import Path
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.vision.handshape import DIGITS, features_from_hands
-from escape_pod.vision.landmarks import LEFT, RIGHT
+import config
+from vision.handshape import DIGITS, features_from_hands
+from vision.landmarks import LEFT, RIGHT
 
 CLASSES = tuple("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")  # mlp_classes.json order
 SOURCE = "https://huggingface.co/nocontextdoruk/asl-landmark-mlp/resolve/main"

@@ -8,10 +8,10 @@ the same rules the engine uses (spec design rule 2, one source of truth).
 """
 from __future__ import annotations
 
-from escape_pod import config
-from escape_pod.puzzles.engine import WIDGETS, load_pool
-from escape_pod.puzzles.models import PuzzleSpec
-from escape_pod.puzzles.phrase import condition, phrase, word
+import config
+from puzzles.engine import WIDGETS, load_pool
+from puzzles.models import PuzzleSpec
+from puzzles.phrase import condition, phrase, word
 
 WIDGET_NAMES = {"wires": "Wires", "keypad": "Keypad", "icons": "Picture buttons",
                 "dial": "Dial", "switches": "Switches", "big_button": "Big button",

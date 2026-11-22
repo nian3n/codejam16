@@ -2,8 +2,8 @@
 """Round XP (spec 2026-11-21-xp-levels-design): the server's breakdown at the end of a round."""
 import time
 
-from escape_pod.web import server
-from escape_pod.web.xp import round_xp
+from web import server
+from web.xp import round_xp
 from test_server import _drain, _fast_bot, _solve_module, _start_solo, _talk  # noqa: F401
 
 

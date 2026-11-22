@@ -36,11 +36,11 @@
 ### Task 1: New name and story wording
 
 **Files:**
-- Modify: `src/escape_pod/web/static/index.html` (title, logo, tagline, role cards)
-- Modify: `src/escape_pod/web/static/app.js` (`setupGame` role label, `renderEnd` titles)
-- Modify: `src/escape_pod/web/static/lobby.js` (hints), `feed.js` (composer labels)
-- Modify: `src/escape_pod/web/server.py` (`FastAPI(title=...)`, the win and loss event text)
-- Modify: `src/escape_pod/__init__.py`, `src/escape_pod/web/tls.py` (certificate name), `src/escape_pod/manual/build.py` (index heading). Then run `uv run build-manual`.
+- Modify: `src/web/static/index.html` (title, logo, tagline, role cards)
+- Modify: `src/web/static/app.js` (`setupGame` role label, `renderEnd` titles)
+- Modify: `src/web/static/lobby.js` (hints), `feed.js` (composer labels)
+- Modify: `src/web/server.py` (`FastAPI(title=...)`, the win and loss event text)
+- Modify: `src/__init__.py`, `src/web/tls.py` (certificate name), `src/manual/build.py` (index heading). Then run `uv run build-manual`.
 - Modify: `README.md`, `CLAUDE.md` (title, §1 win condition, §10 end screen, role names in §1 and §10)
 - Test: `tests/test_server.py`
 
@@ -62,10 +62,10 @@
 ### Task 2: Tactical operation look
 
 **Files:**
-- Modify: `src/escape_pod/web/static/style.css` (tokens, background, frames, manual, video, motion)
-- Modify: `src/escape_pod/web/static/index.html` (add `<div class="alarm" aria-hidden="true"></div>` as the first child of `body`, and `<span id="op-line" class="op-line"></span>` in the top bar)
-- Modify: `src/escape_pod/web/static/app.js` (`tickTimer`, `setupGame`)
-- Modify: `src/escape_pod/web/static/rtc.js` (LIVE tag and channel label in the dock)
+- Modify: `src/web/static/style.css` (tokens, background, frames, manual, video, motion)
+- Modify: `src/web/static/index.html` (add `<div class="alarm" aria-hidden="true"></div>` as the first child of `body`, and `<span id="op-line" class="op-line"></span>` in the top bar)
+- Modify: `src/web/static/app.js` (`tickTimer`, `setupGame`)
+- Modify: `src/web/static/rtc.js` (LIVE tag and channel label in the dock)
 
 **Interfaces:**
 - Consumes: the Task 1 labels.

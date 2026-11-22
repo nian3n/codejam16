@@ -6,9 +6,9 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
-from escape_pod.vision.handshape import DIGITS
-from escape_pod.vision.landmarks import LEFT, N_POINTS, RIGHT
-from escape_pod.vision.recognizer import game_words, hand_model, model, rank, rank_mixed
+from vision.handshape import DIGITS
+from vision.landmarks import LEFT, N_POINTS, RIGHT
+from vision.recognizer import game_words, hand_model, model, rank, rank_mixed
 
 router = APIRouter(prefix="/api/practice")
 APPROVAL_THRESHOLD = 0.75

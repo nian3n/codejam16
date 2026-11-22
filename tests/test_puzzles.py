@@ -5,12 +5,12 @@ import random
 
 import pytest
 
-from escape_pod import config
-from escape_pod.manual.build import all_pages, page_markdown
-from escape_pod.manual.solve import sheet_markdown, solve_module
-from escape_pod.puzzles.engine import WIDGETS, Module, draw, load_pool
-from escape_pod.puzzles.models import Action, PuzzleSpec
-from escape_pod.puzzles.phrase import phrase, word
+import config
+from manual.build import all_pages, page_markdown
+from manual.solve import sheet_markdown, solve_module
+from puzzles.engine import WIDGETS, Module, draw, load_pool
+from puzzles.models import Action, PuzzleSpec
+from puzzles.phrase import phrase, word
 
 POOL = load_pool()
 # The keypad puzzle left the pool (Nov 2026): the digits in the module's allowed words
@@ -151,8 +151,8 @@ def test_answer_key_matches_engine():
 
 
 def test_verb_puzzles_say_picture_and_noun_puzzles_do_not():
-    from escape_pod.puzzles.models import Action, PuzzleSpec
-    from escape_pod.puzzles.phrase import phrase, word
+    from puzzles.models import Action, PuzzleSpec
+    from puzzles.phrase import phrase, word
     assert phrase(Action("press", {"icon": "dance"}), spec=POOL["actions"]) == "Press the dance picture."
     assert phrase(Action("turn", {"to": "listen"}), spec=POOL["senses"]) == "Turn the dial to the listen picture."
     assert phrase(Action("press", {"icon": "cow"}), spec=POOL["pets_farm"]) == "Press the cow."

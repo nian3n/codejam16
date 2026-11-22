@@ -24,9 +24,9 @@ import time
 import urllib.parse
 import urllib.request
 
-from escape_pod import config
+import config
 
-log = logging.getLogger("escape_pod.ice")
+log = logging.getLogger("ksne.ice")
 CACHE_S = 600
 _cache: tuple[float, list[dict]] | None = None
 

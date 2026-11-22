@@ -27,13 +27,13 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 import numpy as np
 
-from escape_pod import config
-from escape_pod.puzzles.engine import load_pool
-from escape_pod.vision.handshape import DIGITS, HandshapeModel
-from escape_pod.vision.landmarks import Extractor, left_handed
-from escape_pod.vision.recognizer import Guess, rank, rank_mixed
-from escape_pod.vision.segmenter import Segmenter
-from escape_pod.vision.word_model import WordModel
+import config
+from puzzles.engine import load_pool
+from vision.handshape import DIGITS, HandshapeModel
+from vision.landmarks import Extractor, left_handed
+from vision.recognizer import Guess, rank, rank_mixed
+from vision.segmenter import Segmenter
+from vision.word_model import WordModel
 
 PANEL_W = 430
 VIEW_H = 720
@@ -146,7 +146,7 @@ class Bench:
             cap = cv2.VideoCapture(camera)
         if not cap.isOpened():
             raise SystemExit(f"Could not open camera {camera}. Try --camera 1.")
-        cv2.namedWindow("Escape Pod sign test", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Keep Signing sign test", cv2.WINDOW_NORMAL)
         prev = time.perf_counter()
         try:
             while True:
@@ -179,7 +179,7 @@ class Bench:
                         self.submit(clip, "auto")
                 self.collect()
 
-                cv2.imshow("Escape Pod sign test", self.render(view, now))
+                cv2.imshow("Keep Signing sign test", self.render(view, now))
                 if not self.key(cv2.waitKey(1) & 0xFF, now):
                     break
         finally:

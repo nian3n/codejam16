@@ -8,7 +8,7 @@ Roles (spec change, Nov 2026: two humans now, the LLM alien comes later):
 The server owns all game state and decides right and wrong with the rule engine
 (spec design rule 1). Clients only render what the server sends them.
 
-    uv run escape-pod [--host 0.0.0.0] [--port 8000] [--debug]
+    uv run ksne [--host 0.0.0.0] [--port 8000] [--debug]
 """
 from __future__ import annotations
 
@@ -28,17 +28,17 @@ from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
-from escape_pod import config
-from escape_pod.brain.hq_bot import BOT_NAME, HqBot
-from escape_pod.brain.hq_voice import mood, nervous
-from escape_pod.manual.build import all_pages
-from escape_pod.manual.solve import sheet_markdown
-from escape_pod.puzzles.engine import Module, draw
-from escape_pod.puzzles.models import Action
-from escape_pod.web.ice import ice_servers
-from escape_pod.web.mission import Mission
-from escape_pod.web.practice import router as practice_router, warm_model
-from escape_pod.web.xp import round_xp
+import config
+from brain.hq_bot import BOT_NAME, HqBot
+from brain.hq_voice import mood, nervous
+from manual.build import all_pages
+from manual.solve import sheet_markdown
+from puzzles.engine import Module, draw
+from puzzles.models import Action
+from web.ice import ice_servers
+from web.mission import Mission
+from web.practice import router as practice_router, warm_model
+from web.xp import round_xp
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
@@ -766,13 +766,13 @@ def main():
     threading.Thread(target=warm_model, daemon=True, name="warm-model").start()
     ssl = {}
     if a.https:
-        from escape_pod.web.tls import ensure_cert
+        from web.tls import ensure_cert
 
         cert, key = ensure_cert()
         ssl = {"ssl_certfile": str(cert), "ssl_keyfile": str(key)}
     scheme = "https" if a.https else "http"
     if a.host == "0.0.0.0":
-        from escape_pod.web.tls import lan_ips
+        from web.tls import lan_ips
 
         for ip in lan_ips():
             print(f"Other players on this Wi-Fi: {scheme}://{ip}:{a.port}", flush=True)
