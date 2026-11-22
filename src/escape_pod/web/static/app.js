@@ -22,7 +22,7 @@ import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
 import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
 import { renderInit } from "./init.js";
-import { playStrike, playSuccess, playVictory, unlockAudio } from "./sfx.js";
+import { playStrike, playSuccess, playVictory, unlockAudio, wireControlSounds } from "./sfx.js";
 import { launchConfetti } from "./confetti.js";
 
 let activeSeatKey = null;
@@ -33,6 +33,7 @@ let detonationTimer = null;
 
 async function boot() {
   unlockAudio();
+  wireControlSounds();
   const legacyProfile = bindProfiles();
   const [icons, pages] = await Promise.all([
     fetch("/api/icons").then((r) => r.json()),

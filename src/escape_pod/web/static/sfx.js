@@ -64,3 +64,59 @@ export function playVictory() {
   [523, 659, 784].forEach((freq, k) => tone(a, { freq, start: k * 0.12, dur: 0.18, type: "triangle", gain: 0.2 }));
   for (const freq of [523, 659, 784, 1047]) tone(a, { freq, start: 0.38, dur: 1.1, type: "triangle", gain: 0.12 });
 }
+
+// A short burst of white noise through a band-pass filter: the "snip" of the cutters.
+function noise(a, { start = 0, dur = 0.08, freq = 3000, q = 1.2, gain = 0.3 }) {
+  const t0 = a.currentTime + start;
+  const len = Math.ceil(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let k = 0; k < len; k++) data[k] = (Math.random() * 2 - 1) * (1 - k / len);
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const band = a.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = freq;
+  band.Q.value = q;
+  const amp = a.createGain();
+  amp.gain.value = gain;
+  src.connect(band).connect(amp).connect(a.destination);
+  src.start(t0);
+}
+
+/** A wire is cut: a sharp snip, then the cut end springs away. */
+export function playSnip() {
+  const a = audio();
+  if (!a) return;
+  noise(a, { dur: 0.05, freq: 4200, gain: 0.45 });
+  tone(a, { freq: 1400, dur: 0.07, type: "square", gain: 0.05, slideTo: 500 });
+  noise(a, { start: 0.045, dur: 0.12, freq: 1800, q: 0.8, gain: 0.12 });
+}
+
+/** A button, a dial position or a wheel: one short mechanical tick. */
+export function playClick() {
+  const a = audio();
+  if (!a) return;
+  noise(a, { dur: 0.025, freq: 2600, q: 2, gain: 0.35 });
+  tone(a, { freq: 520, dur: 0.05, type: "triangle", gain: 0.08, slideTo: 300 });
+}
+
+/** A switch flips: two ticks close together, the lever leaving one stop and hitting the other. */
+export function playToggle() {
+  const a = audio();
+  if (!a) return;
+  noise(a, { dur: 0.02, freq: 1800, q: 2, gain: 0.25 });
+  noise(a, { start: 0.045, dur: 0.03, freq: 3200, q: 2, gain: 0.4 });
+  tone(a, { freq: 240, start: 0.045, dur: 0.06, type: "triangle", gain: 0.1 });
+}
+
+// Every control on the case clicks when pressed. Wires and switches are left out here: they
+// play their own sound (playSnip, playToggle) where the cut or the flip is sent.
+export function wireControlSounds() {
+  document.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    const control = event.target.closest?.("#stage button, #case-lock-stage button");
+    if (!control || control.disabled || control.matches(".switch, .cuttable")) return;
+    playClick();
+  }, { capture: true });
+}

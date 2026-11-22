@@ -3,8 +3,12 @@
 // Each widget lives in widgets/<name>.js; to add one, register it in widgets/index.js.
 import { $, el, send, store } from "./core.js";
 import { WIDGETS } from "./widgets/index.js";
+import { playSnip, playToggle } from "./sfx.js";
 
 function sendAct(i, verb, target) {
+  // Buttons click through sfx.wireControlSounds. Wires are SVG paths and switches flip, so they sound here.
+  if (verb === "cut") playSnip();
+  else if (verb === "set") playToggle();
   send({ type: "act", round_id: store.state.round_id, module: i, action: { verb, target } });
 }
 

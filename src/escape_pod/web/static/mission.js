@@ -1,5 +1,6 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 import { $, el, gameplayOpen, send, store, svg, WIRE_COLORS } from "./core.js";
+import { playSnip } from "./sfx.js";
 
 function lockProgress(confirmed) {
   return `${confirmed} of 3 digits confirmed`;
@@ -96,6 +97,7 @@ export function harnessWire(color, cut, fresh = false) {
 function cutWire(index) {
   const s = store.state;
   if (!gameplayOpen() || s.mission?.stage !== "wire_tray") return;
+  playSnip();
   send({ type: "wire_cut", wire: index, round_id: s.round_id, mission_revision: s.mission.revision });
 }
 
