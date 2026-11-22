@@ -7,6 +7,8 @@ Source code for CodeJam 16. Keep Signing and Nobody Explodes is a two-player bom
 
 They talk only through a silent video link, so the agent signs. The name is a play on words: the players move their hands instead of talking. The code name is `ksne`. The Python code sits directly in `src/`.
 
+**Play it online:** https://keep-signing-and-nobody-explodes.onrender.com. Open it in two browsers with cameras, or click **Play solo** to play with the bot handler, Rob.
+
 For now, the defuser types each sign. Webcam sign recognition and the LLM alien come later. The full spec is in `CLAUDE.md`.
 
 ## Set up
@@ -45,7 +47,7 @@ The repo has a `Dockerfile` and a `render.yaml` for Render. Render gives the gam
 3. Click **New**, then **Blueprint**. Select this repo.
 4. When Render asks for `TURN_USERNAME` and `TURN_CREDENTIAL`, paste the username and the password. Leave `METERED_APP` and `METERED_API_KEY` empty.
 5. Click **Apply**. The first build takes a few minutes.
-6. Open the address that Render shows, for example `https://escape-pod.onrender.com`. Send the invite link to the other player.
+6. Open the address that Render shows, for example `https://keep-signing-and-nobody-explodes.onrender.com`. Send the invite link to the other player.
 
 Render builds again after each push to the branch in `render.yaml`. The free plan stops the server after 15 minutes with no visitors. The next visit then waits about one minute. A restart also removes all rooms.
 
@@ -70,7 +72,6 @@ To see the answer key for a live bomb, run `uv run ksne --debug`. Then click **A
 | `uv run build-manual` | rebuilds `docs/manual/` after a rule change |
 | `uv run answer-key --seed 7` | prints the answer key for one bomb |
 | `uv run pytest` | runs the tests |
-| `uv add <package>` | adds a package (`uv add --dev` for test-only packages) |
 
 ## Layout
 
@@ -85,8 +86,6 @@ To see the answer key for a live bomb, run `uv run ksne --debug`. Then click **A
 | `docs/manual/` | the generated manual pages (committed) | Teammate 4 |
 | `etc/` | secrets. Only `.env.example` is in git | everyone |
 | `tests/` | pytest tests | everyone |
-
-Not built yet: `signs/` (Teammate 2), the recognizer (Teammate 3), `brain/` (Teammates 3 and 4), `tools/`. See `CLAUDE.md` §3 and §14.
 
 ## Solo practice
 
@@ -113,5 +112,4 @@ The script reads only the start of each PopSign archive, so each word needs abou
 - **Sign model:** `sign/kaggle-asl-signs-1st-place` on Hugging Face, MIT license.
 - **Digit model:** "ASL Landmark MLP" by nocontextdoruk (https://huggingface.co/nocontextdoruk/asl-landmark-mlp), CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/): non-commercial use only. We convert its ONNX weights to NumPy. Trained on the ASL-HG dataset: Pranto et al., *Data in Brief*, 2026 (https://data.mendeley.com/datasets/j4y5w2c8w9/1).
 - **MediaPipe:** Google, Apache 2.0.
-- **Emoji:** the system emoji font of each player's device.
 
