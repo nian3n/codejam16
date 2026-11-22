@@ -38,6 +38,7 @@ from escape_pod.puzzles.models import Action
 from escape_pod.web.ice import ice_servers
 from escape_pod.web.mission import Mission
 from escape_pod.web.practice import router as practice_router, warm_model
+from escape_pod.web.xp import round_xp
 
 STATIC = config.STATIC_DIR
 CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O, so codes are easy to read aloud
@@ -82,6 +83,13 @@ class Player:
     role: str | None = None
     ws: WebSocket | None = None
     practice_credits: set[str] = field(default_factory=set)
+    # This round's credits. practice_credits loses each one when the browser saves it
+    # (practice_saved), but the round summary still has to count it.
+    round_credits: set[str] = field(default_factory=set)
+
+    def give_credit(self, *credits: str):
+        self.practice_credits.update(credits)
+        self.round_credits.update(credits)
 
 
 @dataclass
@@ -224,6 +232,11 @@ def view(room: Room, me: Player) -> dict:
             v["bot_words"] = sorted(set(room.bot.page.pool) | set(config.CORE_SIGNS))
     if room.modules:
         v["progress"] = {"total": len(room.modules), "defused": sum(m.defused for m in room.modules)}
+    if room.phase in ("escaped", "boom") and me.role in ROLES and room.round_id:
+        # What this round was worth for this player (web/xp.py). The browser saves it once per round_id.
+        v["round_xp"] = {"round_id": room.round_id,
+                         **round_xp(room.level, sum(m.defused for m in room.modules), room.phase == "escaped",
+                                    room.ended_left, len(me.round_credits))}
     # Only the defuser sees the bomb. At the end both see it, for the debrief.
     if (room.modules and room.mission is not None and room.mission.stage == "modules"
             and (me.role == "defuser" or room.phase in ("escaped", "boom"))):
@@ -323,6 +336,8 @@ def start_game(room: Room):
     room.mission = Mission.draw(rng, wheels=not room.solo)
     room.round_id = uuid.uuid4().hex
     room.signed_modules.clear()
+    for p in room.players.values():
+        p.round_credits.clear()
     room.replied_modules.clear()
     room.strikes = 0
     room.chat = []
@@ -435,7 +450,7 @@ def act(room: Room, index: int, action: Action) -> bool | None:
             credit = f"{room.round_id}:{index}"
             for player in room.players.values():
                 if player.role in ROLES:
-                    player.practice_credits.add(credit)
+                    player.give_credit(credit)
         room.say({"kind": "event", "text": f"Module {index + 1} defused!"})
         if all(x.defused for x in room.modules):
             end_game(room, "escaped", "All modules defused. Device neutralized.")
@@ -470,7 +485,7 @@ def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
             # The handler made the signs, so the handler gets the practice points.
             for p in room.players.values():
                 if p.role == "expert":
-                    p.practice_credits.update(f"{room.round_id}:case_lock:{slot}" for slot in range(len(mission.code)))
+                    p.give_credit(*(f"{room.round_id}:case_lock:{slot}" for slot in range(len(mission.code))))
             room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
         return True
     if kind == "signs":
@@ -483,14 +498,14 @@ def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
             room.say({"kind": "signs", "from": me.name, "glosses": glosses, "mission_stage": stage})
         if stage == "case_lock":
             for slot in range(previous_digits, mission.lock_confirmed):
-                me.practice_credits.add(f"{room.round_id}:case_lock:{slot}")
+                me.give_credit(f"{room.round_id}:case_lock:{slot}")
             if mission.stage == "wire_tray":
                 room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
                 if room.bot is not None:
                     bot_say(room, room.bot.wire_tray_prompt())
         elif mission.tray_ready and not was_ready:
             for index in range(len(mission.colors)):
-                me.practice_credits.add(f"{room.round_id}:wire_tray:{index}")
+                me.give_credit(f"{room.round_id}:wire_tray:{index}")
             if room.bot is not None:
                 bot_say(room, room.bot.wire_order_prompt(mission.cut_colors))
         return True
