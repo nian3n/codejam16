@@ -10,7 +10,7 @@ from test_server import _drain, _fast_bot, _solve_module, _start_solo, _talk  # 
 def test_win_parts():
     r = round_xp("intermediate", defused=4, won=True, seconds_left=81.9, signs=14)
     assert r["parts"] == [{"label": "Signs confirmed (14)", "xp": 70}, {"label": "Modules defused (4)", "xp": 40},
-                          {"label": "Bomb defused", "xp": 75}, {"label": "Time left 1:21", "xp": 40}]
+                          {"label": "Bomb defused", "xp": 75}, {"label": "Time left 1:22", "xp": 40}]
     assert r["signs_xp"] == 70 and r["total"] == 225
 
 

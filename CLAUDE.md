@@ -186,6 +186,8 @@ The server forwards an `rtc` message to the other player as `{"type": "rtc", "da
 
 After each change, the server sends each player its own `{"type": "state", ...}`. **Hints** (design: `docs/superpowers/specs/2026-11-21-sign-hints-design.md`): in a two-player game, the expert's copy of a signs chat entry has `count` and `hint_in_s` instead of `glosses`, until a `hint` reveals it (`hinted: true`) or the game ends. The expert's wire tray view has `colors_received`, not the colors. Only the defuser's state has `bomb` (the modules and their facts), until the game ends. The server ignores any message that is wrong for the sender's role or the phase. It can also send `{"type": "error", "text": ...}`, for example when the room is full.
 
+**Round XP** (design: `docs/superpowers/specs/2026-11-21-xp-levels-design.md`): when the phase is `escaped` or `boom`, each player's state has `round_xp`: `round_id`, `parts` (label and XP), `signs_xp` and `total` (`web/xp.py`). The browser saves `total - signs_xp` once per round under `ep:round-xp:<profile id>:<round id>`. Sign XP is 5 per saved practice credit.
+
 **Mission:** While a round exists, `state.mission` has `stage` (`case_lock`, `wire_tray`, or `modules`), `revision`, `lock_confirmed`, and `cut_count`. The defuser also gets `feedback`. Gate inputs use the round's `round_id` and the most recently acknowledged `mission.revision`. The design is in `docs/superpowers/specs/2026-11-21-two-player-gates-design.md`.
 
 - **Case lock, two players:** only the expert gets `case_code`. The defuser gets `lock_wheels: true`. The expert signs the code on video, and the defuser sets it on wheels and sends `lock`. A wrong code is a strike. A malformed code is a retry. The server ignores the expert's `say` at this gate. The expert gets the digit practice points.
@@ -468,7 +470,8 @@ The expert's manual already highlights the pages that contain the signed words (
 - **Sign cards:** at Beginner, the pool of the module being signed shows beside the camera. The cards show the whole pool, so they do not give away which items are on the module.
 - **Glossary (built):** the "📖 Glossary (G)" button in the game top bar, or the **G** key, opens the Field Sign Dictionary, for both roles, at any time during a game. The timer keeps running. It lists every game word A to Z, plus YES, NO and FINISH (topic "game controls"), never only this bomb's words (rule 3). A click plays a looping PopSign clip from `signs/clips/` (`uv run fetch-signs`). The digits show a still picture when the team adds one (`signs/clips/pictures/`, with its source and license in `index.json`). Until then, they say "No picture yet". Later: our own signer's animations and a "practice" button.
 - **Retry is free:** a rejected guess or a NO costs nothing. Only wrong actions on the bomb cost strikes.
-- **Round report:** modules defused, strikes, time, topics practiced, every sign confirmed, and the signs that needed retries.
+- **Round report:** modules defused, strikes, time, topics practiced, every sign confirmed, and the signs that needed retries. Built so far: the end card lists the round's XP (signs 5 each, modules 10 each, a win 50, 75 or 100 by level, and 1 per 2 s left after a win) and the player's level.
+- **Levels (built):** XP has no cap. Level n to n + 1 needs 250 + 100 × (n − 1) XP. Titles: Beginner (1–2), Developing (3–4), Practiced (5–6), Skilled (7–9), Accomplished (10 and up). The total lives in the browser profile (`progress.js`, `xp_levels.js`).
 - **Wording:** present the game as ASL vocabulary practice. Do not claim that it translates ASL. It recognizes single signs.
 
 ---

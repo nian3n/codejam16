@@ -674,3 +674,14 @@ kbd { font-family: var(--mono); border: 1px solid var(--line); border-bottom-wid
 /* ---------- sign hints (feed.js): the handler reads the video first ---------- */
 .hidden-signs .hint-note { margin: 4px 0 6px; color: var(--muted, #a9b0bb); font-size: .85rem; }
 .hint-btn:disabled { opacity: .6; cursor: default; }
+
+/* ---------- round XP on the end card (spec 2026-11-21-xp-levels-design) ---------- */
+.end-xp { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: var(--mono); font-size: .85rem; }
+.end-xp:empty, .end-level:empty { display: none; }
+.end-xp li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed #ffffff1f; padding-bottom: 3px; }
+.end-xp b { color: var(--amber); }
+.end-level { display: grid; gap: 6px; }
+.end-level-head { display: flex; justify-content: space-between; font-weight: 700; font-size: .9rem; }
+.end-level progress { width: 100%; height: 8px; accent-color: var(--amber); }
+.level-up { margin: 0; color: var(--amber); font: 700 1rem var(--mono); letter-spacing: .06em; }
+

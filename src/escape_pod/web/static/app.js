@@ -20,6 +20,7 @@ import { updateFaces } from "./widgets/big_button.js";
 import { onRoomState, onRtc, placeDock, stopVideo } from "./rtc.js";
 import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
+import { levelFor } from "./xp_levels.js";
 import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile, saveRoundXp } from "./progress.js";
 import { renderInit } from "./init.js";
 import { playClockTick, playStrike, playSuccess, playVictory, unlockAudio, wireControlSounds } from "./sfx.js";
@@ -398,8 +399,27 @@ function renderEnd() {
   const s = store.state;
   const win = s.phase === "escaped";
   $(".end-card").className = "card end-card " + (win ? "win" : "lose");
-  $("#end-title").textContent = win ? "Defused" : "Detonation";
+  const xp = s.round_xp;
+  $("#end-title").textContent = (win ? "Defused" : "Detonation") + (xp ? ` · +${xp.total} XP` : "");
   $("#end-stats").textContent = `Defused ${s.progress.defused} of ${s.progress.total} · Strikes ${s.strikes} · Time left ${fmt(Math.ceil(s.remaining_s))}`;
+  $("#end-xp").replaceChildren(...(xp?.parts ?? []).map((p) =>
+    el("li", {}, el("span", { text: p.label }), el("b", { text: `+${p.xp}` }))));
+  renderEndLevel(xp);
+}
+
+// The level bar under the round's XP. The whole round counts toward "Level up!", signs included:
+// their credits were saved during play, so the total before the round is after - total.
+function renderEndLevel(xp) {
+  const box = $("#end-level");
+  const saved = xp && lastRoundXp?.round_id === xp.round_id ? lastRoundXp : null;
+  if (!saved) { box.replaceChildren(); return; }
+  const now = levelFor(saved.after);
+  const up = now.level > levelFor(Math.max(0, saved.after - xp.total)).level;
+  box.replaceChildren(
+    up ? el("p", { class: "level-up", text: `Level up! You are now level ${now.level}.` }) : "",
+    el("div", { class: "end-level-head" }, el("span", { text: `Level ${now.level} · ${now.title}` }),
+      el("span", { text: `${now.into} / ${now.need} XP` })),
+    el("progress", { max: now.need, value: now.into }));
 }
 
 boot();
