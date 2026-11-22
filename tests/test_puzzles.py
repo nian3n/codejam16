@@ -89,6 +89,13 @@ def test_500_seeds_give_a_valid_target(pid):
         assert results == ["step"] * (len(steps) - 1) + ["defused"] and m.defused
 
 
+def test_dial_needle_never_starts_on_the_answer():
+    for spec in (s for s in POOL.values() if s.widget == "dial"):
+        for seed in range(500):
+            m = Module(spec, WIDGETS["dial"].generate(spec, random.Random(seed)))
+            assert m.solution().target["to"] != m.facts["needle"], f"{spec.id} seed {seed}"
+
+
 def test_every_rule_can_fire():
     """No dead rules: across many seeds, each rule of each puzzle fires at least once."""
     for spec in POOL.values():

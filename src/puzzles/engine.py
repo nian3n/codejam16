@@ -175,8 +175,15 @@ class Dial(Widget):
     reading_order = "Pictures are counted clockwise, starting at the top."
 
     def generate(self, spec, rng):
+        # The needle never starts on the answer: "turn the dial to the sun" with the needle
+        # already on the sun left nothing to do (playtest, Nov 2026). Try the positions in a
+        # random order and keep the first one whose solution is somewhere else.
         options = rng.sample(spec.pool, spec.setup["shown"])
-        return {"options": options, "needle": rng.choice(options)}
+        for needle in rng.sample(options, len(options)):
+            facts = {"options": options, "needle": needle}
+            if Module(spec, facts).solution().target["to"] != needle:
+                return facts
+        return facts  # every position answers itself (no pool rule does this); keep the last
 
     def items(self, facts):
         return facts["options"]
