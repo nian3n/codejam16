@@ -64,13 +64,3 @@ export function expertComposer() {
     input,
     el("div", { class: "chips" }, quick.map((q) => el("button", { class: "btn small", text: q, onclick: () => say(q) }))));
 }
-
-/** The case lock: the handler must sign the code, so the server ignores typed replies.
- * Show that here instead of a box that seems to work. */
-export function lockExpertComposer(state) {
-  const box = $("#expert-composer");
-  if (!box) return;
-  const off = state.phase === "playing" && state.mission?.stage === "case_lock";
-  for (const control of box.querySelectorAll("input, button")) control.disabled = off;
-  $("#reply-text").placeholder = off ? "Typing is off. Sign the code to the agent." : REPLY_HINT;
-}

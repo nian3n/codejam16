@@ -218,10 +218,8 @@ def view(room: Room, me: Player) -> dict:
     }
     if room.mission is not None:
         v["mission"] = room.mission.view(me.role)
-        if (room.mission.stage != "case_lock"
-                and (room.phase in ("escaped", "boom")
-                     or (me.role == "defuser" and room.mission.stage == "modules"))):
-            # The cut tray remains part of the physical case after its gate.
+        if room.phase == "playing" and me.role == "defuser" and room.mission.stage == "modules":
+            # The agent's view plays the "tray cleared" animation from this (mission.js finishTray).
             v["case_tray"] = {"wires": room.mission.colors, "cuts": room.mission.cuts}
     if room.bot is not None and room.mission is not None and room.mission.stage == "modules":
         v["bot_stage"] = room.bot.stage  # which frame the composer shows: module or details
@@ -467,7 +465,7 @@ def clean_glosses(raw) -> list[str]:
 
 
 def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
-    """One gate input from the agent: "signs", "wire_cut" or "lock". False: ignored."""
+    """One gate input: "signs" or "wire_cut" from the agent, "lock" from the handler. False: ignored."""
     revision = msg.get("mission_revision")
     if (not room.armed or msg.get("round_id") != room.round_id
             or type(revision) is not int or revision != mission.revision):
@@ -475,22 +473,22 @@ def handle_gate(room: Room, mission: Mission, me: Player, msg: dict) -> bool:
     stage = mission.stage
     kind = msg["type"]
     if kind == "lock":
-        # Two players: the handler signed the code, the agent set it on the wheels.
-        if stage != "case_lock" or not mission.wheels:
+        # Two players: the agent signed the code, the handler set it on the wheels.
+        if stage != "case_lock" or not mission.wheels or me.role != "expert":
             return False
         outcome = mission.try_code(msg.get("code"))
         if outcome == "strike":
             strike(room)
         elif outcome == "open":
-            # The handler made the signs, so the handler gets the practice points.
+            # The agent made the signs, so the agent gets the practice points.
             for p in room.players.values():
-                if p.role == "expert":
+                if p.role == "defuser":
                     p.give_credit(*(f"{room.round_id}:case_lock:{slot}" for slot in range(len(mission.code))))
             room.say({"kind": "event", "text": "Case unlocked. The wire tray is open."})
         return True
+    if me.role != "defuser":
+        return False
     if kind == "signs":
-        if stage == "case_lock" and mission.wheels:
-            return False
         previous_digits = mission.lock_confirmed
         was_ready = mission.tray_ready
         glosses = mission.confirm(clean_glosses(msg.get("glosses")))
@@ -577,8 +575,9 @@ async def handle(room: Room, me: Player, msg: dict):
         room.level = "custom"
     elif kind == "start" and room.can_start():
         start_game(room)
-    elif (kind in ("signs", "wire_cut", "lock") and room.phase == "playing" and me.role == "defuser"
-          and mission is not None and mission.stage != "modules"):
+    elif (room.phase == "playing" and mission is not None and mission.stage != "modules"
+          and ((kind in ("signs", "wire_cut") and me.role == "defuser")
+               or (kind == "lock" and me.role == "expert"))):
         if not handle_gate(room, mission, me, msg):
             return
     elif kind == "signs" and room.phase == "playing" and me.role == "defuser":
@@ -596,9 +595,7 @@ async def handle(room: Room, me: Player, msg: dict):
             if room.bot is not None:
                 bot = room.bot
                 bot_later(room, lambda: bot.reply(glosses))
-    elif (kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo
-          # The case lock: the handler must sign the code. A typed "434" would skip the sign.
-          and not (mission is not None and mission.stage == "case_lock")):
+    elif kind == "say" and room.phase == "playing" and me.role == "expert" and not room.solo:
         text = str(msg.get("text", "")).strip()[:MAX_TEXT_LEN]
         if text:
             room.say({"kind": "say", "from": me.name, "text": text})

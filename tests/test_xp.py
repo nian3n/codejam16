@@ -84,7 +84,7 @@ def test_again_clears_round_xp():
 
 def test_two_players_each_get_round_xp():
     from test_server import _start_game
-    code, a, b, sa, sb = _start_game()  # the gates are open: the handler signed the code, the agent the colors
+    code, a, b, sa, sb = _start_game()  # the gates are open: the agent signed the code and the colors
     room = server.rooms[code]
     for i, m in enumerate(room.modules):
         a.send_json({"type": "signs", "glosses": [m.widget.items(m.facts)[0]]})
@@ -95,8 +95,8 @@ def test_two_players_each_get_round_xp():
     sb = _drain(b, lambda s: s["phase"] == "escaped")
     modules = len(room.modules)
     lock, tray = len(room.mission.code), len(room.mission.colors)
-    assert f"Signs confirmed ({tray + modules})" in _labels(sa)
-    assert f"Signs confirmed ({lock + modules})" in _labels(sb)
+    assert f"Signs confirmed ({lock + tray + modules})" in _labels(sa)
+    assert f"Signs confirmed ({modules})" in _labels(sb)
     for s in (sa, sb):
         assert "Bomb defused" in _labels(s) and f"Modules defused ({modules})" in _labels(s)
     a.__exit__(None, None, None)

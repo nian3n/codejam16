@@ -1,5 +1,8 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 import { $, el, gameplayOpen, send, store, svg, WIRE_COLORS } from "./core.js";
+
+// The case code never uses 2 (server: mission.LOCK_DIGITS).
+const LOCK_DIGITS = ["0", "1", "3", "4", "5", "6", "7", "8", "9"];
 import { playSnip } from "./sfx.js";
 
 function lockProgress(confirmed) {
@@ -10,45 +13,45 @@ function trayProgress(cuts) {
   return `${cuts} of 4 wires cut`;
 }
 
-// Two players: the handler signs the code, the agent sets it on three wheels and
-// presses Open ({"type": "lock"}). The wheel values are local, per round.
+// Two players: the agent signs the code, the handler sets it on three wheels in the
+// manual and presses Open ({"type": "lock"}), opening the case remotely. The wheel
+// values are local, per round.
 function wheelState() {
   const round = store.state.round_id;
   if (store.local.lockWheels?.round !== round) store.local.lockWheels = { round, digits: [0, 0, 0] };
   return store.local.lockWheels.digits;
 }
 
-function renderWheels(mission) {
-  const mount = $("#case-lock-stage");
+// A spin updates the shown digit in place: the manual page around the wheels is not
+// rebuilt, so the handler keeps the scroll and the focus.
+function lockWheels(mission) {
   const digits = wheelState();
-  const key = JSON.stringify(["wheels", digits, mission.revision, mission.feedback]);
-  if (mount.dataset.lock === key) return;
-  mount.dataset.lock = key;
+  const shown = [];
   const spin = (i, step) => {
     digits[i] = (digits[i] + step + 10) % 10;
-    renderWheels(mission);
+    shown[i].textContent = String(digits[i]);
   };
   const open = () => {
     const s = store.state;
     if (!gameplayOpen() || s.mission?.stage !== "case_lock") return;
     send({ type: "lock", code: digits.join(""), round_id: s.round_id, mission_revision: s.mission.revision });
   };
-  mount.replaceChildren(el("section", { class: "mission-case" },
-    el("div", { class: "case-lock wheels" },
-      el("div", { class: "lock-latch", "aria-hidden": "true" }),
-      el("div", { class: "lock-slots", role: "group", "aria-label": "Code wheels" },
-        digits.map((d, i) => el("div", { class: "wheel" },
-          el("button", { class: "wheel-step", type: "button", text: "▲", "aria-label": `Wheel ${i + 1} up`, onclick: () => spin(i, 1) }),
-          el("span", { class: "lock-slot", text: String(d), "aria-live": "polite" }),
-          el("button", { class: "wheel-step", type: "button", text: "▼", "aria-label": `Wheel ${i + 1} down`, onclick: () => spin(i, -1) })))),
-      el("button", { class: "btn primary lock-open", type: "button", text: "Open", onclick: open }))));
+  return el("div", { class: "case-lock wheels" },
+    el("div", { class: "lock-latch", "aria-hidden": "true" }),
+    el("div", { class: "lock-slots", role: "group", "aria-label": "Code wheels" },
+      digits.map((d, i) => el("div", { class: "wheel" },
+        el("button", { class: "wheel-step", type: "button", text: "▲", "aria-label": `Wheel ${i + 1} up`, onclick: () => spin(i, 1) }),
+        shown[i] = el("span", { class: "lock-slot", text: String(d), "aria-live": "polite" }),
+        el("button", { class: "wheel-step", type: "button", text: "▼", "aria-label": `Wheel ${i + 1} down`, onclick: () => spin(i, -1) })))),
+    el("button", { class: "btn primary lock-open", type: "button", text: "Open", onclick: open }),
+    mission.feedback ? el("p", { class: "mission-note", role: "status", text: mission.feedback }) : null);
 }
 
 export function renderLock(mission) {
-  if (mission?.lock_wheels) { renderWheels(mission); return; }
   if (!mission?.case_code) return;
+  const remote = !store.state?.solo;  // two players: the handler opens it from the manual
   const mount = $("#case-lock-stage");
-  const key = JSON.stringify([mission.case_code, mission.lock_confirmed, mission.feedback]);
+  const key = JSON.stringify([mission.case_code, mission.lock_confirmed, mission.feedback, remote]);
   if (mount.dataset.lock === key) return;
   mount.dataset.lock = key;
   mount.replaceChildren(el("section", { class: "mission-case" },
@@ -58,7 +61,8 @@ export function renderLock(mission) {
         [...mission.case_code].map((digit, index) => el("span", {
           class: "lock-slot", text: index < mission.lock_confirmed ? digit : "–",
         }))),
-      el("p", { class: "mission-count", text: lockProgress(mission.lock_confirmed) })),
+      el("p", { class: "mission-count", text: remote && mission.lock_confirmed < 3
+        ? "Opened by your handler" : lockProgress(mission.lock_confirmed) })),
     el("div", { class: "case-tag" },
       el("span", { text: "CASE COMBINATION" }),
       el("strong", { text: mission.case_code }))));
@@ -127,13 +131,19 @@ function wireTray(mission, newlyCut = []) {
 
 function missionManual(mission, chat = []) {
   if (mission.stage === "case_lock") {
-    // Only the handler sees the code. The pictures help a handler who does not know the signs.
+    // The agent signs the code; the handler opens the case remotely. The digits show
+    // here only after a hint, like the colors at the tray.
+    const digits = chat.filter((m) => m.kind === "signs" && m.mission_stage === "case_lock" && m.glosses)
+      .flatMap((m) => m.glosses);
     return el("article", { class: "page mission-gate mission-manual" },
       el("h2", { text: "Case lock" }),
-      el("p", { text: "Sign this code to the agent, one digit at a time, from left to right. "
-        + "The agent reads your signs on the video and sets the code on the lock. Typing is off for this step." }),
-      el("div", { class: "code-card", "aria-label": `Code ${[...(mission.case_code || "")].join(" ")}` },
-        [...(mission.case_code || "")].map((d) => el("figure", { class: "code-digit" },
+      el("p", { text: "The agent signs the 3-digit code on the case, from left to right. "
+        + "Read the signs on the video, set the code on the wheels, then press Open. A wrong code is a strike." }),
+      lockWheels(mission),
+      digits.length ? el("p", { class: "meta", text: `Digits from hints: ${digits.join(" ")}` }) : null,
+      el("h3", { text: "The digit signs" }),
+      el("div", { class: "code-card", "aria-label": "The signs for the digits" },
+        LOCK_DIGITS.map((d) => el("figure", { class: "code-digit" },
           el("img", { src: `/signs/pictures/${d}.png`, alt: `The sign for ${d}`, loading: "lazy" }),
           el("figcaption", { text: d })))));
   }

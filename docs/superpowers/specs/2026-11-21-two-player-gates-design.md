@@ -1,5 +1,7 @@
 # Two-player gates: both players take part
 
+> **Change, 2026-11-22:** the case lock now goes the other way. The agent sees the code on the tag and signs it. The digits go to the handler without a check, as a signs message. The handler sets the code on wheels in the manual and sends `lock`, which opens the case remotely. So only the agent signs. The agent gets the digit practice points. The handler can type at the case lock. CLAUDE.md §4.2 has the current messages. The Gate 1 section below describes the first version.
+
 ## Why
 
 In a two-player game, the agent does almost all of the work in the two gates before the modules.

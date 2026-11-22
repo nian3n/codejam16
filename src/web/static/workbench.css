@@ -126,23 +126,6 @@
 }
 .case-bay #stage { display: block; flex: 1; overflow: auto; min-width: 0; container-type: normal; }
 [data-stage="case_lock"][data-outcome=""] .case-bay #stage { visibility: hidden; }
-#case-tray {
-  flex: 0 0 clamp(46px, 12cqw, 129px);
-  padding: 4px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1px;
-  place-content: center;
-  border: 1px solid #0b1317;
-  border-radius: 8px;
-  background: repeating-linear-gradient(0deg, #263336 0 18px, #192629 19px 22px);
-  box-shadow: inset 2px 4px 10px #0009;
-}
-/* The cut tray stays out of sight while the modules are in play: next to the modules it
-   looked like part of the board. It shows again in the end view. */
-#case-tray:empty, [data-stage="wire_tray"][data-outcome=""] #case-tray,
-[data-stage="modules"][data-outcome=""] #case-tray { display: none; }
-#case-tray .harness-wire { width: 100%; min-height: 17px; }
 #stage-effect {
   inset: 8px;
   z-index: 4;

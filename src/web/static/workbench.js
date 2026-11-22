@@ -1,14 +1,13 @@
 // Owner: Teammate 1 (Game, scenes, widgets)
 // The scene consumes round snapshots. Effects never submit gameplay actions.
 import { $, el } from "./core.js";
-import { harnessWire, renderLock } from "./mission.js";
+import { renderLock } from "./mission.js";
 
 const bench = $("#workbench");
 const bay = $(".case-bay");
 const manual = $("#handler-desk");
 const stage = $("#stage");
 const lock = $("#case-lock-stage");
-const tray = $("#case-tray");
 const timer = $("#case-timer");
 const digits = ["abcdef", "bc", "abdeg", "abcdg", "bcfg", "acdfg", "acdefg", "abc", "abcdefg", "abcdfg"];
 const stageTitle = { case_lock: "Case lock", wire_tray: "Wire tray", modules: "Main modules" };
@@ -20,8 +19,6 @@ export function resetWorkbench() {
   lock.replaceChildren();
   delete lock.dataset.lock;
   stage.replaceChildren();
-  tray.replaceChildren();
-  delete tray.dataset.tray;
   $("#stage-effect").replaceChildren();
 }
 
@@ -37,20 +34,14 @@ export function prepareWorkbench(state, previous) {
   bench.dataset.view = handler ? "manual" : "case";
   bench.dataset.stage = mission.stage;
   $("#case-note").textContent = playing && !handler && mission.stage === "case_lock"
-    ? mission.feedback || (mission.lock_wheels ? "Set the code that your handler signs, then press Open."
-      : "Confirm the digits from left to right.") : "";
+    ? mission.feedback || (state.solo ? "Confirm the digits from left to right."
+      : "Sign the code on the tag. Your handler opens the lock remotely.") : "";
   if (playing && mission.stage === "case_lock" && !handler) renderLock(mission);
   if (playing && mission.stage === "wire_tray" && previous?.mission?.case_code
       && previous.round_id === state.round_id) {
     renderLock({ ...previous.mission, lock_confirmed: mission.lock_confirmed });
   }
 
-  const key = JSON.stringify(state.case_tray ?? null);
-  if (tray.dataset.tray !== key) {
-    tray.dataset.tray = key;
-    tray.replaceChildren(...(state.case_tray?.wires.map((color, index) =>
-      harnessWire(color, state.case_tray.cuts.includes(index))) ?? []));
-  }
   if (!playing || mission.stage !== "modules") $("#stage-effect").replaceChildren();
 }
 

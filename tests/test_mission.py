@@ -50,9 +50,13 @@ def test_solo_lock_takes_signs_and_no_code():
     assert m.confirm(list(m.code)) == list(m.code) and m.stage == "wire_tray"
 
 
-def test_wheels_lock_takes_no_signs():
+def test_wheels_lock_passes_digits_unchecked():
+    # Two players: the agent's digits go to the handler as signed; only the wheels open the case.
     m = Mission.draw(random.Random(1), wheels=True)
-    assert m.confirm(list(m.code)) == [] and m.stage == "case_lock"
+    wrong = ["1" if d != "1" else "3" for d in m.code]
+    assert m.confirm(wrong) == wrong and m.stage == "case_lock" and m.lock_confirmed == 0
+    assert m.confirm(["red"]) == [] and m.confirm(list("0134")) == []
+    assert m.try_code(m.code) == "open" and m.stage == "wire_tray"
 
 
 def test_tray_signs_collect_colors():
@@ -80,8 +84,8 @@ def test_cut_waits_for_all_four_colors():
 def test_views_split_the_code():
     m = Mission.draw(random.Random(1), wheels=True)
     agent, handler = m.view("defuser"), m.view("expert")
-    assert agent["lock_wheels"] is True and "case_code" not in agent
-    assert handler["case_code"] == m.code
+    assert agent["case_code"] == m.code and "lock_wheels" not in agent
+    assert handler["lock_wheels"] is True and "case_code" not in handler
     solo = Mission.draw(random.Random(1), wheels=False)
     assert solo.view("defuser")["case_code"] == solo.code and "lock_wheels" not in solo.view("defuser")
     m.try_code(m.code)

@@ -17,9 +17,10 @@ LOCK_DIGITS = tuple(d for d in DIGITS if d != "2")
 class Mission:
     """Two gates before the module board (spec 2026-11-21-two-player-gates-design).
 
-    Case lock. Two players (wheels=True): only the handler sees the code and signs it;
-    the agent reads the video and sets the code on wheels (try_code). Solo: the agent
-    signs the code on the tag and the digit model reads it (confirm).
+    Case lock. The agent always sees the code on the tag and signs it; the digit model
+    reads the signs (confirm). Two players (wheels=True): the digits go to the handler
+    unchecked, and the handler sets the code on the wheels to open the case remotely
+    (try_code), so only the agent signs. Solo: each digit is checked against the next slot.
     Wire tray: the agent signs the four wire colors (confirm). Once all four arrived,
     the cuts unlock. The handler's manual has a ranking of all 8 colors, drawn per
     round; the cut order is the tray's colors in that ranking (wire_order).
@@ -56,14 +57,14 @@ class Mission:
         return set(self.colors) <= set(self.signed_colors)
 
     def try_code(self, code) -> Literal["retry", "strike", "open"]:
-        """The agent's wheels (two players only). A malformed code is a retry, never a strike."""
+        """The handler's wheels (two players only). A malformed code is a retry, never a strike."""
         self.revision += 1
         if (not self.wheels or self.stage != "case_lock" or not isinstance(code, str)
                 or len(code) != LOCK_LENGTH or not all(d in DIGITS for d in code)):
             self.feedback = "Set all three wheels, then open the lock."
             return "retry"
         if code != self.code:
-            self.feedback = "The lock did not open. Watch your handler sign the code again."
+            self.feedback = "The lock did not open. Check the code with your agent."
             return "strike"
         self.lock_confirmed = LOCK_LENGTH
         self.stage = "wire_tray"
@@ -75,7 +76,13 @@ class Mission:
         self.revision += 1
         if self.stage == "case_lock":
             if self.wheels:
-                return []  # two players: the handler signs the code, the agent sets wheels
+                # Two players: no check here. The handler reads the digits and sets the
+                # wheels; only the wheel code decides (a misread digit is theirs to catch).
+                if not 1 <= len(glosses) <= len(self.code) or any(g not in DIGITS for g in glosses):
+                    self.feedback = "Sign the digits of the code only, up to three."
+                    return []
+                self.feedback = "Digits sent. Your handler sets them on the lock."
+                return glosses
             remaining = len(self.code) - self.lock_confirmed
             if not 1 <= len(glosses) <= remaining or any(g not in DIGITS for g in glosses):
                 self.feedback = "Confirm one digit per slot, in order."
@@ -127,12 +134,13 @@ class Mission:
         if role == "defuser":
             payload["feedback"] = self.feedback
             if self.stage == "case_lock":
-                payload.update({"lock_wheels": True} if self.wheels else {"case_code": self.code})
+                payload["case_code"] = self.code
             elif self.stage == "wire_tray":
                 payload.update(wires=self.colors, cuts=self.cuts, signed_colors=self.signed_colors)
         elif role == "expert":
             if self.stage == "case_lock" and self.wheels:
-                payload["case_code"] = self.code
+                # The handler opens the lock remotely with the digits the agent signs.
+                payload.update(lock_wheels=True, feedback=self.feedback)
             elif self.stage == "wire_tray":
                 # Only the count: the handler reads the colors on the video (or with a hint).
                 payload.update(wire_rank=self.rank, colors_received=len(self.signed_colors))
