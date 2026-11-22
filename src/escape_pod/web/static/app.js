@@ -22,7 +22,7 @@ import { bindGlossary, closeGlossary } from "./glossary.js";
 import { enterPractice, leavePractice, preloadMediaPipe } from "./practice.js";
 import { bindProfiles, currentProfile, moveProgress, savePracticeCredits, saveProfile } from "./progress.js";
 import { renderInit } from "./init.js";
-import { playStrike, playSuccess, playVictory, unlockAudio, wireControlSounds } from "./sfx.js";
+import { playClockTick, playStrike, playSuccess, playVictory, unlockAudio, wireControlSounds } from "./sfx.js";
 import { launchConfetti } from "./confetti.js";
 
 let activeSeatKey = null;
@@ -327,6 +327,9 @@ function renderGame(previous) {
   renderSignChips();
 }
 
+// The clock ticks once per shown second, only while it runs (not in INITIALIZING, the 3-2-1 or the end screen).
+let lastTick = null;
+
 function tickTimer() {
   const s = store.state;
   if (!s) { document.body.classList.remove("critical"); return; }
@@ -342,7 +345,10 @@ function tickTimer() {
   $(".topbar").inert = locked;
   // The alarm speeds up in the last 30 s of a running game only, so it never leaks into the lobby or end screen.
   document.body.classList.toggle("critical", s.phase === "playing" && left < 30);
-  const t = fmt(Math.ceil(left));
+  const whole = Math.ceil(left);
+  if (s.phase === "playing" && s.armed && whole > 0 && whole !== lastTick && lastTick !== null) playClockTick(whole);
+  lastTick = s.phase === "playing" && s.armed ? whole : null;
+  const t = fmt(whole);
   $("#top-timer").textContent = t;
   renderCaseTime(t);
 }

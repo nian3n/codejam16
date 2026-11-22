@@ -120,3 +120,13 @@ export function wireControlSounds() {
     playClick();
   }, { capture: true });
 }
+
+/** The bomb clock, once per second. Tick and tock alternate. In the last 30 s it is higher and louder. */
+export function playClockTick(secondsLeft) {
+  const a = audio();
+  if (!a) return;
+  const urgent = secondsLeft <= 30;
+  const tock = secondsLeft % 2 === 1;
+  noise(a, { dur: 0.018, freq: tock ? 1700 : 2300, q: 3, gain: urgent ? 0.22 : 0.09 });
+  if (urgent) tone(a, { freq: tock ? 880 : 988, dur: 0.06, type: "square", gain: 0.035 });
+}
