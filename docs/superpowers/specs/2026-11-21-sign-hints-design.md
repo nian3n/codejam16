@@ -9,7 +9,7 @@ The user approved this design earlier in the session. The wire tray part is new:
 ## Goals
 
 - In a two-player game, the handler does not get the words of a signs message by default.
-- The handler can reveal the words of one message, 20 s after it arrives.
+- The handler can reveal the words of one message, 10 s after it arrives.
 - The server enforces this. The words are not in the handler's data before the hint.
 
 ## Non-goals
@@ -27,7 +27,7 @@ The user approved this design earlier in the session. The wire tray part is new:
 ## Behavior
 
 - A signs message on the handler's screen reads "Ana sent 3 signs", with no words. The manual does not highlight pages for a hidden message.
-- Each hidden message has a "Show the words" button. It unlocks 20 s after the message arrives (`HINT_WAIT_S`), and it shows a countdown.
+- Each hidden message has a "Show the words" button. It unlocks 10 s after the message arrives (`HINT_WAIT_S`), and it shows a countdown.
 - A click sends `{"type": "hint", "msg": <chat index>}`. The server rejects it before the wait ends, and for a message that is not a sign message.
 - After the hint, the handler sees the words of that message and the page highlights, as before. Both players see "<handler> used a hint."
 - When the game ends, the handler sees all words, for the debrief.

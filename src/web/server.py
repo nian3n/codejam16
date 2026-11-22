@@ -51,7 +51,7 @@ COUNTDOWN_S = 3.0       # "ready" starts a 3-2-1 that both players see, then the
 BOT_DELAY_S = 1.0       # the solo bot "thinks" this long before each reply (tests set 0)
 # Two players: the handler reads the agent's signs on the video first. The words of a
 # signs message unlock for the handler this long after it arrives ({"type": "hint"}).
-HINT_WAIT_S = 20.0
+HINT_WAIT_S = 10.0
 MAX_ROOMS = 1000        # a public server refuses new rooms past this (after pruning)
 
 app = FastAPI(title="Keep Signing and Nobody Explodes")

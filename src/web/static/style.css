@@ -116,7 +116,6 @@ label { display: grid; gap: 6px; color: var(--dim); font-size: .9rem; }
 .role.mine { border-color: var(--acc); background: var(--acc-bg); }
 .role h2 { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: 1.3rem; }
 .role p { margin: 0; color: var(--dim); font-size: .9rem; }
-.role-icon { font-size: 2.6rem; }
 .role-who { min-height: 1.4em; font-weight: 600; color: var(--amber); }
 .levels { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .level { border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; cursor: pointer; text-align: center; min-width: 140px; }
